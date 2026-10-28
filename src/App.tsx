@@ -1,8 +1,4 @@
-import { CustomerDetail } from './components/customers/CustomerDetail'
-import { CustomerFormModal } from './components/customers/CustomerFormModal'
 import { CustomerTable } from './components/customers/CustomerTable'
-import { TransactionFormModal } from './components/finance/TransactionFormModal'
-import { TransactionTable } from './components/finance/TransactionTable'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { KpiCards } from './components/overview/KpiCards'
@@ -10,10 +6,9 @@ import { QuickActions } from './components/overview/QuickActions'
 import { RecentActivity } from './components/overview/RecentActivity'
 import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
-import { SettingsPanel } from './components/settings/SettingsPanel'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
 import { PasswordPrompt } from './components/auth/PasswordPrompt'
 import { ToastProvider } from './components/ui/Toast'
@@ -55,6 +50,37 @@ function ActiveSection() {
   }
 }
 
+// Og'irroq bo'limlar va modallar alohida chunk'larda: birinchi ochilishda yuklanadigan JS kamayadi
+const loadTransactionTable = () => import('./components/finance/TransactionTable')
+const loadSettingsPanel = () => import('./components/settings/SettingsPanel')
+const loadCustomerForm = () => import('./components/customers/CustomerFormModal')
+const loadCustomerDetail = () => import('./components/customers/CustomerDetail')
+const loadTransactionForm = () => import('./components/finance/TransactionFormModal')
+
+const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
+const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
+const CustomerFormModal = lazy(() => loadCustomerForm().then((m) => ({ default: m.CustomerFormModal })))
+const CustomerDetail = lazy(() => loadCustomerDetail().then((m) => ({ default: m.CustomerDetail })))
+const TransactionFormModal = lazy(() => loadTransactionForm().then((m) => ({ default: m.TransactionFormModal })))
+
+// Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
+function prefetchChunks() {
+  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel]) {
+    load().catch(() => {
+      // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
+    })
+  }
+}
+
+function SectionFallback() {
+  return (
+    <div className="section-loading" role="status" aria-live="polite">
+      <span className="spinner" aria-hidden="true" />
+      Yuklanmoqda...
+    </div>
+  )
+}
+
 // Yozish maydoni ichida bo'lsa tezkor tugmalar ishlamaydi
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -65,6 +91,11 @@ function Shell() {
   const { modal, activeSection, setActiveSection, openModal } = useDashboard()
   const { usingDefaultPassword } = useAuth()
   const [promptDismissed, setPromptDismissed] = useState(false)
+
+  useEffect(() => {
+    const timer = window.setTimeout(prefetchChunks, 1200)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const label = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
@@ -108,23 +139,27 @@ function Shell() {
         <Header />
         <main className="main" id="main-content" tabIndex={-1}>
           <ErrorBoundary key={activeSection} compact>
-            <ActiveSection />
+            <Suspense fallback={<SectionFallback />}>
+              <ActiveSection />
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>
       {usingDefaultPassword && !promptDismissed && !modal && (
         <PasswordPrompt onChangeNow={goToSecurity} onLater={() => setPromptDismissed(true)} />
       )}
-      {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
-      {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
-      {modal?.type === 'transaction' && (
-        <TransactionFormModal
-          key={modal.payload?.id ?? 'new'}
-          transactionId={modal.payload?.id}
-          kind={modal.payload?.kind}
-          customerId={modal.payload?.customerId}
-        />
-      )}
+      <Suspense fallback={null}>
+        {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
+        {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
+        {modal?.type === 'transaction' && (
+          <TransactionFormModal
+            key={modal.payload?.id ?? 'new'}
+            transactionId={modal.payload?.id}
+            kind={modal.payload?.kind}
+            customerId={modal.payload?.customerId}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }

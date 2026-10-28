@@ -2,10 +2,28 @@
 <html lang="uz">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#4f46e5" />
     <title>Apex Dashboard</title>
+    <meta
+      name="description"
+      content="Apex Dashboard — ta'lim markazlari va kichik biznes uchun CRM: mijozlar bazasi, to'lovlar, kassa balansi, hisobotlar va analitika bitta panelda."
+    />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Open Graph: deploy qilingandan so'ng og:url va og:image ni to'liq domen bilan almashtiring -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Apex Dashboard" />
+    <meta property="og:title" content="Apex Dashboard — Business & Education CRM" />
+    <meta property="og:description" content="Mijozlar, to'lovlar va analitika bitta panelda. O'zbek tilida, mobil va dark mode bilan." />
+    <meta property="og:locale" content="uz_UZ" />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <script>
       // Mavzuni birinchi chizishdan oldin qo'llash (oq "miltillash" bo'lmasligi uchun)
       try {
@@ -15,6 +33,7 @@
     </script>
   </head>
   <body>
+    <noscript>Apex Dashboard ishlashi uchun brauzerda JavaScript yoqilgan bo'lishi kerak.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

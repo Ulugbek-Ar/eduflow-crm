@@ -3,7 +3,6 @@ import type { Currency, DateFormat } from '../types/dashboard.types'
 const numberFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 })
 const decimalFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 1 })
 const usdFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-const dateFormat = new Intl.DateTimeFormat('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export function formatMoney(amount: number, currency: Currency): string {
   return currency === 'USD' ? usdFormat.format(amount) : `${numberFormat.format(amount)} so'm`
@@ -31,10 +30,6 @@ export function formatCompact(value: number): string {
 
 function trimZero(value: number): string {
   return decimalFormat.format(Math.round(value * 10) / 10)
-}
-
-export function formatDate(iso: string): string {
-  return dateFormat.format(new Date(iso))
 }
 
 // Sozlamadagi formatga ko'ra, mahalliy vaqt bo'yicha (brauzer lokaliga bog'liq emas)
