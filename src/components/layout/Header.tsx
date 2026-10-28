@@ -5,11 +5,11 @@ import { dateStamp, downloadJson, exportRows } from '../../services/export.servi
 import type { ExportFormat } from '../../services/export.service'
 import type { DateRange } from '../../types/dashboard.types'
 import { filterCustomers, sortCustomers } from '../../utils/customers'
-import { formatDate } from '../../utils/format'
 import { customerColumns, transactionColumns } from '../../utils/reports'
 import { filterTransactions, sortTransactions, transactionPeriod } from '../../utils/transactions'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
+import { NotificationBell } from './NotificationBell'
 
 const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 
@@ -29,6 +29,7 @@ export function Header() {
     transactionSort,
     getCustomerName,
     toggleSidebar,
+    formatDate,
   } = useDashboard()
 
   const title = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
@@ -79,6 +80,8 @@ export function Header() {
             </button>
           ))}
         </div>
+
+        <NotificationBell />
 
         <Dropdown
           label="Hisobot yuklash"

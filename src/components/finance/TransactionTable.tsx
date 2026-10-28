@@ -5,7 +5,6 @@ import { useConfirm } from '../../hooks/useConfirm'
 import type { Transaction, TransactionCategory, TransactionFilters } from '../../types/finance.types'
 import { filterByPeriod } from '../../utils/analytics'
 import { toOptions } from '../../utils/cx'
-import { formatDate } from '../../utils/format'
 import { paginate } from '../../utils/list'
 import {
   EMPTY_TRANSACTION_FILTERS,
@@ -39,6 +38,7 @@ export function TransactionTable() {
     setTransactionFilters,
     transactionSort: sort,
     setTransactionSort,
+    formatDate,
   } = useDashboard()
   const confirm = useConfirm()
   const [page, setPage] = useState(1)

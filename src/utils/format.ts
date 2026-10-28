@@ -1,4 +1,4 @@
-import type { Currency } from '../types/dashboard.types'
+import type { Currency, DateFormat } from '../types/dashboard.types'
 
 const numberFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 })
 const decimalFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 1 })
@@ -35,6 +35,23 @@ function trimZero(value: number): string {
 
 export function formatDate(iso: string): string {
   return dateFormat.format(new Date(iso))
+}
+
+// Sozlamadagi formatga ko'ra, mahalliy vaqt bo'yicha (brauzer lokaliga bog'liq emas)
+export function formatDateWith(iso: string, format: DateFormat): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  const dd = String(date.getDate()).padStart(2, '0')
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(date.getFullYear())
+  switch (format) {
+    case 'dd.mm.yyyy':
+      return `${dd}.${mm}.${yyyy}`
+    case 'dd/mm/yyyy':
+      return `${dd}/${mm}/${yyyy}`
+    case 'yyyy-mm-dd':
+      return `${yyyy}-${mm}-${dd}`
+  }
 }
 
 // Sana -> <input type="date"> qiymati (mahalliy vaqt bo'yicha 'YYYY-MM-DD')

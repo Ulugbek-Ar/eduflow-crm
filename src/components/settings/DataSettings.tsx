@@ -5,7 +5,6 @@ import { useConfirm } from '../../hooks/useConfirm'
 import { dateStamp, downloadJson } from '../../services/export.service'
 import { createBackup, parseBackup } from '../../services/storage.service'
 import type { StoredData } from '../../services/storage.service'
-import { formatDate } from '../../utils/format'
 import { Button } from '../ui/Button'
 
 interface ImportPreview {
@@ -18,12 +17,11 @@ interface ImportPreview {
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 export function DataSettings() {
-  const { customers, transactions, settings, resetData, replaceData } = useDashboard()
+  const { customers, transactions, settings, resetData, replaceData, formatDate } = useDashboard()
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
 
   const handleBackup = () => {
     downloadJson(`apex-zaxira-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
@@ -33,7 +31,6 @@ export function DataSettings() {
     const file = event.target.files?.[0]
     event.target.value = ''
     setError('')
-    setMessage('')
     setPreview(null)
     if (!file) return
     if (file.size > MAX_FILE_SIZE) {
@@ -57,7 +54,6 @@ export function DataSettings() {
     })
     if (!ok) return
     replaceData(preview.data)
-    setMessage(`Zaxira tiklandi: ${preview.data.customers.length} mijoz, ${preview.data.transactions.length} tranzaksiya`)
     setPreview(null)
   }
 
@@ -70,7 +66,6 @@ export function DataSettings() {
     if (!ok) return
     resetData()
     setPreview(null)
-    setMessage('Demo ma\'lumotlar tiklandi')
   }
 
   return (
@@ -111,11 +106,6 @@ export function DataSettings() {
       {error && (
         <p className="notice notice-error" role="alert">
           {error}
-        </p>
-      )}
-      {message && (
-        <p className="notice notice-success" role="status">
-          {message}
         </p>
       )}
 

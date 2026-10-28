@@ -5,7 +5,6 @@ import { useConfirm } from '../../hooks/useConfirm'
 import type { Customer, CustomerFilters, CustomerStatus } from '../../types/customer.types'
 import { toOptions } from '../../utils/cx'
 import { EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
-import { formatDate } from '../../utils/format'
 import { paginate } from '../../utils/list'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -28,6 +27,7 @@ export function CustomerTable() {
     updateCustomer,
     deleteCustomer,
     openModal,
+    formatDate,
   } = useDashboard()
   const confirm = useConfirm()
   const [page, setPage] = useState(1)

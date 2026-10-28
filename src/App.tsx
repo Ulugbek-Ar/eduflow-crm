@@ -13,8 +13,14 @@ import { SourceDistribution } from './components/overview/SourceDistribution'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
+import { useState } from 'react'
+import { LoginScreen } from './components/auth/LoginScreen'
+import { PasswordPrompt } from './components/auth/PasswordPrompt'
+import { ToastProvider } from './components/ui/Toast'
+import { AuthProvider } from './context/AuthContext'
 import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
+import { useAuth } from './hooks/useAuth'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
@@ -48,7 +54,15 @@ function ActiveSection() {
 }
 
 function Shell() {
-  const { modal, activeSection } = useDashboard()
+  const { modal, activeSection, setActiveSection } = useDashboard()
+  const { usingDefaultPassword } = useAuth()
+  const [promptDismissed, setPromptDismissed] = useState(false)
+
+  const goToSecurity = () => {
+    setPromptDismissed(true)
+    setActiveSection('settings')
+    window.requestAnimationFrame(() => document.getElementById('security')?.scrollIntoView({ block: 'start' }))
+  }
 
   return (
     <div className="app">
@@ -61,6 +75,9 @@ function Shell() {
           </ErrorBoundary>
         </main>
       </div>
+      {usingDefaultPassword && !promptDismissed && !modal && (
+        <PasswordPrompt onChangeNow={goToSecurity} onLater={() => setPromptDismissed(true)} />
+      )}
       {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
       {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
       {modal?.type === 'transaction' && (
@@ -75,14 +92,26 @@ function Shell() {
   )
 }
 
+function AuthGate() {
+  const { session } = useAuth()
+  if (!session) return <LoginScreen />
+  return (
+    <DashboardProvider>
+      <Shell />
+    </DashboardProvider>
+  )
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ConfirmProvider>
-        <DashboardProvider>
-          <Shell />
-        </DashboardProvider>
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <AuthGate />
+          </AuthProvider>
+        </ConfirmProvider>
+      </ToastProvider>
     </ErrorBoundary>
   )
 }

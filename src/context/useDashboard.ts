@@ -37,10 +37,12 @@ export interface DashboardContextValue {
   addTransaction: (data: TransactionInput) => void
   updateTransaction: (id: string, patch: Partial<TransactionInput>) => void
   deleteTransaction: (id: string) => void
-  updateSettings: (settings: Settings) => void
+  updateSettings: (settings: Settings, options?: { silent?: boolean }) => void
   resetData: () => void
   replaceData: (data: StoredData) => void
   money: (amount: number) => string
+  formatDate: (iso: string) => string
+  setUnsavedChanges: (dirty: boolean) => void
   getCustomerName: (id?: string) => string
 }
 

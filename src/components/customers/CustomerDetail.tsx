@@ -2,13 +2,12 @@ import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS } from '../../constants/nav
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import { getInitials } from '../../utils/customers'
-import { formatDate } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, money, openModal, closeModal, deleteCustomer } = useDashboard()
+  const { getCustomer, transactions, money, openModal, closeModal, deleteCustomer, formatDate } = useDashboard()
   const confirm = useConfirm()
   const customer = getCustomer(customerId)
 

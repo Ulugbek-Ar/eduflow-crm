@@ -2,11 +2,10 @@ import { Icon, STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { recentActivity } from '../../utils/analytics'
 import { cx } from '../../utils/cx'
-import { formatDate } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 
 export function RecentActivity() {
-  const { customers, transactions, money, getCustomerName, openModal } = useDashboard()
+  const { customers, transactions, money, getCustomerName, openModal, formatDate } = useDashboard()
   const items = recentActivity(customers, transactions, 5)
 
   return (
