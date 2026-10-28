@@ -14,13 +14,13 @@ interface PaymentForm {
   date: string
 }
 
-export function AddPaymentModal() {
+export function AddPaymentModal({ customerId }: { customerId?: string }) {
   const { customers, addTransaction, closeModal } = useDashboard()
   const [form, setForm] = useState<PaymentForm>(() => ({
     type: 'income',
     amount: '',
     method: 'payme',
-    customerId: '',
+    customerId: customerId ?? '',
     note: '',
     date: todayInputValue(),
   }))

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DATE_RANGE_LABELS, Icon, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useConfirm } from '../../hooks/useConfirm'
 import type { TransactionType } from '../../types/finance.types'
 import { formatDate, isInRange } from '../../utils/format'
 
@@ -8,6 +9,7 @@ type TypeFilter = TransactionType | 'all'
 
 export function TransactionTable() {
   const { transactions, search, dateRange, money, getCustomerName, deleteTransaction, openModal } = useDashboard()
+  const confirm = useConfirm()
   const [type, setType] = useState<TypeFilter>('all')
 
   const inRange = transactions
@@ -23,8 +25,13 @@ export function TransactionTable() {
     return t.note.toLowerCase().includes(query) || getCustomerName(t.customerId).toLowerCase().includes(query)
   })
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Ushbu tranzaksiyani o\'chirishni tasdiqlaysizmi?')) deleteTransaction(id)
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: 'Tranzaksiyani o\'chirish',
+      message: 'Ushbu tranzaksiya jurnaldan butunlay o\'chiriladi. Davom etasizmi?',
+      confirmLabel: 'O\'chirish',
+    })
+    if (ok) deleteTransaction(id)
   }
 
   return (
@@ -56,7 +63,7 @@ export function TransactionTable() {
               <option value="income">{TYPE_LABELS.income}</option>
               <option value="expense">{TYPE_LABELS.expense}</option>
             </select>
-            <button type="button" className="btn btn-primary" onClick={() => openModal('payment')}>
+            <button type="button" className="btn btn-primary" onClick={() => openModal({ type: 'transaction' })}>
               <Icon name="plus" size={16} />
               <span>To'lov qo'shish</span>
             </button>

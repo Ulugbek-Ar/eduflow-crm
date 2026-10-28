@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { DEFAULT_SETTINGS } from '../../constants/mockData'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useConfirm } from '../../hooks/useConfirm'
 import { dateStamp, downloadJson } from '../../services/export.service'
 import type { Currency, Settings } from '../../types/dashboard.types'
 
@@ -13,6 +14,7 @@ const CURRENCIES: Record<Currency, string> = {
 
 export function SettingsPanel() {
   const { settings, updateSettings, resetData, customers, transactions } = useDashboard()
+  const confirm = useConfirm()
   const [form, setForm] = useState<Settings>(settings)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -33,8 +35,13 @@ export function SettingsPanel() {
     setSaved(true)
   }
 
-  const handleReset = () => {
-    if (!window.confirm('Barcha ma\'lumotlar demo holatiga qaytariladi. Davom etasizmi?')) return
+  const handleReset = async () => {
+    const ok = await confirm({
+      title: 'Ma\'lumotlarni tiklash',
+      message: 'Barcha o\'zgarishlar o\'chadi va demo ma\'lumotlar qaytadi. Davom etasizmi?',
+      confirmLabel: 'Tiklash',
+    })
+    if (!ok) return
     resetData()
     setForm({ ...DEFAULT_SETTINGS })
     setSaved(false)

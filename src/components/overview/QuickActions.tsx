@@ -13,8 +13,8 @@ export function QuickActions() {
   const { openModal, setActiveSection } = useDashboard()
 
   const actions: Action[] = [
-    { label: 'Yangi mijoz', description: 'Lead yoki o\'quvchi qo\'shish', icon: 'userPlus', onClick: () => openModal('customer') },
-    { label: 'To\'lov qo\'shish', description: 'Kirim yoki chiqimni qayd etish', icon: 'card', onClick: () => openModal('payment') },
+    { label: 'Yangi mijoz', description: 'Lead yoki o\'quvchi qo\'shish', icon: 'userPlus', onClick: () => openModal({ type: 'customer' }) },
+    { label: 'To\'lov qo\'shish', description: 'Kirim yoki chiqimni qayd etish', icon: 'card', onClick: () => openModal({ type: 'transaction' }) },
     { label: 'Mijozlar ro\'yxati', description: 'Barcha mijozlarni ko\'rish', icon: 'customers', onClick: () => setActiveSection('customers') },
     { label: 'Moliya jurnali', description: 'Tranzaksiyalar tarixi', icon: 'finance', onClick: () => setActiveSection('finance') },
   ]

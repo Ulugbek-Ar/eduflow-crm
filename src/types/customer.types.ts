@@ -6,10 +6,21 @@ export interface Customer {
   id: string
   name: string
   phone: string
+  email?: string
   course: string
   status: CustomerStatus
   source: CustomerSource
+  note?: string
   createdAt: string
+  updatedAt?: string
 }
 
-export type NewCustomer = Omit<Customer, 'id' | 'createdAt'>
+export type CustomerInput = Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>
+
+export type CustomerSortKey = 'name' | 'course' | 'status' | 'createdAt'
+
+export interface CustomerFilters {
+  status: CustomerStatus | 'all'
+  course: string
+  source: CustomerSource | 'all'
+}
