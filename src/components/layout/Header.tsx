@@ -2,7 +2,8 @@ import { DATE_RANGE_LABELS, Icon, METHOD_LABELS, NAV_ITEMS, SOURCE_LABELS, STATU
 import { useDashboard } from '../../context/useDashboard'
 import { dateStamp, exportToCsv } from '../../services/export.service'
 import type { DateRange } from '../../types/dashboard.types'
-import { formatDate, isInRange } from '../../utils/format'
+import { filterByPeriod, getPeriod } from '../../utils/analytics'
+import { formatDate } from '../../utils/format'
 
 const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 
@@ -24,7 +25,7 @@ export function Header() {
       ])
       return
     }
-    const rows = transactions.filter((t) => isInRange(t.date, dateRange))
+    const rows = filterByPeriod(transactions, (t) => t.date, getPeriod(dateRange))
     exportToCsv(`hisobot-${dateRange}-${dateStamp()}.csv`, rows, [
       { header: 'Sana', value: (t) => formatDate(t.date) },
       { header: 'Turi', value: (t) => TYPE_LABELS[t.type] },

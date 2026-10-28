@@ -1,6 +1,7 @@
-import type { Currency, DateRange } from '../types/dashboard.types'
+import type { Currency } from '../types/dashboard.types'
 
 const numberFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 })
+const decimalFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 1 })
 const usdFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const dateFormat = new Intl.DateTimeFormat('uz-UZ', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -12,31 +13,28 @@ export function formatNumber(value: number): string {
   return numberFormat.format(value)
 }
 
+const percentFormat = new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+export function formatPercent(value: number): string {
+  return `${percentFormat.format(value)}%`
+}
+
+// Qisqa ko'rinish: 1 500 000 -> "1,5 mln", 650 000 -> "650 ming"
+export function formatCompact(value: number): string {
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '−' : ''
+  if (abs >= 1_000_000_000) return `${sign}${trimZero(abs / 1_000_000_000)} mlrd`
+  if (abs >= 1_000_000) return `${sign}${trimZero(abs / 1_000_000)} mln`
+  if (abs >= 1_000) return `${sign}${Math.round(abs / 1_000)} ming`
+  return `${sign}${abs}`
+}
+
+function trimZero(value: number): string {
+  return decimalFormat.format(Math.round(value * 10) / 10)
+}
+
 export function formatDate(iso: string): string {
   return dateFormat.format(new Date(iso))
-}
-
-// Tanlangan davrning boshlanish vaqti
-export function getRangeStart(range: DateRange, now = new Date()): Date {
-  const start = new Date(now)
-  start.setHours(0, 0, 0, 0)
-  switch (range) {
-    case 'today':
-      return start
-    case '7d':
-      start.setDate(start.getDate() - 6)
-      return start
-    case 'month':
-      start.setDate(1)
-      return start
-    case 'year':
-      start.setMonth(0, 1)
-      return start
-  }
-}
-
-export function isInRange(iso: string, range: DateRange): boolean {
-  return new Date(iso).getTime() >= getRangeStart(range).getTime()
 }
 
 // Sana -> <input type="date"> qiymati (mahalliy vaqt bo'yicha 'YYYY-MM-DD')

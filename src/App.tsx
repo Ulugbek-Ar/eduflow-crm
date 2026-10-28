@@ -7,6 +7,7 @@ import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { KpiCards } from './components/overview/KpiCards'
 import { QuickActions } from './components/overview/QuickActions'
+import { RecentActivity } from './components/overview/RecentActivity'
 import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
 import { SettingsPanel } from './components/settings/SettingsPanel'
@@ -26,7 +27,10 @@ function ActiveSection() {
             <RevenueChart />
             <SourceDistribution />
           </div>
-          <QuickActions />
+          <div className="overview-grid">
+            <RecentActivity />
+            <QuickActions />
+          </div>
         </div>
       )
     case 'customers':
