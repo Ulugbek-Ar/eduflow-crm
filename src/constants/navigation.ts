@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import type { CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange, Section } from '../types/dashboard.types'
-import type { PaymentMethod, TransactionType } from '../types/finance.types'
+import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategory, TransactionType } from '../types/finance.types'
 
 // Ikonlar: 24x24 viewBox, stroke uslubida chiziladigan path'lar
 export const ICONS = {
@@ -156,4 +156,23 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
 export const TYPE_LABELS: Record<TransactionType, string> = {
   income: 'Kirim',
   expense: 'Chiqim',
+}
+
+export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
+  course_fee: 'Kurs to\'lovi',
+  other_income: 'Boshqa kirim',
+  rent: 'Ijara',
+  salary: 'Maosh',
+  marketing: 'Marketing',
+  equipment: 'Jihozlar',
+  utilities: 'Kommunal xizmatlar',
+  other_expense: 'Boshqa chiqim',
+}
+
+export const INCOME_CATEGORIES: readonly IncomeCategory[] = ['course_fee', 'other_income']
+
+export const EXPENSE_CATEGORIES: readonly ExpenseCategory[] = ['rent', 'salary', 'marketing', 'equipment', 'utilities', 'other_expense']
+
+export function categoriesFor(type: TransactionType): readonly TransactionCategory[] {
+  return type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 }

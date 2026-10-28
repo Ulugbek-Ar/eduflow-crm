@@ -1,7 +1,7 @@
 import { createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Customer } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
-import type { Transaction } from '../types/finance.types'
+import type { Transaction, TransactionCategory } from '../types/finance.types'
 
 export const STORAGE_KEYS = {
   customers: 'apex:customers',
@@ -56,6 +56,18 @@ export function createMockData(): StoredData {
   }
 }
 
+// Kategoriyasi yo'q eski tranzaksiyalar uchun izoh va turiga qarab taxmin
+export function inferCategory(t: Pick<Transaction, 'type' | 'note' | 'customerId'>): TransactionCategory {
+  if (t.type === 'income') return t.customerId ? 'course_fee' : 'other_income'
+  const note = t.note.toLowerCase()
+  if (note.includes('ijara')) return 'rent'
+  if (note.includes('maosh') || note.includes('oylik')) return 'salary'
+  if (note.includes('reklama') || note.includes('marketing')) return 'marketing'
+  if (note.includes('jihoz')) return 'equipment'
+  if (note.includes('kommunal') || note.includes('elektr') || note.includes('internet')) return 'utilities'
+  return 'other_expense'
+}
+
 // Birinchi ishga tushishda demo ma'lumotlarni yozadi, keyin saqlanganini o'qiydi
 export function loadData(): StoredData {
   if (!getItem(STORAGE_KEYS.seeded, false)) {
@@ -65,7 +77,9 @@ export function loadData(): StoredData {
   }
   return {
     customers: getItem<Customer[]>(STORAGE_KEYS.customers, []),
-    transactions: getItem<Transaction[]>(STORAGE_KEYS.transactions, []),
+    transactions: getItem<Transaction[]>(STORAGE_KEYS.transactions, []).map((t) =>
+      t.category ? t : { ...t, category: inferCategory(t) },
+    ),
     settings: { ...DEFAULT_SETTINGS, ...getItem<Partial<Settings>>(STORAGE_KEYS.settings, {}) },
   }
 }

@@ -1,7 +1,7 @@
 import { CustomerDetail } from './components/customers/CustomerDetail'
 import { CustomerFormModal } from './components/customers/CustomerFormModal'
 import { CustomerTable } from './components/customers/CustomerTable'
-import { AddPaymentModal } from './components/finance/AddPaymentModal'
+import { TransactionFormModal } from './components/finance/TransactionFormModal'
 import { TransactionTable } from './components/finance/TransactionTable'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
@@ -56,7 +56,14 @@ function Shell() {
       </div>
       {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
       {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
-      {modal?.type === 'transaction' && <AddPaymentModal customerId={modal.payload?.customerId} />}
+      {modal?.type === 'transaction' && (
+        <TransactionFormModal
+          key={modal.payload?.id ?? 'new'}
+          transactionId={modal.payload?.id}
+          kind={modal.payload?.kind}
+          customerId={modal.payload?.customerId}
+        />
+      )}
     </div>
   )
 }

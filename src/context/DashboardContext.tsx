@@ -4,10 +4,20 @@ import { COURSES } from '../constants/mockData'
 import { loadData, resetToMock, setItem, STORAGE_KEYS } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
+import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 import { EMPTY_CUSTOMER_FILTERS } from '../utils/customers'
 import { createId, formatMoney } from '../utils/format'
+import { EMPTY_TRANSACTION_FILTERS } from '../utils/transactions'
 import { DashboardContext } from './useDashboard'
 import type { DashboardContextValue } from './useDashboard'
+
+function cleanTransaction<T extends Partial<TransactionInput>>(data: T): T {
+  const result = { ...data }
+  if (result.note !== undefined) result.note = result.note.trim()
+  if (result.type === 'expense') result.customerId = undefined
+  if ('customerId' in result && !result.customerId) result.customerId = undefined
+  return result
+}
 
 // Bo'sh satrlarni saqlamaslik uchun ixtiyoriy maydonlarni tozalaydi
 function cleanCustomer<T extends Partial<CustomerInput>>(data: T): T {
@@ -30,6 +40,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [customerFilters, setCustomerFilters] = useState<CustomerFilters>(EMPTY_CUSTOMER_FILTERS)
   const [customerSort, setCustomerSort] = useState<SortState<CustomerSortKey>>({ key: 'createdAt', direction: 'desc' })
+  const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>(EMPTY_TRANSACTION_FILTERS)
+  const [transactionSort, setTransactionSort] = useState<SortState<TransactionSortKey>>({ key: 'date', direction: 'desc' })
 
   useEffect(() => setItem(STORAGE_KEYS.customers, customers), [customers])
   useEffect(() => setItem(STORAGE_KEYS.transactions, transactions), [transactions])
@@ -56,6 +68,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     balance,
     customerFilters,
     customerSort,
+    transactionFilters,
+    transactionSort,
     setSearch,
     setDateRange,
     setActiveSection: (section) => {
@@ -67,7 +81,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     toggleSidebar: () => setSidebarOpen((open) => !open),
     setCustomerFilters,
     setCustomerSort,
+    setTransactionFilters,
+    setTransactionSort,
     getCustomer,
+    getTransaction: (id) => (id ? transactions.find((t) => t.id === id) : undefined),
     addCustomer: (data) => {
       const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt: new Date().toISOString() }
       setCustomers((list) => [customer, ...list])
@@ -78,7 +95,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     },
     deleteCustomer: (id) => setCustomers((list) => list.filter((c) => c.id !== id)),
     addTransaction: (data) => {
-      setTransactions((list) => [{ ...data, id: createId('t') }, ...list])
+      setTransactions((list) => [{ ...cleanTransaction(data), id: createId('t') }, ...list])
+    },
+    updateTransaction: (id, patch) => {
+      const updatedAt = new Date().toISOString()
+      setTransactions((list) => list.map((t) => (t.id === id ? { ...t, ...cleanTransaction(patch), updatedAt } : t)))
     },
     deleteTransaction: (id) => setTransactions((list) => list.filter((t) => t.id !== id)),
     updateSettings: setSettings,
@@ -89,6 +110,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setSettings(mock.settings)
       setSearch('')
       setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
+      setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
     },
     money: (amount) => formatMoney(amount, settings.currency),
     getCustomerName: (id) => getCustomer(id)?.name ?? '—',

@@ -1169,6 +1169,110 @@ body.scroll-locked {
   white-space: nowrap;
 }
 
+/* ===== Combobox ===== */
+.combobox {
+  position: relative;
+}
+
+.combobox-icon {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.combobox-input {
+  padding-left: 36px;
+  padding-right: 40px;
+}
+
+.combobox-clear {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+}
+
+.combobox-list {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.combobox-option {
+  display: grid;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.combobox-option small {
+  color: var(--text-muted);
+}
+
+.combobox-option.is-active {
+  background: var(--primary-soft);
+}
+
+.combobox-option[aria-selected='true'] span {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.combobox-empty {
+  padding: 10px;
+  color: var(--text-muted);
+}
+
+/* ===== Moliya ===== */
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-range .field {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-range .input {
+  width: 150px;
+  height: 38px;
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.fill-success {
+  background: var(--success);
+}
+
+.fill-danger {
+  background: var(--danger);
+}
+
+.segmented button.seg-income.is-active {
+  color: var(--success-text);
+}
+
+.segmented button.seg-expense.is-active {
+  color: var(--danger);
+}
+
 /* ===== Responsiv ===== */
 @media (max-width: 1200px) {
   .kpi-grid,
@@ -1183,6 +1287,7 @@ body.scroll-locked {
 
 @media (max-width: 900px) {
   .settings-grid,
+  .split-grid,
   .summary-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1244,6 +1349,25 @@ body.scroll-locked {
 
   .main {
     padding: 16px;
+  }
+
+  .filters > .input {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .date-range {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .date-range .field {
+    flex: 1 1 140px;
+  }
+
+  .date-range .input {
+    width: 100%;
+    min-width: 0;
   }
 
   .kpi-grid,

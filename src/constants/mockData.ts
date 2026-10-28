@@ -1,6 +1,6 @@
 import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
-import type { PaymentMethod, Transaction, TransactionType } from '../types/finance.types'
+import type { PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
 
 export const COURSES = [
   'Ingliz tili (IELTS)',
@@ -45,35 +45,38 @@ const CUSTOMER_SEED: CustomerSeed[] = [
   ['Malika Sobirova', '+998 99 555 66 77', 4, 'lead', 'referral', 0],
 ]
 
-// [tur, summa, usul, izoh, mijoz raqami (1 dan) yoki 0, necha kun oldin]
-type TransactionSeed = [TransactionType, number, PaymentMethod, string, number, number]
+// [tur, summa, usul, kategoriya, izoh, mijoz raqami (1 dan) yoki 0, necha kun oldin]
+type TransactionSeed = [TransactionType, number, PaymentMethod, TransactionCategory, string, number, number]
 
 const TRANSACTION_SEED: TransactionSeed[] = [
-  ['income', 650_000, 'payme', 'IELTS - 1-oy to\'lovi', 1, 168],
-  ['income', 1_200_000, 'click', 'Frontend - 1-oy to\'lovi', 2, 158],
-  ['expense', 2_000_000, 'bank', 'Xona ijarasi', 0, 150],
-  ['income', 500_000, 'cash', 'Matematika - 1-oy to\'lovi', 3, 148],
-  ['income', 650_000, 'payme', 'IELTS - 2-oy to\'lovi', 1, 138],
-  ['income', 900_000, 'click', 'Python - 1-oy to\'lovi', 4, 128],
-  ['expense', 3_000_000, 'bank', 'O\'qituvchilar maoshi', 0, 120],
-  ['income', 1_200_000, 'bank', 'Frontend - 2-oy to\'lovi', 2, 118],
-  ['income', 450_000, 'cash', 'Rus tili - 1-oy to\'lovi', 5, 112],
-  ['income', 1_200_000, 'payme', 'Frontend - 1-oy to\'lovi', 6, 98],
-  ['expense', 2_000_000, 'bank', 'Xona ijarasi', 0, 90],
-  ['income', 800_000, 'click', 'Grafik dizayn - 1-oy to\'lovi', 7, 83],
-  ['expense', 800_000, 'click', 'Instagram reklama', 0, 75],
-  ['income', 900_000, 'payme', 'Python - 2-oy to\'lovi', 4, 68],
-  ['expense', 3_000_000, 'bank', 'O\'qituvchilar maoshi', 0, 60],
-  ['income', 500_000, 'cash', 'Matematika - 1-oy to\'lovi', 9, 53],
-  ['income', 900_000, 'click', 'Python - 1-oy to\'lovi', 10, 38],
-  ['expense', 2_000_000, 'bank', 'Xona ijarasi', 0, 30],
-  ['income', 650_000, 'payme', 'IELTS - 1-oy to\'lovi', 11, 23],
-  ['income', 1_200_000, 'click', 'Frontend - 2-oy to\'lovi', 6, 20],
-  ['income', 800_000, 'payme', 'Grafik dizayn - 2-oy to\'lovi', 7, 12],
-  ['expense', 600_000, 'cash', 'Ofis jihozlari', 0, 9],
-  ['income', 800_000, 'cash', 'Grafik dizayn - 1-oy to\'lovi', 13, 6],
-  ['income', 900_000, 'click', 'Python - 2-oy to\'lovi', 10, 4],
-  ['income', 650_000, 'payme', 'IELTS - 2-oy to\'lovi', 11, 0],
+  ['income', 650_000, 'payme', 'course_fee', 'IELTS - 1-oy to\'lovi', 1, 168],
+  ['income', 1_200_000, 'click', 'course_fee', 'Frontend - 1-oy to\'lovi', 2, 158],
+  ['expense', 2_000_000, 'bank', 'rent', 'Xona ijarasi', 0, 150],
+  ['income', 500_000, 'cash', 'course_fee', 'Matematika - 1-oy to\'lovi', 3, 148],
+  ['income', 650_000, 'payme', 'course_fee', 'IELTS - 2-oy to\'lovi', 1, 138],
+  ['expense', 350_000, 'click', 'utilities', 'Elektr va internet', 0, 135],
+  ['income', 900_000, 'click', 'course_fee', 'Python - 1-oy to\'lovi', 4, 128],
+  ['expense', 3_000_000, 'bank', 'salary', 'O\'qituvchilar maoshi', 0, 120],
+  ['income', 1_200_000, 'bank', 'course_fee', 'Frontend - 2-oy to\'lovi', 2, 118],
+  ['income', 450_000, 'cash', 'course_fee', 'Rus tili - 1-oy to\'lovi', 5, 112],
+  ['income', 1_200_000, 'payme', 'course_fee', 'Frontend - 1-oy to\'lovi', 6, 98],
+  ['expense', 2_000_000, 'bank', 'rent', 'Xona ijarasi', 0, 90],
+  ['income', 800_000, 'click', 'course_fee', 'Grafik dizayn - 1-oy to\'lovi', 7, 83],
+  ['expense', 800_000, 'click', 'marketing', 'Instagram reklama', 0, 75],
+  ['income', 900_000, 'payme', 'course_fee', 'Python - 2-oy to\'lovi', 4, 68],
+  ['income', 400_000, 'cash', 'other_income', 'Ochiq dars (master-klass)', 0, 64],
+  ['expense', 3_000_000, 'bank', 'salary', 'O\'qituvchilar maoshi', 0, 60],
+  ['income', 500_000, 'cash', 'course_fee', 'Matematika - 1-oy to\'lovi', 9, 53],
+  ['income', 900_000, 'click', 'course_fee', 'Python - 1-oy to\'lovi', 10, 38],
+  ['expense', 2_000_000, 'bank', 'rent', 'Xona ijarasi', 0, 30],
+  ['income', 650_000, 'payme', 'course_fee', 'IELTS - 1-oy to\'lovi', 11, 23],
+  ['income', 1_200_000, 'click', 'course_fee', 'Frontend - 2-oy to\'lovi', 6, 20],
+  ['expense', 380_000, 'click', 'utilities', 'Elektr va internet', 0, 15],
+  ['income', 800_000, 'payme', 'course_fee', 'Grafik dizayn - 2-oy to\'lovi', 7, 12],
+  ['expense', 600_000, 'cash', 'equipment', 'Ofis jihozlari', 0, 9],
+  ['income', 800_000, 'cash', 'course_fee', 'Grafik dizayn - 1-oy to\'lovi', 13, 6],
+  ['income', 900_000, 'click', 'course_fee', 'Python - 2-oy to\'lovi', 10, 4],
+  ['income', 650_000, 'payme', 'course_fee', 'IELTS - 2-oy to\'lovi', 11, 0],
 ]
 
 export function createMockCustomers(): Customer[] {
@@ -89,11 +92,12 @@ export function createMockCustomers(): Customer[] {
 }
 
 export function createMockTransactions(): Transaction[] {
-  return TRANSACTION_SEED.map(([type, amount, method, note, customerNo, days], index) => ({
+  return TRANSACTION_SEED.map(([type, amount, method, category, note, customerNo, days], index) => ({
     id: `t${index + 1}`,
     type,
     amount,
     method,
+    category,
     note,
     customerId: customerNo > 0 ? `c${customerNo}` : undefined,
     date: daysAgo(days),

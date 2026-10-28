@@ -39,11 +39,27 @@ export function isInRange(iso: string, range: DateRange): boolean {
   return new Date(iso).getTime() >= getRangeStart(range).getTime()
 }
 
+// Sana -> <input type="date"> qiymati (mahalliy vaqt bo'yicha 'YYYY-MM-DD')
+export function toInputDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
+}
+
 export function todayInputValue(): string {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
+  return toInputDate(new Date())
+}
+
+// Summa maydoni: faqat raqamlar, minglik ajratgich bilan "1 200 000"
+export function formatAmountInput(value: string): string {
+  const digits = value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 13)
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
+export function parseAmount(value: string): number {
+  const digits = value.replace(/\D/g, '')
+  return digits ? Number(digits) : 0
 }
 
 export function createId(prefix: string): string {

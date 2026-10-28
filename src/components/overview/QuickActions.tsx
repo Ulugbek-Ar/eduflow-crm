@@ -14,8 +14,18 @@ export function QuickActions() {
 
   const actions: Action[] = [
     { label: 'Yangi mijoz', description: 'Lead yoki o\'quvchi qo\'shish', icon: 'userPlus', onClick: () => openModal({ type: 'customer' }) },
-    { label: 'To\'lov qo\'shish', description: 'Kirim yoki chiqimni qayd etish', icon: 'card', onClick: () => openModal({ type: 'transaction' }) },
-    { label: 'Mijozlar ro\'yxati', description: 'Barcha mijozlarni ko\'rish', icon: 'customers', onClick: () => setActiveSection('customers') },
+    {
+      label: 'To\'lov qabul qilish',
+      description: 'Kurs to\'lovi yoki boshqa kirim',
+      icon: 'card',
+      onClick: () => openModal({ type: 'transaction', payload: { kind: 'income' } }),
+    },
+    {
+      label: 'Xarajat yozish',
+      description: 'Ijara, maosh, reklama va boshqalar',
+      icon: 'receipt',
+      onClick: () => openModal({ type: 'transaction', payload: { kind: 'expense' } }),
+    },
     { label: 'Moliya jurnali', description: 'Tranzaksiyalar tarixi', icon: 'finance', onClick: () => setActiveSection('finance') },
   ]
 
