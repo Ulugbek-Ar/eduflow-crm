@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
-import type { Transaction, TransactionCategory, TransactionFilters } from '../../types/finance.types'
+import type { SortDirection } from '../../types/dashboard.types'
+import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey } from '../../types/finance.types'
 import { filterByPeriod } from '../../utils/analytics'
 import { toOptions } from '../../utils/cx'
 import { paginate } from '../../utils/list'
@@ -23,6 +24,13 @@ import { SortHeader } from '../ui/SortHeader'
 import { FinanceSummary } from './FinanceSummary'
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TransactionCategory[]
+
+const MOBILE_SORTS = [
+  { value: 'date:desc', label: 'Eng yangi' },
+  { value: 'date:asc', label: 'Eng eski' },
+  { value: 'amount:desc', label: 'Summa: kattadan' },
+  { value: 'amount:asc', label: 'Summa: kichikdan' },
+]
 
 export function TransactionTable() {
   const {
@@ -140,6 +148,17 @@ export function TransactionTable() {
             />
             <Input label="Gacha" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} />
           </div>
+          <Select
+            label="Saralash"
+            hideLabel
+            className="mobile-only"
+            value={`${sort.key}:${sort.direction}`}
+            onChange={(e) => {
+              const [key, direction] = e.target.value.split(':') as [TransactionSortKey, SortDirection]
+              setTransactionSort({ key, direction })
+            }}
+            options={MOBILE_SORTS}
+          />
           {filtersActive && (
             <Button variant="subtle" icon="close" onClick={clearFilters}>
               Filtrlarni tozalash

@@ -13,11 +13,13 @@ import { SourceDistribution } from './components/overview/SourceDistribution'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
 import { PasswordPrompt } from './components/auth/PasswordPrompt'
 import { ToastProvider } from './components/ui/Toast'
+import { NAV_ITEMS } from './constants/navigation'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
 import { useAuth } from './hooks/useAuth'
@@ -53,10 +55,42 @@ function ActiveSection() {
   }
 }
 
+// Yozish maydoni ichida bo'lsa tezkor tugmalar ishlamaydi
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+}
+
 function Shell() {
-  const { modal, activeSection, setActiveSection } = useDashboard()
+  const { modal, activeSection, setActiveSection, openModal } = useDashboard()
   const { usingDefaultPassword } = useAuth()
   const [promptDismissed, setPromptDismissed] = useState(false)
+
+  useEffect(() => {
+    const label = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
+    document.title = `${label} · Apex Dashboard`
+  }, [activeSection])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        const search = document.getElementById('global-search')
+        if (search instanceof HTMLInputElement) {
+          search.focus()
+          search.select()
+        }
+        return
+      }
+      const modalOpen = document.querySelector('.modal-overlay') !== null
+      if (event.key.toLowerCase() === 'n' && !event.ctrlKey && !event.metaKey && !event.altKey && !modalOpen && !isTypingTarget(event.target)) {
+        event.preventDefault()
+        openModal({ type: 'customer' })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [openModal])
 
   const goToSecurity = () => {
     setPromptDismissed(true)
@@ -66,10 +100,13 @@ function Shell() {
 
   return (
     <div className="app">
+      <a href="#main-content" className="skip-link">
+        Asosiy kontentga o'tish
+      </a>
       <Sidebar />
       <div className="content">
         <Header />
-        <main className="main" id="main-content">
+        <main className="main" id="main-content" tabIndex={-1}>
           <ErrorBoundary key={activeSection} compact>
             <ActiveSection />
           </ErrorBoundary>
@@ -105,13 +142,15 @@ function AuthGate() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <ConfirmProvider>
-          <AuthProvider>
-            <AuthGate />
-          </AuthProvider>
-        </ConfirmProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <AuthGate />
+            </AuthProvider>
+          </ConfirmProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }

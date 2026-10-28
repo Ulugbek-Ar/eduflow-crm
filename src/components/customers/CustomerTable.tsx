@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
-import type { Customer, CustomerFilters, CustomerStatus } from '../../types/customer.types'
+import type { Customer, CustomerFilters, CustomerSortKey, CustomerStatus } from '../../types/customer.types'
+import type { SortDirection } from '../../types/dashboard.types'
 import { toOptions } from '../../utils/cx'
 import { EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
 import { paginate } from '../../utils/list'
@@ -13,6 +14,16 @@ import { Select } from '../ui/Select'
 import { SortHeader } from '../ui/SortHeader'
 
 const STATUS_OPTIONS = toOptions(STATUS_LABELS)
+
+// Mobilda jadval sarlavhasi yashiriladi, saralash shu ro'yxat orqali
+const MOBILE_SORTS = [
+  { value: 'createdAt:desc', label: 'Eng yangi' },
+  { value: 'createdAt:asc', label: 'Eng eski' },
+  { value: 'name:asc', label: 'Ism (A–Z)' },
+  { value: 'name:desc', label: 'Ism (Z–A)' },
+  { value: 'course:asc', label: 'Kurs bo\'yicha' },
+  { value: 'status:asc', label: 'Holat bo\'yicha' },
+]
 
 export function CustomerTable() {
   const {
@@ -100,6 +111,17 @@ export function CustomerTable() {
           value={filters.source}
           onChange={(e) => setFilter('source', e.target.value as CustomerFilters['source'])}
           options={[{ value: 'all', label: 'Barcha manbalar' }, ...toOptions(SOURCE_LABELS)]}
+        />
+        <Select
+          label="Saralash"
+          hideLabel
+          className="mobile-only"
+          value={`${sort.key}:${sort.direction}`}
+          onChange={(e) => {
+            const [key, direction] = e.target.value.split(':') as [CustomerSortKey, SortDirection]
+            setCustomerSort({ key, direction })
+          }}
+          options={MOBILE_SORTS}
         />
         {filtersActive && (
           <Button variant="subtle" icon="close" onClick={clearFilters}>

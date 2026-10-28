@@ -37,7 +37,7 @@ export function NotificationBell() {
     >
       <button
         type="button"
-        className="icon-btn bell-btn"
+        className="icon-btn header-icon-btn bell-btn"
         aria-label={label}
         title={label}
         aria-expanded={open}

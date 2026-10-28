@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useAuth } from '../../hooks/useAuth'
@@ -18,6 +18,10 @@ export function LoginScreen() {
   const [attempts, setAttempts] = useState(0)
   const [lockedUntil, setLockedUntil] = useState(0)
   const cryptoReady = isCryptoAvailable()
+
+  useEffect(() => {
+    document.title = 'Kirish · Apex Dashboard'
+  }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()

@@ -107,7 +107,7 @@ export function KpiCards() {
             <Icon name={kpi.icon} size={20} />
           </span>
           <div className="kpi-body">
-            <h3>{kpi.label}</h3>
+            <h2 className="kpi-title">{kpi.label}</h2>
             <strong>{kpi.value}</strong>
             <span className="kpi-foot">
               <TrendBadge change={kpi.change} unit={kpi.unit} />

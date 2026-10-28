@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
@@ -10,6 +11,18 @@ export function Sidebar() {
   const { session, logout } = useAuth()
   const toast = useToast()
   const login = session?.login ?? settings.adminLogin
+  const navRef = useRef<HTMLElement>(null)
+
+  // Mobil menyu ochilganda fokus birinchi bo'limga o'tadi, Esc yopadi
+  useEffect(() => {
+    if (!sidebarOpen) return
+    navRef.current?.querySelector<HTMLElement>('button')?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') toggleSidebar()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sidebarOpen, toggleSidebar])
 
   return (
     <>
@@ -24,7 +37,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <nav className="sidebar-nav" aria-label="Bo'limlar">
+        <nav ref={navRef} className="sidebar-nav" aria-label="Bo'limlar">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}

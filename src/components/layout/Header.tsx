@@ -10,6 +10,7 @@ import { filterTransactions, sortTransactions, transactionPeriod } from '../../u
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
 import { NotificationBell } from './NotificationBell'
+import { ThemeToggle } from './ThemeToggle'
 
 const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 
@@ -67,10 +68,14 @@ export function Header() {
           <input
             id="global-search"
             type="search"
-            placeholder="Ism, telefon yoki izoh..."
+            placeholder="Qidiruv..."
+            aria-keyshortcuts="Control+K Meta+K"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <kbd className="search-kbd" aria-hidden="true">
+            Ctrl K
+          </kbd>
         </div>
 
         <div className="segmented" role="group" aria-label="Davr">
@@ -81,13 +86,17 @@ export function Header() {
           ))}
         </div>
 
-        <NotificationBell />
+        <div className="header-icons">
+          <ThemeToggle />
+          <NotificationBell />
+        </div>
 
         <Dropdown
           label="Hisobot yuklash"
           trigger={(props) => (
             <Button icon="download" {...props}>
-              Hisobot yuklash
+              <span className="hide-mobile">Hisobot yuklash</span>
+              <span className="show-mobile">Hisobot</span>
               <Icon name="chevronDown" size={14} />
             </Button>
           )}

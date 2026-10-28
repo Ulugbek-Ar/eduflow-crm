@@ -9,6 +9,8 @@ export interface DropdownItem {
   label: string
   description?: string
   icon?: IconName
+  // Tanlov guruhi uchun (masalan, mavzu): menuitemradio sifatida chiqadi
+  checked?: boolean
   onSelect: () => void
 }
 
@@ -32,7 +34,7 @@ export function Dropdown({ label, trigger, sections, align = 'right' }: Dropdown
 
   useEffect(() => {
     if (!open) return
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    menuRef.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
     const onPointer = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
     }
@@ -46,7 +48,7 @@ export function Dropdown({ label, trigger, sections, align = 'right' }: Dropdown
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])
     const index = items.indexOf(document.activeElement as HTMLElement)
     switch (event.key) {
       case 'ArrowDown':
@@ -97,9 +99,10 @@ export function Dropdown({ label, trigger, sections, align = 'right' }: Dropdown
                 <button
                   key={item.id}
                   type="button"
-                  role="menuitem"
+                  role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+                  aria-checked={item.checked}
                   tabIndex={-1}
-                  className="dropdown-item"
+                  className={cx('dropdown-item', item.checked && 'is-checked')}
                   onClick={() => {
                     item.onSelect()
                     close(true)
@@ -110,6 +113,7 @@ export function Dropdown({ label, trigger, sections, align = 'right' }: Dropdown
                     {item.label}
                     {item.description && <small>{item.description}</small>}
                   </span>
+                  {item.checked && <Icon name="check" size={16} className="dropdown-check" />}
                 </button>
               ))}
             </div>
