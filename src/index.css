@@ -1467,6 +1467,164 @@ body.scroll-locked {
   color: var(--danger);
 }
 
+/* ===== Dropdown ===== */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 250px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.dropdown-menu.align-left {
+  right: auto;
+  left: 0;
+}
+
+.dropdown-section + .dropdown-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.dropdown-heading {
+  padding: 6px 10px 2px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text);
+  text-align: left;
+}
+
+.dropdown-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.dropdown-item small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus-visible {
+  background: var(--primary-soft);
+  outline: none;
+}
+
+/* ===== Xato ekrani ===== */
+.error-screen {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 520px;
+  margin: 10vh auto;
+  padding: 32px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+.error-screen.is-compact {
+  margin: 24px auto;
+}
+
+.error-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.error-screen details {
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.error-screen code {
+  display: block;
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--slate-100);
+  word-break: break-word;
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ===== Sozlamalar: ma'lumotlar ===== */
+.settings-rows {
+  display: grid;
+  gap: 16px;
+}
+
+.notice {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.notice-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.notice-success {
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.import-preview {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+}
+
+.import-preview p {
+  margin: 0;
+}
+
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* ===== Responsiv ===== */
 @media (max-width: 1200px) {
   .kpi-grid {

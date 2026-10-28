@@ -1,20 +1,24 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { DEFAULT_SETTINGS } from '../../constants/mockData'
-import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
-import { useConfirm } from '../../hooks/useConfirm'
-import { dateStamp, downloadJson } from '../../services/export.service'
-import type { Currency, Settings } from '../../types/dashboard.types'
+import type { CsvDelimiter, Currency, Settings } from '../../types/dashboard.types'
+import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
+import { DataSettings } from './DataSettings'
 
 const CURRENCIES: Record<Currency, string> = {
   UZS: 'O\'zbek so\'mi (UZS)',
   USD: 'AQSH dollari (USD)',
 }
 
+const DELIMITERS: Record<CsvDelimiter, string> = {
+  ';': 'Nuqtali vergul (;) — Excel UZ/RU',
+  ',': 'Vergul (,) — Excel EN, Google Sheets',
+}
+
 export function SettingsPanel() {
-  const { settings, updateSettings, resetData, customers, transactions } = useDashboard()
-  const confirm = useConfirm()
+  const { settings, updateSettings } = useDashboard()
   const [form, setForm] = useState<Settings>(settings)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -35,27 +39,6 @@ export function SettingsPanel() {
     setSaved(true)
   }
 
-  const handleReset = async () => {
-    const ok = await confirm({
-      title: 'Ma\'lumotlarni tiklash',
-      message: 'Barcha o\'zgarishlar o\'chadi va demo ma\'lumotlar qaytadi. Davom etasizmi?',
-      confirmLabel: 'Tiklash',
-    })
-    if (!ok) return
-    resetData()
-    setForm({ ...DEFAULT_SETTINGS })
-    setSaved(false)
-  }
-
-  const handleBackup = () => {
-    downloadJson(`apex-zaxira-${dateStamp()}.json`, {
-      exportedAt: new Date().toISOString(),
-      settings,
-      customers,
-      transactions,
-    })
-  }
-
   return (
     <div className="settings-grid">
       <form className="card form" onSubmit={handleSubmit} noValidate>
@@ -65,74 +48,36 @@ export function SettingsPanel() {
             <span className="muted">Asosiy ma'lumotlar</span>
           </div>
         </div>
-
-        <label className="field">
-          <span>Tashkilot nomi *</span>
-          <input
-            className={`input${error ? ' has-error' : ''}`}
-            value={form.orgName}
-            onChange={(e) => update('orgName', e.target.value)}
-          />
-          {error && <small className="error">{error}</small>}
-        </label>
-
-        <label className="field">
-          <span>Valyuta</span>
-          <select className="input" value={form.currency} onChange={(e) => update('currency', e.target.value as Currency)}>
-            {(Object.keys(CURRENCIES) as Currency[]).map((c) => (
-              <option key={c} value={c}>
-                {CURRENCIES[c]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="field">
-          <span>Admin login</span>
-          <input className="input" value={form.adminLogin} readOnly disabled />
-        </label>
-
+        <Input label="Tashkilot nomi" required value={form.orgName} error={error} onChange={(e) => update('orgName', e.target.value)} />
+        <Select
+          label="Valyuta"
+          value={form.currency}
+          onChange={(e) => update('currency', e.target.value as Currency)}
+          options={(Object.keys(CURRENCIES) as Currency[]).map((c) => ({ value: c, label: CURRENCIES[c] }))}
+        />
+        <Select
+          label="CSV ajratgichi"
+          value={form.csvDelimiter}
+          onChange={(e) => update('csvDelimiter', e.target.value as CsvDelimiter)}
+          options={(Object.keys(DELIMITERS) as CsvDelimiter[]).map((d) => ({ value: d, label: DELIMITERS[d] }))}
+        />
         <div className="modal-actions">
           {saved && <span className="text-success">Saqlandi</span>}
-          <button type="submit" className="btn btn-primary">
-            <Icon name="save" size={16} />
-            <span>Saqlash</span>
-          </button>
+          <Button type="submit" icon="save">
+            Saqlash
+          </Button>
         </div>
       </form>
 
-      <div className="card form">
+      <section className="card" aria-labelledby="data-title">
         <div className="card-head">
           <div>
-            <h2>Ma'lumotlar</h2>
-            <span className="muted">
-              {customers.length} ta mijoz, {transactions.length} ta tranzaksiya brauzerda saqlangan
-            </span>
+            <h2 id="data-title">Ma'lumotlar</h2>
+            <span className="muted">Zaxira, tiklash va demo</span>
           </div>
         </div>
-
-        <div className="setting-row">
-          <div>
-            <strong>JSON zaxira</strong>
-            <p className="muted">Barcha ma'lumotlarni bitta faylga yuklab olish</p>
-          </div>
-          <button type="button" className="btn btn-ghost" onClick={handleBackup}>
-            <Icon name="download" size={16} />
-            <span>Yuklab olish</span>
-          </button>
-        </div>
-
-        <div className="setting-row">
-          <div>
-            <strong>Ma'lumotlarni tiklash</strong>
-            <p className="muted">Barcha o'zgarishlar o'chadi va demo ma'lumotlar qaytadi</p>
-          </div>
-          <button type="button" className="btn btn-danger" onClick={handleReset}>
-            <Icon name="refresh" size={16} />
-            <span>Tiklash</span>
-          </button>
-        </div>
-      </div>
+        <DataSettings />
+      </section>
     </div>
   )
 }

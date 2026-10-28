@@ -1,13 +1,19 @@
 import { useState } from 'react'
-import { CATEGORY_LABELS, categoriesFor, DATE_RANGE_LABELS, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
+import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import type { Transaction, TransactionCategory, TransactionFilters } from '../../types/finance.types'
-import { customPeriod, filterByPeriod, getPeriod } from '../../utils/analytics'
+import { filterByPeriod } from '../../utils/analytics'
 import { toOptions } from '../../utils/cx'
 import { formatDate } from '../../utils/format'
 import { paginate } from '../../utils/list'
-import { EMPTY_TRANSACTION_FILTERS, filterTransactions, hasTransactionFilters, sortTransactions } from '../../utils/transactions'
+import {
+  EMPTY_TRANSACTION_FILTERS,
+  filterTransactions,
+  hasTransactionFilters,
+  sortTransactions,
+  transactionPeriod,
+} from '../../utils/transactions'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -45,10 +51,7 @@ export function TransactionTable() {
     setPage(1)
   }
 
-  // Sana oralig'i tanlansa u ishlatiladi, aks holda Header'dagi davr
-  const custom = customPeriod(filters.from, filters.to)
-  const period = custom ?? getPeriod(dateRange)
-  const periodLabel = custom ? 'tanlangan oraliq' : DATE_RANGE_LABELS[dateRange].toLowerCase()
+  const { period, label: periodLabel } = transactionPeriod(filters, dateRange)
 
   const inPeriod = filterByPeriod(transactions, (t) => t.date, period)
   const rows = sortTransactions(filterTransactions(transactions, filters, period, search, getCustomerName), sort)

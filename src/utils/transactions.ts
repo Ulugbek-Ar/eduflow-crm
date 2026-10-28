@@ -1,6 +1,7 @@
-import type { SortState } from '../types/dashboard.types'
+import { DATE_RANGE_LABELS } from '../constants/navigation'
+import type { DateRange, SortState } from '../types/dashboard.types'
 import type { Transaction, TransactionFilters, TransactionSortKey } from '../types/finance.types'
-import { inPeriod } from './analytics'
+import { customPeriod, getPeriod, inPeriod } from './analytics'
 import type { Period } from './analytics'
 import { applyDirection } from './list'
 
@@ -8,6 +9,14 @@ export const EMPTY_TRANSACTION_FILTERS: TransactionFilters = { type: 'all', meth
 
 export function hasTransactionFilters(filters: TransactionFilters): boolean {
   return filters.type !== 'all' || filters.method !== 'all' || filters.category !== 'all' || filters.from !== '' || filters.to !== ''
+}
+
+// Sana oralig'i tanlansa u ishlatiladi, aks holda Header'dagi davr
+export function transactionPeriod(filters: TransactionFilters, dateRange: DateRange): { period: Period; label: string } {
+  const custom = customPeriod(filters.from, filters.to)
+  return custom
+    ? { period: custom, label: 'tanlangan oraliq' }
+    : { period: getPeriod(dateRange), label: DATE_RANGE_LABELS[dateRange].toLowerCase() }
 }
 
 export function filterTransactions(

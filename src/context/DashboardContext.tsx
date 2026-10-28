@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { COURSES } from '../constants/mockData'
-import { loadData, resetToMock, setItem, STORAGE_KEYS } from '../services/storage.service'
+import { loadData, readStored, resetToMock, saveAll, setItem, STORAGE_KEYS } from '../services/storage.service'
+import type { StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
 import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
@@ -30,9 +30,9 @@ function cleanCustomer<T extends Partial<CustomerInput>>(data: T): T {
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [initial] = useState(loadData)
-  const [customers, setCustomers] = useState(initial.customers)
-  const [transactions, setTransactions] = useState(initial.transactions)
-  const [settings, setSettings] = useState(initial.settings)
+  const [customers, setCustomers] = useState(initial.data.customers)
+  const [transactions, setTransactions] = useState(initial.data.transactions)
+  const [settings, setSettings] = useState(initial.data.settings)
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
   const [activeSection, setSection] = useState<Section>('overview')
@@ -47,13 +47,36 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => setItem(STORAGE_KEYS.transactions, transactions), [transactions])
   useEffect(() => setItem(STORAGE_KEYS.settings, settings), [settings])
 
+  // Boshqa tabda o'zgargan ma'lumotni shu tabga olib kelish (storage event faqat boshqa tablarda chiqadi)
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea !== localStorage) return
+      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings]
+      if (!watched.includes(event.key)) return
+      const { data } = readStored()
+      if (event.key === null || event.key === STORAGE_KEYS.customers) setCustomers(data.customers)
+      if (event.key === null || event.key === STORAGE_KEYS.transactions) setTransactions(data.transactions)
+      if (event.key === null || event.key === STORAGE_KEYS.settings) setSettings(data.settings)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi
   const balance = transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0)
 
-  // Standart kurslar + mijozlarda uchraydigan boshqa kurslar
-  const courses = Array.from(new Set([...COURSES, ...customers.map((c) => c.course)]))
+  const courses = settings.courses
 
   const getCustomer = (id?: string) => (id ? customers.find((c) => c.id === id) : undefined)
+
+  const applyData = (data: StoredData) => {
+    setCustomers(data.customers)
+    setTransactions(data.transactions)
+    setSettings(data.settings)
+    setSearch('')
+    setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
+    setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+  }
 
   const value: DashboardContextValue = {
     customers,
@@ -103,14 +126,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     },
     deleteTransaction: (id) => setTransactions((list) => list.filter((t) => t.id !== id)),
     updateSettings: setSettings,
-    resetData: () => {
-      const mock = resetToMock()
-      setCustomers(mock.customers)
-      setTransactions(mock.transactions)
-      setSettings(mock.settings)
-      setSearch('')
-      setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
-      setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+    resetData: () => applyData(resetToMock()),
+    replaceData: (data) => {
+      saveAll(data)
+      applyData(data)
     },
     money: (amount) => formatMoney(amount, settings.currency),
     getCustomerName: (id) => getCustomer(id)?.name ?? '—',

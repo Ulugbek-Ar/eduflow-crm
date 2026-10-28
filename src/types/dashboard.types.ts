@@ -21,8 +21,18 @@ export type ModalState =
 
 export type ModalType = NonNullable<ModalState>['type']
 
+export type DateFormat = 'dd.mm.yyyy' | 'dd/mm/yyyy' | 'yyyy-mm-dd'
+
+export type CsvDelimiter = ';' | ','
+
 export interface Settings {
   orgName: string
+  logoText: string
+  phone: string
+  address: string
   currency: Currency
+  dateFormat: DateFormat
+  csvDelimiter: CsvDelimiter
   adminLogin: string
+  courses: string[]
 }

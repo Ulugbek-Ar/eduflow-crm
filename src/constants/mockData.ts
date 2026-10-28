@@ -13,8 +13,14 @@ export const COURSES = [
 
 export const DEFAULT_SETTINGS: Settings = {
   orgName: 'Apex Academy',
+  logoText: 'AA',
+  phone: '+998 71 200 00 00',
+  address: 'Toshkent sh., Chilonzor tumani',
   currency: 'UZS',
+  dateFormat: 'dd.mm.yyyy',
+  csvDelimiter: ';',
   adminLogin: 'admin',
+  courses: [...COURSES],
 }
 
 // Sanalar "hozir"ga nisbatan hisoblanadi, shunda demo ma'lumotlar doim oxirgi 6 oyni qamrab oladi

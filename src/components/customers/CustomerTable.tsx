@@ -41,6 +41,8 @@ export function CustomerTable() {
     setPage(1)
   }
 
+  // Filtrda sozlamalardagi kurslar va mijozlarda uchraydigan boshqa kurslar
+  const courseOptions = Array.from(new Set([...courses, ...customers.map((c) => c.course)])).filter(Boolean)
   const filtered = sortCustomers(filterCustomers(customers, search, filters), sort)
   const current = paginate(filtered, page, pageSize)
   const filtersActive = hasActiveFilters(filters) || search.trim() !== ''
@@ -90,7 +92,7 @@ export function CustomerTable() {
           hideLabel
           value={filters.course}
           onChange={(e) => setFilter('course', e.target.value)}
-          options={[{ value: 'all', label: 'Barcha kurslar' }, ...courses.map((c) => ({ value: c, label: c }))]}
+          options={[{ value: 'all', label: 'Barcha kurslar' }, ...courseOptions.map((c) => ({ value: c, label: c }))]}
         />
         <Select
           label="Manba"

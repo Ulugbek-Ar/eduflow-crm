@@ -12,6 +12,7 @@ import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
 import { SettingsPanel } from './components/settings/SettingsPanel'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
 
@@ -47,15 +48,17 @@ function ActiveSection() {
 }
 
 function Shell() {
-  const { modal } = useDashboard()
+  const { modal, activeSection } = useDashboard()
 
   return (
     <div className="app">
       <Sidebar />
       <div className="content">
         <Header />
-        <main className="main">
-          <ActiveSection />
+        <main className="main" id="main-content">
+          <ErrorBoundary key={activeSection} compact>
+            <ActiveSection />
+          </ErrorBoundary>
         </main>
       </div>
       {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
@@ -74,10 +77,12 @@ function Shell() {
 
 export default function App() {
   return (
-    <ConfirmProvider>
-      <DashboardProvider>
-        <Shell />
-      </DashboardProvider>
-    </ConfirmProvider>
+    <ErrorBoundary>
+      <ConfirmProvider>
+        <DashboardProvider>
+          <Shell />
+        </DashboardProvider>
+      </ConfirmProvider>
+    </ErrorBoundary>
   )
 }

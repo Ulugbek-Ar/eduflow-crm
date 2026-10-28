@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, Settings, SortState } from '../types/dashboard.types'
+import type { StoredData } from '../services/storage.service'
 import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 
 export interface DashboardContextValue {
@@ -38,6 +39,7 @@ export interface DashboardContextValue {
   deleteTransaction: (id: string) => void
   updateSettings: (settings: Settings) => void
   resetData: () => void
+  replaceData: (data: StoredData) => void
   money: (amount: number) => string
   getCustomerName: (id?: string) => string
 }
