@@ -12,8 +12,9 @@ export const COURSES = [
 ] as const
 
 export const DEFAULT_SETTINGS: Settings = {
-  orgName: 'Apex Academy',
-  logoText: 'AA',
+  orgName: 'EduFlow Academy',
+  // Tashkilot nomining bosh harflari (Sidebar'dagi logo)
+  logoText: 'EA',
   phone: '+998 71 200 00 00',
   address: 'Toshkent sh., Chilonzor tumani',
   currency: 'UZS',

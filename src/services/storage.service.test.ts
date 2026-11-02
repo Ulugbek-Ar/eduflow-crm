@@ -121,7 +121,7 @@ describe('loadData', () => {
     const { data } = loadData()
     expect(data.customers).toEqual([])
     expect(data.transactions).toEqual([])
-    expect(data.settings.orgName).toBe('Apex Academy')
+    expect(data.settings).toMatchObject({ orgName: 'EduFlow Academy', logoText: 'EA' })
   })
 })
 
