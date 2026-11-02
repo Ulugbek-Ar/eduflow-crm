@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmountInput, formatCompact, formatDateWith, formatMoney, formatPercent, parseAmount, toInputDate } from './format'
+import { formatAmountInput, formatCompact, formatDateWith, formatKilobytes, formatMoney, formatPercent, parseAmount, toInputDate } from './format'
 
 // Intl bo'shliq sifatida NBSP qaytarishi mumkin — solishtirishdan oldin oddiy bo'shliqqa keltiramiz
 const plain = (value: string) => value.replace(/\s/g, ' ')
@@ -75,5 +75,12 @@ describe('summa maydoni', () => {
 
   it('toInputDate mahalliy sana bo\'yicha', () => {
     expect(toInputDate(new Date(2026, 9, 5, 23, 59))).toBe('2026-10-05')
+  })
+})
+
+describe('formatKilobytes', () => {
+  it('baytni bir xonali aniqlikdagi KB ga aylantiradi', () => {
+    expect(plain(formatKilobytes(0))).toBe('0,0 KB')
+    expect(plain(formatKilobytes(12_697))).toBe('12,4 KB')
   })
 })

@@ -2,7 +2,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../constants/mockData'
 import { isCustomer, isSettings, isTransaction, sanitizeSettings } from '../utils/guards'
-import { createBackup, getItem, inferCategory, loadData, parseBackup, readJson, SCHEMA_VERSION, setItem, STORAGE_KEYS } from './storage.service'
+import {
+  combineResults,
+  createBackup,
+  createMockData,
+  estimateStorageUsage,
+  getStorageUsage,
+  getItem,
+  inferCategory,
+  isQuotaError,
+  loadData,
+  parseBackup,
+  readJson,
+  saveAll,
+  saveErrorMessage,
+  SCHEMA_VERSION,
+  setItem,
+  STORAGE_KEYS,
+  STORAGE_LIMIT_BYTES,
+  subscribeStorageUsage,
+} from './storage.service'
 
 const validCustomer = {
   id: 'c1',
@@ -177,5 +196,74 @@ describe('parseBackup', () => {
   it('1-bosqich (versiyasiz) zaxirasini migratsiya qiladi', () => {
     const result = parseBackup(JSON.stringify({ exportedAt: '2026-10-01', settings: {}, customers: [validCustomer], transactions: [v1Expense] }))
     expect(result.ok && result.data.transactions[0].category).toBe('rent')
+  })
+})
+
+describe('saqlash xatolari', () => {
+  const quota = () => new DOMException('to\'ldi', 'QuotaExceededError')
+
+  it('setItem muvaffaqiyatda ok qaytaradi', () => {
+    expect(setItem('apex:test', [1, 2])).toEqual({ ok: true })
+    expect(readJson('apex:test')).toEqual([1, 2])
+  })
+
+  it('xotira to\'lsa "quota" qaytaradi, xato tashlamaydi', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw quota()
+    })
+    expect(setItem('apex:test', { a: 1 })).toEqual({ ok: false, reason: 'quota' })
+  })
+
+  it('boshqa xatolar "unavailable"', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('bloklangan', 'SecurityError')
+    })
+    expect(setItem('apex:test', 1)).toEqual({ ok: false, reason: 'unavailable' })
+  })
+
+  it('isQuotaError brauzerlarning turli nomlarini taniydi', () => {
+    expect(isQuotaError(quota())).toBe(true)
+    expect(isQuotaError(new DOMException('ff', 'NS_ERROR_DOM_QUOTA_REACHED'))).toBe(true)
+    expect(isQuotaError(new Error('QuotaExceededError'))).toBe(false)
+  })
+
+  it('saveAll birinchi xatoni qaytaradi', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw quota()
+    })
+    expect(saveAll(createMockData())).toEqual({ ok: false, reason: 'quota' })
+    expect(combineResults([{ ok: true }, { ok: false, reason: 'unavailable' }])).toEqual({ ok: false, reason: 'unavailable' })
+  })
+
+  it('loadData migratsiyani saqlay olmasa saveError beradi', () => {
+    seedV1([validCustomer], [v1Income])
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw quota()
+    })
+    const result = loadData()
+    expect(result.saveError).toBe('quota')
+    expect(result.data.customers).toHaveLength(1)
+  })
+
+  it('xato matni foydalanuvchiga tushunarli', () => {
+    expect(saveErrorMessage('quota')).toBe('Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.')
+  })
+
+  it('estimateStorageUsage UTF-16 bo\'yicha baytlarni hisoblaydi', () => {
+    localStorage.setItem('ab', 'cdef')
+    const usage = estimateStorageUsage()
+    expect(usage.bytes).toBe(12)
+    expect(usage.percent).toBeCloseTo((12 / STORAGE_LIMIT_BYTES) * 100)
+  })
+
+  it('getStorageUsage keshlanadi va yozuvdan keyin obunachiga xabar beradi', () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribeStorageUsage(listener)
+    const before = getStorageUsage()
+    expect(getStorageUsage()).toBe(before)
+    setItem('apex:test', 'katta qiymat')
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(getStorageUsage().bytes).toBeGreaterThan(before.bytes)
+    unsubscribe()
   })
 })

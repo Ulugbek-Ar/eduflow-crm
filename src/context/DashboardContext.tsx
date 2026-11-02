@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { STATUS_LABELS } from '../constants/navigation'
 import { useConfirm } from '../hooks/useConfirm'
 import { useToast } from '../hooks/useToast'
-import { loadData, readStored, resetToMock, saveAll, setItem, STORAGE_KEYS } from '../services/storage.service'
-import type { StoredData } from '../services/storage.service'
+import { loadData, readStored, resetToMock, saveAll, saveErrorMessage, setItem, STORAGE_KEYS } from '../services/storage.service'
+import type { SaveResult, StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
 import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 import { EMPTY_CUSTOMER_FILTERS } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
+import { createSaveMonitor } from '../utils/saveMonitor'
 import { EMPTY_TRANSACTION_FILTERS } from '../utils/transactions'
 import { DashboardContext } from './useDashboard'
 import type { DashboardContextValue } from './useDashboard'
@@ -38,6 +39,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref
   const unsavedRef = useRef(false)
   const startupNoticeRef = useRef(false)
+  const [saveMonitor] = useState(createSaveMonitor)
   const [customers, setCustomers] = useState(initial.data.customers)
   const [transactions, setTransactions] = useState(initial.data.transactions)
   const [settings, setSettings] = useState(initial.data.settings)
@@ -51,6 +53,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>(EMPTY_TRANSACTION_FILTERS)
   const [transactionSort, setTransactionSort] = useState<SortState<TransactionSortKey>>({ key: 'date', direction: 'desc' })
 
+  // Saqlash natijasini kuzatadi: yangi xato bo'lsa bir marta toast chiqadi
+  const reportSave = (key: string, result: SaveResult) => {
+    const reason = saveMonitor.report(key, result)
+    if (reason) toast.error(saveErrorMessage(reason))
+  }
+  // Effektlardan chaqirish uchun: toast o'zgarsa ham effektlar qayta ishga tushmaydi
+  const onSaved = useEffectEvent(reportSave)
+
+  useEffect(() => {
+    // Faqat birinchi yuklashda (migratsiyani qayta saqlash muvaffaqiyatsiz bo'lsa)
+    if (initial.saveError) onSaved('all', { ok: false, reason: initial.saveError })
+  }, [initial.saveError])
+
   useEffect(() => {
     if (initial.dropped > 0 && !startupNoticeRef.current) {
       startupNoticeRef.current = true
@@ -60,15 +75,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (unsavedRef.current) event.preventDefault()
+      // Sozlamalarda saqlanmagan forma yoki brauzerga yozib bo'lmagan ma'lumot bor
+      if (unsavedRef.current || saveMonitor.isFailing()) event.preventDefault()
     }
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [])
+  }, [saveMonitor])
 
-  useEffect(() => setItem(STORAGE_KEYS.customers, customers), [customers])
-  useEffect(() => setItem(STORAGE_KEYS.transactions, transactions), [transactions])
-  useEffect(() => setItem(STORAGE_KEYS.settings, settings), [settings])
+  // Har bir ro'yxat o'zgarganda alohida yoziladi; natija reportSave orqali kuzatiladi
+  useEffect(() => onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers)), [customers])
+  useEffect(() => onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions)), [transactions])
+  useEffect(() => onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings)), [settings])
 
   // Boshqa tabda o'zgargan ma'lumotni shu tabga olib kelish (storage event faqat boshqa tablarda chiqadi)
   useEffect(() => {
@@ -184,13 +201,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       if (!options?.silent) toast.success('Sozlamalar saqlandi')
     },
     resetData: () => {
-      applyData(resetToMock())
-      toast.success('Demo ma\'lumotlar tiklandi')
+      const { data, saved } = resetToMock()
+      applyData(data)
+      reportSave('all', saved)
+      if (saved.ok) toast.success('Demo ma\'lumotlar tiklandi')
     },
     replaceData: (data) => {
-      saveAll(data)
+      const saved = saveAll(data)
       applyData(data)
-      toast.success(`Zaxira tiklandi: ${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+      reportSave('all', saved)
+      if (saved.ok) toast.success(`Zaxira tiklandi: ${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
     },
     money,
     formatDate: (iso) => formatDateWith(iso, settings.dateFormat),

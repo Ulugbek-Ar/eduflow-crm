@@ -2,9 +2,12 @@ import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
+import { useStorageUsage } from '../../hooks/useStorageUsage'
 import { dateStamp, downloadJson } from '../../services/export.service'
-import { createBackup, parseBackup } from '../../services/storage.service'
+import { createBackup, parseBackup, STORAGE_LIMIT_BYTES } from '../../services/storage.service'
 import type { StoredData } from '../../services/storage.service'
+import { cx } from '../../utils/cx'
+import { formatKilobytes, formatPercent } from '../../utils/format'
 import { Button } from '../ui/Button'
 
 interface ImportPreview {
@@ -15,9 +18,13 @@ interface ImportPreview {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+// Shu foizdan oshsa ogohlantirish ko'rsatiladi
+const USAGE_WARNING_PERCENT = 80
+const LIMIT_MB = STORAGE_LIMIT_BYTES / 1024 / 1024
 
 export function DataSettings() {
   const { customers, transactions, settings, resetData, replaceData, formatDate } = useDashboard()
+  const storageUsage = useStorageUsage()
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
@@ -73,6 +80,31 @@ export function DataSettings() {
       <p className="muted">
         Brauzerda saqlangan: {customers.length} ta mijoz, {transactions.length} ta tranzaksiya.
       </p>
+
+      <div className="storage-usage">
+        <div className="progress-meta">
+          <span id="storage-usage-label">Band joy (taxminiy)</span>
+          <span>
+            {formatKilobytes(storageUsage.bytes)} / ~{LIMIT_MB} MB · {formatPercent(storageUsage.percent)}
+          </span>
+        </div>
+        <div
+          className="progress"
+          role="meter"
+          aria-labelledby="storage-usage-label"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(storageUsage.percent)}
+        >
+          <div
+            className={cx('progress-fill', storageUsage.percent >= USAGE_WARNING_PERCENT && 'fill-danger')}
+            style={{ width: `${Math.max(storageUsage.percent, 1)}%` }}
+          />
+        </div>
+        {storageUsage.percent >= USAGE_WARNING_PERCENT && (
+          <p className="notice notice-warning">Brauzer xotirasi deyarli to'lgan — JSON zaxira oling va keraksiz yozuvlarni o'chiring.</p>
+        )}
+      </div>
 
       <div className="setting-row">
         <div>

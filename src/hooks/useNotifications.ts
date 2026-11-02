@@ -20,7 +20,10 @@ function loadState(): NotificationState {
 export function useNotifications(all: AppNotification[]) {
   const [state, setState] = useState(loadState)
 
-  useEffect(() => setItem(KEY, state), [state])
+  // O'qilgan/tozalangan holati muhim emas: saqlanmasa, eslatmalar shunchaki qayta ko'rinadi
+  useEffect(() => {
+    setItem(KEY, state)
+  }, [state])
 
   const visible = all.filter((n) => !state.dismissed.includes(n.id))
   const unread = visible.filter((n) => !state.read.includes(n.id)).length

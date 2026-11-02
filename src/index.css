@@ -2195,6 +2195,15 @@ body.scroll-locked {
   display: block;
 }
 
+.storage-usage {
+  display: grid;
+  gap: 8px;
+}
+
+.storage-usage .progress-meta {
+  margin-bottom: 0;
+}
+
 .import-preview {
   display: grid;
   gap: 6px;

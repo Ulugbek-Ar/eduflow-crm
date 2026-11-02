@@ -18,6 +18,11 @@ export function formatPercent(value: number): string {
   return `${percentFormat.format(value)}%`
 }
 
+// Bayt -> "12,4 KB" (band joy ko'rsatkichi uchun)
+export function formatKilobytes(bytes: number): string {
+  return `${percentFormat.format(bytes / 1024)} KB`
+}
+
 // Qisqa ko'rinish: 1 500 000 -> "1,5 mln", 650 000 -> "650 ming"
 export function formatCompact(value: number): string {
   const abs = Math.abs(value)

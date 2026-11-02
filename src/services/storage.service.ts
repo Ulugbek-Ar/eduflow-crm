@@ -27,6 +27,8 @@ export interface LoadResult {
   data: StoredData
   // Tekshiruvdan o'tmay tashlab yuborilgan yozuvlar soni
   dropped: number
+  // Yuklashda qayta saqlash (migratsiya) muvaffaqiyatsiz bo'lsa
+  saveError?: SaveFailure
 }
 
 // ===== Past darajadagi o'qish/yozish =====
@@ -45,14 +47,92 @@ export function getItem<T>(key: StorageKey, fallback: T, guard: (value: unknown)
   return guard(value) ? value : fallback
 }
 
-export function setItem<T>(key: string, value: T): void {
+// 'quota' — brauzer xotirasi to'lgan; 'unavailable' — saqlash bloklangan yoki boshqa xato
+export type SaveFailure = 'quota' | 'unavailable'
+export type SaveResult = { ok: true } | { ok: false; reason: SaveFailure }
+
+const SAVED: SaveResult = { ok: true }
+
+// Brauzerlar xotira to'lishini turlicha nomlaydi (Chrome/Safari: 22, Firefox: 1014)
+export function isQuotaError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) return false
+  return error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED' || error.code === 22 || error.code === 1014
+}
+
+export function setItem<T>(key: string, value: T): SaveResult {
   try {
     const serialized = JSON.stringify(value)
     // Bir xil qiymatni qayta yozmaslik boshqa tablar bilan cheksiz sinxron aylanishining oldini oladi
-    if (localStorage.getItem(key) !== serialized) localStorage.setItem(key, serialized)
-  } catch {
-    // Xotira to'lgan yoki brauzer saqlashni bloklagan — ilova xotiradagi holat bilan ishlashda davom etadi
+    if (localStorage.getItem(key) !== serialized) {
+      localStorage.setItem(key, serialized)
+      notifyStorageChanged()
+    }
+    return SAVED
+  } catch (error) {
+    // Ilova xotiradagi holat bilan ishlashda davom etadi, lekin chaqiruvchi foydalanuvchini ogohlantirishi kerak
+    return { ok: false, reason: isQuotaError(error) ? 'quota' : 'unavailable' }
   }
+}
+
+// Bir nechta yozuv natijasidan birinchi xato (bo'lmasa — muvaffaqiyat)
+export function combineResults(results: readonly SaveResult[]): SaveResult {
+  return results.find((r) => !r.ok) ?? SAVED
+}
+
+export function saveErrorMessage(reason: SaveFailure): string {
+  return reason === 'quota'
+    ? 'Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.'
+    : 'Ma\'lumot saqlanmadi: brauzer saqlashni bloklagan. JSON zaxira oling.'
+}
+
+// ===== Band joy (taxminiy) =====
+
+// Ko'pchilik brauzerlarda localStorage limiti ~5 MB (aniq qiymatni brauzer bermaydi)
+export const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024
+
+export interface StorageUsage {
+  bytes: number
+  percent: number
+}
+
+// Brauzerlar satrlarni UTF-16 da saqlaydi: kalit + qiymat, har bir belgi ~2 bayt
+export function estimateStorageUsage(storage: Storage = localStorage): StorageUsage {
+  let chars = 0
+  try {
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i)
+      if (key === null) continue
+      chars += key.length + (storage.getItem(key)?.length ?? 0)
+    }
+  } catch {
+    // Saqlash bloklangan bo'lsa 0 deb hisoblanadi
+  }
+  const bytes = chars * 2
+  return { bytes, percent: Math.min(100, (bytes / STORAGE_LIMIT_BYTES) * 100) }
+}
+
+// useSyncExternalStore uchun: har yozuvdan keyin obunachilar xabardor qilinadi, qiymat keshlanadi
+const usageListeners = new Set<() => void>()
+let usageSnapshot: StorageUsage | null = null
+
+function notifyStorageChanged(): void {
+  usageSnapshot = null
+  for (const listener of usageListeners) listener()
+}
+
+export function subscribeStorageUsage(listener: () => void): () => void {
+  usageListeners.add(listener)
+  // Boshqa tabdagi yozuvlar ham band joyni o'zgartiradi
+  window.addEventListener('storage', notifyStorageChanged)
+  return () => {
+    usageListeners.delete(listener)
+    if (usageListeners.size === 0) window.removeEventListener('storage', notifyStorageChanged)
+  }
+}
+
+export function getStorageUsage(): StorageUsage {
+  usageSnapshot ??= estimateStorageUsage()
+  return usageSnapshot
 }
 
 // ===== Migratsiyalar =====
@@ -97,12 +177,14 @@ export function normalizeData(raw: { customers: unknown; transactions: unknown; 
 
 // ===== Yuqori darajadagi API =====
 
-export function saveAll(data: StoredData): void {
-  setItem(STORAGE_KEYS.customers, data.customers)
-  setItem(STORAGE_KEYS.transactions, data.transactions)
-  setItem(STORAGE_KEYS.settings, data.settings)
-  setItem(STORAGE_KEYS.seeded, true)
-  setItem(STORAGE_KEYS.version, SCHEMA_VERSION)
+export function saveAll(data: StoredData): SaveResult {
+  return combineResults([
+    setItem(STORAGE_KEYS.customers, data.customers),
+    setItem(STORAGE_KEYS.transactions, data.transactions),
+    setItem(STORAGE_KEYS.settings, data.settings),
+    setItem(STORAGE_KEYS.seeded, true),
+    setItem(STORAGE_KEYS.version, SCHEMA_VERSION),
+  ])
 }
 
 export function createMockData(): StoredData {
@@ -125,19 +207,21 @@ export function readStored(): LoadResult {
 export function loadData(): LoadResult {
   if (readJson(STORAGE_KEYS.seeded) !== true) {
     const mock = createMockData()
-    saveAll(mock)
-    return { data: mock, dropped: 0 }
+    const saved = saveAll(mock)
+    return { data: mock, dropped: 0, saveError: saved.ok ? undefined : saved.reason }
   }
   const result = readStored()
   const version = readJson(STORAGE_KEYS.version)
-  if (version !== SCHEMA_VERSION || result.dropped > 0) saveAll(result.data)
+  if (version !== SCHEMA_VERSION || result.dropped > 0) {
+    const saved = saveAll(result.data)
+    if (!saved.ok) return { ...result, saveError: saved.reason }
+  }
   return result
 }
 
-export function resetToMock(): StoredData {
-  const mock = createMockData()
-  saveAll(mock)
-  return mock
+export function resetToMock(): { data: StoredData; saved: SaveResult } {
+  const data = createMockData()
+  return { data, saved: saveAll(data) }
 }
 
 // ===== Zaxira (JSON) =====
