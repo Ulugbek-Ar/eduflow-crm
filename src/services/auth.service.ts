@@ -9,10 +9,19 @@ export const DEFAULT_LOGIN = 'admin'
 export const DEFAULT_PASSWORD = 'admin123'
 export const MIN_PASSWORD_LENGTH = 8
 
+// 'sha256' — eski (1–8-bosqich) format, faqat migratsiya uchun o'qiladi
+export type HashAlgo = 'pbkdf2-sha256' | 'sha256'
+
+// OWASP (2023) tavsiyasi: PBKDF2-HMAC-SHA256 uchun kamida 210 000 iteratsiya
+export const PBKDF2_ITERATIONS = 210_000
+const CURRENT_ALGO: HashAlgo = 'pbkdf2-sha256'
+
 export interface Credentials {
   login: string
   salt: string
   passwordHash: string
+  algo: HashAlgo
+  iterations: number
   // Standart parol hali almashtirilmagan
   mustChange: boolean
 }
@@ -23,7 +32,8 @@ export interface Session {
 }
 
 export function isCryptoAvailable(): boolean {
-  return typeof crypto !== 'undefined' && typeof crypto.subtle?.digest === 'function'
+  const subtle = typeof crypto !== 'undefined' ? crypto.subtle : undefined
+  return typeof subtle?.digest === 'function' && typeof subtle.importKey === 'function' && typeof subtle.deriveBits === 'function'
 }
 
 function toHex(buffer: ArrayBuffer): string {
@@ -36,29 +46,76 @@ function randomSalt(): string {
   return toHex(bytes.buffer)
 }
 
-// SHA-256 (Web Crypto) — tuz (salt) bilan, bir xil parollar bir xil hash bermasligi uchun
-export async function hashPassword(password: string, salt: string): Promise<string> {
+// Eski format: SHA-256(salt:parol). Faqat mavjud yozuvlarni tekshirish uchun qoldirilgan
+export async function hashPasswordLegacy(password: string, salt: string): Promise<string> {
   const data = new TextEncoder().encode(`${salt}:${password}`)
   return toHex(await crypto.subtle.digest('SHA-256', data))
 }
 
-function isCredentials(value: unknown): value is Credentials {
-  return (
-    isRecord(value) &&
-    typeof value.login === 'string' &&
-    value.login.length > 0 &&
-    typeof value.salt === 'string' &&
-    typeof value.passwordHash === 'string' &&
-    /^[0-9a-f]{64}$/.test(value.passwordHash) &&
-    typeof value.mustChange === 'boolean'
-  )
+// PBKDF2-HMAC-SHA256 (Web Crypto): sekin hisoblanadi — parolni tanlab topish qimmatlashadi
+export async function hashPassword(password: string, salt: string, iterations = PBKDF2_ITERATIONS): Promise<string> {
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(salt), iterations }, key, 256)
+  return toHex(bits)
+}
+
+// O'zgarmas vaqtli solishtirish: birinchi farq qiluvchi belgida to'xtamaydi (timing hujumlariga qarshi)
+export function timingSafeEqual(a: string, b: string): boolean {
+  const length = Math.max(a.length, b.length)
+  let diff = a.length ^ b.length
+  for (let i = 0; i < length; i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0)
+  return diff === 0
+}
+
+async function hashFor(credentials: Credentials, password: string): Promise<string> {
+  return credentials.algo === 'sha256'
+    ? hashPasswordLegacy(password, credentials.salt)
+    : hashPassword(password, credentials.salt, credentials.iterations)
+}
+
+async function checkPassword(credentials: Credentials, password: string): Promise<boolean> {
+  return timingSafeEqual(await hashFor(credentials, password), credentials.passwordHash)
+}
+
+// Eski algoritm yoki kam iteratsiya — keyingi to'g'ri kirishda yangilanadi
+export function needsRehash(credentials: Credentials): boolean {
+  return credentials.algo !== CURRENT_ALGO || credentials.iterations < PBKDF2_ITERATIONS
+}
+
+async function createHash(password: string): Promise<Pick<Credentials, 'salt' | 'passwordHash' | 'algo' | 'iterations'>> {
+  const salt = randomSalt()
+  return { salt, passwordHash: await hashPassword(password, salt), algo: CURRENT_ALGO, iterations: PBKDF2_ITERATIONS }
+}
+
+// Ikkala formatni qabul qiladi: yangi (algo + iterations) va eski (bu maydonlarsiz, SHA-256)
+export function isCredentials(value: unknown): value is Credentials {
+  if (
+    !isRecord(value) ||
+    typeof value.login !== 'string' ||
+    value.login.length === 0 ||
+    typeof value.salt !== 'string' ||
+    typeof value.passwordHash !== 'string' ||
+    !/^[0-9a-f]{64}$/.test(value.passwordHash) ||
+    typeof value.mustChange !== 'boolean'
+  ) {
+    return false
+  }
+  if (value.algo === undefined) return value.iterations === undefined
+  if (value.algo === 'sha256') return value.iterations === undefined || value.iterations === 1
+  return value.algo === 'pbkdf2-sha256' && Number.isInteger(value.iterations) && (value.iterations as number) > 0
+}
+
+function normalizeCredentials(value: Credentials): Credentials {
+  if (value.algo === undefined || value.algo === 'sha256') return { ...value, algo: 'sha256', iterations: 1 }
+  return value
 }
 
 function readCredentials(): Credentials | null {
   try {
     const raw = localStorage.getItem(AUTH_KEY)
     const parsed: unknown = raw ? JSON.parse(raw) : null
-    return isCredentials(parsed) ? parsed : null
+    return isCredentials(parsed) ? normalizeCredentials(parsed) : null
   } catch {
     return null
   }
@@ -79,13 +136,7 @@ export function getCredentials(): Promise<Credentials> {
   const stored = readCredentials()
   if (stored) return Promise.resolve(stored)
   pending ??= (async () => {
-    const salt = randomSalt()
-    const credentials: Credentials = {
-      login: DEFAULT_LOGIN,
-      salt,
-      passwordHash: await hashPassword(DEFAULT_PASSWORD, salt),
-      mustChange: true,
-    }
+    const credentials: Credentials = { login: DEFAULT_LOGIN, ...(await createHash(DEFAULT_PASSWORD)), mustChange: true }
     writeCredentials(credentials)
     pending = null
     return credentials
@@ -95,8 +146,12 @@ export function getCredentials(): Promise<Credentials> {
 
 export async function verifyLogin(login: string, password: string): Promise<boolean> {
   const credentials = await getCredentials()
-  const hash = await hashPassword(password, credentials.salt)
-  return login.trim().toLowerCase() === credentials.login.toLowerCase() && hash === credentials.passwordHash
+  // Parol login to'g'ri-noto'g'riligidan qat'i nazar tekshiriladi — javob vaqti farq qilmasligi uchun
+  const passwordOk = await checkPassword(credentials, password)
+  const ok = login.trim().toLowerCase() === credentials.login.toLowerCase() && passwordOk
+  // Migratsiya: eski SHA-256 yozuv to'g'ri parol bilan kirilganda PBKDF2 ga yangilanadi
+  if (ok && needsRehash(credentials)) writeCredentials({ ...credentials, ...(await createHash(password)) })
+  return ok
 }
 
 export type ChangeResult = { ok: true; credentials: Credentials } | { ok: false; field: 'current' | 'login' | 'password'; error: string }
@@ -108,7 +163,7 @@ export function validateLogin(login: string): string | null {
 
 export async function changeCredentials(currentPassword: string, newLogin: string, newPassword: string): Promise<ChangeResult> {
   const credentials = await getCredentials()
-  if ((await hashPassword(currentPassword, credentials.salt)) !== credentials.passwordHash) {
+  if (!(await checkPassword(credentials, currentPassword))) {
     return { ok: false, field: 'current', error: 'Joriy parol noto\'g\'ri' }
   }
   const loginError = validateLogin(newLogin)
@@ -119,11 +174,14 @@ export async function changeCredentials(currentPassword: string, newLogin: strin
   if (newPassword && newPassword === DEFAULT_PASSWORD) {
     return { ok: false, field: 'password', error: 'Standart paroldan foydalanib bo\'lmaydi' }
   }
-  const salt = newPassword ? randomSalt() : credentials.salt
+  // Parol o'zgarmasa ham eski formatdagi xesh joriy parol bilan yangilanadi
+  const hash = newPassword ? await createHash(newPassword) : needsRehash(credentials) ? await createHash(currentPassword) : credentials
   const next: Credentials = {
     login: newLogin,
-    salt,
-    passwordHash: newPassword ? await hashPassword(newPassword, salt) : credentials.passwordHash,
+    salt: hash.salt,
+    passwordHash: hash.passwordHash,
+    algo: hash.algo,
+    iterations: hash.iterations,
     mustChange: newPassword ? false : credentials.mustChange,
   }
   writeCredentials(next)

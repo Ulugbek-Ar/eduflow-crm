@@ -3,11 +3,9 @@ import type { FormEvent } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useAuth } from '../../hooks/useAuth'
 import { DEFAULT_LOGIN, DEFAULT_PASSWORD, isCryptoAvailable } from '../../services/auth.service'
+import { formatLockWait, lockRemaining, MAX_ATTEMPTS, readLockState, registerFailure, registerSuccess } from '../../services/loginLock.service'
 import { Button, IconButton } from '../ui/Button'
 import { Input } from '../ui/Input'
-
-const MAX_ATTEMPTS = 5
-const LOCK_MS = 30_000
 
 export function LoginScreen() {
   const { login, usingDefaultPassword } = useAuth()
@@ -15,9 +13,19 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [attempts, setAttempts] = useState(0)
-  const [lockedUntil, setLockedUntil] = useState(0)
+  // Blok holati localStorage'dan: sahifa yangilansa ham saqlanadi
+  const [lock, setLock] = useState(readLockState)
+  const [now, setNow] = useState(Date.now)
   const cryptoReady = isCryptoAvailable()
+  const remaining = lockRemaining(lock, now)
+  const locked = remaining > 0
+
+  // Blok davomida har soniyada qolgan vaqt yangilanadi
+  useEffect(() => {
+    if (!locked) return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [locked])
 
   useEffect(() => {
     document.title = 'Kirish · Apex Dashboard'
@@ -29,23 +37,23 @@ export function LoginScreen() {
       setError('Login va parolni kiriting')
       return
     }
-    if (Date.now() < lockedUntil) {
-      setError('Juda ko\'p urinish. 30 soniyadan keyin qayta urinib ko\'ring')
-      return
-    }
+    // Boshqa tabda blok boshlangan bo'lishi mumkin — har safar saqlangan holat o'qiladi
+    const current = readLockState()
+    setLock(current)
+    setNow(Date.now())
+    if (lockRemaining(current) > 0) return
     setBusy(true)
     const ok = await login(form.login, form.password)
     setBusy(false)
-    if (ok) return
-    const next = attempts + 1
-    setAttempts(next)
-    if (next >= MAX_ATTEMPTS) {
-      setLockedUntil(Date.now() + LOCK_MS)
-      setAttempts(0)
-      setError('Juda ko\'p noto\'g\'ri urinish. 30 soniyadan keyin qayta urinib ko\'ring')
-    } else {
-      setError('Login yoki parol noto\'g\'ri')
+    if (ok) {
+      registerSuccess()
+      return
     }
+    const next = registerFailure()
+    setLock(next)
+    setNow(Date.now())
+    const left = MAX_ATTEMPTS - next.failures
+    setError(lockRemaining(next) > 0 ? '' : `Login yoki parol noto'g'ri. Yana ${left} ta urinish qoldi`)
     setForm((prev) => ({ ...prev, password: '' }))
   }
 
@@ -93,13 +101,20 @@ export function LoginScreen() {
           />
         </div>
 
-        {error && (
+        {locked ? (
           <p className="notice notice-error" role="alert">
-            {error}
+            Juda ko'p noto'g'ri urinish. Kirish vaqtincha bloklandi.{' '}
+            <span aria-live="off">{formatLockWait(remaining)} dan keyin qayta urinib ko'ring.</span>
           </p>
+        ) : (
+          error && (
+            <p className="notice notice-error" role="alert">
+              {error}
+            </p>
+          )
         )}
 
-        <Button type="submit" className="btn-block" disabled={busy || !cryptoReady}>
+        <Button type="submit" className="btn-block" disabled={busy || !cryptoReady || locked}>
           {busy ? 'Tekshirilmoqda...' : 'Kirish'}
         </Button>
 
