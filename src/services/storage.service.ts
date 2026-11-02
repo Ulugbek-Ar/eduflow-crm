@@ -10,6 +10,8 @@ export const STORAGE_KEYS = {
   settings: 'apex:settings',
   seeded: 'apex:seeded',
   version: 'apex:version',
+  // Demo ma'lumot bilan boshlangan (Header'da belgi va tozalash tugmasi ko'rinadi)
+  demo: 'apex:demo',
 } as const
 
 type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
@@ -187,6 +189,10 @@ export function saveAll(data: StoredData): SaveResult {
   ])
 }
 
+export function createEmptyData(): StoredData {
+  return { customers: [], transactions: [], settings: { ...DEFAULT_SETTINGS, courses: [...DEFAULT_SETTINGS.courses] } }
+}
+
 export function createMockData(): StoredData {
   return {
     customers: createMockCustomers(),
@@ -203,13 +209,33 @@ export function readStored(): LoadResult {
   })
 }
 
-// Birinchi ishga tushishda demo ma'lumot yoziladi; eski versiya bo'lsa migratsiya qilinib qayta saqlanadi
+// ===== Birinchi ishga tushish va demo rejim =====
+
+// Hali tanlov qilinmagan (bo'sh yoki demo). Mavjud foydalanuvchilarda apex:seeded === true
+export function isFirstRun(): boolean {
+  return readJson(STORAGE_KEYS.seeded) !== true
+}
+
+export function isDemoMode(): boolean {
+  return readJson(STORAGE_KEYS.demo) === true
+}
+
+export function setDemoMode(demo: boolean): SaveResult {
+  return setItem(STORAGE_KEYS.demo, demo)
+}
+
+// Tanlov ekranidan: 'empty' — bo'sh baza, 'demo' — namunaviy ma'lumot.
+// Boshqa tabda allaqachon tanlangan bo'lsa, mavjud ma'lumot ustidan yozilmaydi.
+export function startFresh(mode: 'empty' | 'demo'): SaveResult {
+  if (!isFirstRun()) return { ok: true }
+  const saved = saveAll(mode === 'demo' ? createMockData() : createEmptyData())
+  return combineResults([saved, setDemoMode(mode === 'demo')])
+}
+
+// Eski versiya bo'lsa migratsiya qilinib qayta saqlanadi. Birinchi ishga tushishda hech narsa yozilmaydi —
+// avval foydalanuvchi FirstRunScreen'da tanlov qiladi
 export function loadData(): LoadResult {
-  if (readJson(STORAGE_KEYS.seeded) !== true) {
-    const mock = createMockData()
-    const saved = saveAll(mock)
-    return { data: mock, dropped: 0, saveError: saved.ok ? undefined : saved.reason }
-  }
+  if (isFirstRun()) return { data: createEmptyData(), dropped: 0 }
   const result = readStored()
   const version = readJson(STORAGE_KEYS.version)
   if (version !== SCHEMA_VERSION || result.dropped > 0) {
@@ -221,7 +247,7 @@ export function loadData(): LoadResult {
 
 export function resetToMock(): { data: StoredData; saved: SaveResult } {
   const data = createMockData()
-  return { data, saved: saveAll(data) }
+  return { data, saved: combineResults([saveAll(data), setDemoMode(true)]) }
 }
 
 // ===== Zaxira (JSON) =====

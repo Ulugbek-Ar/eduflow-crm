@@ -10,6 +10,7 @@ import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
+import { FirstRunScreen } from './components/onboarding/FirstRunScreen'
 import { PasswordPrompt } from './components/auth/PasswordPrompt'
 import { ToastProvider } from './components/ui/Toast'
 import { NAV_ITEMS } from './constants/navigation'
@@ -18,6 +19,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
 import { useAuth } from './hooks/useAuth'
+import { isFirstRun } from './services/storage.service'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
@@ -166,7 +168,10 @@ function Shell() {
 
 function AuthGate() {
   const { session } = useAuth()
+  const [firstRun, setFirstRun] = useState(isFirstRun)
   if (!session) return <LoginScreen />
+  // Ma'lumot avtomatik yozilmaydi: avval "bo'sh" yoki "demo" tanlanadi
+  if (firstRun) return <FirstRunScreen onDone={() => setFirstRun(false)} />
   return (
     <DashboardProvider>
       <Shell />

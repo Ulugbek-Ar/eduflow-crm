@@ -10,7 +10,12 @@ import {
   getStorageUsage,
   getItem,
   inferCategory,
+  isDemoMode,
+  isFirstRun,
   isQuotaError,
+  resetToMock,
+  setDemoMode,
+  startFresh,
   loadData,
   parseBackup,
   readJson,
@@ -71,12 +76,13 @@ describe('o\'qish va yozish', () => {
 })
 
 describe('loadData', () => {
-  it('birinchi ishga tushishda demo ma\'lumot yozadi', () => {
+  it('birinchi ishga tushishda hech narsa yozmaydi va bo\'sh ma\'lumot qaytaradi', () => {
     const { data, dropped } = loadData()
     expect(dropped).toBe(0)
-    expect(data.customers).toHaveLength(15)
-    expect(data.transactions.every(isTransaction)).toBe(true)
-    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
+    expect(data.customers).toEqual([])
+    expect(data.transactions).toEqual([])
+    expect(localStorage.length).toBe(0)
+    expect(isFirstRun()).toBe(true)
   })
 
   it('v1 -> v2 migratsiya: kategoriya, sozlamalar standartlari, versiya', () => {
@@ -181,7 +187,7 @@ describe('parseBackup', () => {
   })
 
   it('o\'z zaxirasini qayta o\'qiydi, buzuq yozuvlarni sanaydi', () => {
-    const { data } = loadData()
+    const data = createMockData()
     const backup = createBackup(data)
     const text = JSON.stringify({ ...backup, customers: [...backup.customers, { id: 'buzuq' }] })
     const result = parseBackup(text)
@@ -265,5 +271,53 @@ describe('saqlash xatolari', () => {
     expect(listener).toHaveBeenCalledTimes(1)
     expect(getStorageUsage().bytes).toBeGreaterThan(before.bytes)
     unsubscribe()
+  })
+})
+
+describe('birinchi ishga tushish va demo rejim', () => {
+  it('"Bo\'sh boshlash": bo\'sh baza, demo rejim o\'chiq', () => {
+    expect(startFresh('empty')).toEqual({ ok: true })
+    expect(isFirstRun()).toBe(false)
+    expect(isDemoMode()).toBe(false)
+    const { data } = loadData()
+    expect(data.customers).toEqual([])
+    expect(data.transactions).toEqual([])
+    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
+  })
+
+  it('"Demo ma\'lumot": namunaviy ma\'lumot yoziladi va demo bayrog\'i qo\'yiladi', () => {
+    startFresh('demo')
+    expect(isDemoMode()).toBe(true)
+    const { data } = loadData()
+    expect(data.customers).toHaveLength(15)
+    expect(data.transactions.every(isTransaction)).toBe(true)
+  })
+
+  it('tanlov allaqachon qilingan bo\'lsa, mavjud ma\'lumot ustidan yozilmaydi', () => {
+    startFresh('empty')
+    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify([validCustomer]))
+    startFresh('demo')
+    expect(isDemoMode()).toBe(false)
+    expect(loadData().data.customers).toHaveLength(1)
+  })
+
+  it('mavjud foydalanuvchida (apex:seeded === true) hech narsa o\'zgarmaydi', () => {
+    localStorage.setItem(STORAGE_KEYS.seeded, 'true')
+    localStorage.setItem(STORAGE_KEYS.version, String(SCHEMA_VERSION))
+    localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify([validCustomer]))
+    localStorage.setItem(STORAGE_KEYS.transactions, '[]')
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(DEFAULT_SETTINGS))
+    const snapshot = { ...localStorage }
+    expect(isFirstRun()).toBe(false)
+    expect(isDemoMode()).toBe(false)
+    expect(loadData().data.customers).toHaveLength(1)
+    expect({ ...localStorage }).toEqual(snapshot)
+  })
+
+  it('demo rejim bayrog\'i: resetToMock yoqadi, setDemoMode(false) o\'chiradi', () => {
+    resetToMock()
+    expect(isDemoMode()).toBe(true)
+    setDemoMode(false)
+    expect(isDemoMode()).toBe(false)
   })
 })

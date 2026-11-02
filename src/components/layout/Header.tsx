@@ -1,5 +1,6 @@
 import { DATE_RANGE_LABELS, Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useConfirm } from '../../hooks/useConfirm'
 import { createBackup } from '../../services/storage.service'
 import { dateStamp, downloadJson, exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
@@ -7,6 +8,7 @@ import type { DateRange } from '../../types/dashboard.types'
 import { filterCustomers, sortCustomers } from '../../utils/customers'
 import { customerColumns, transactionColumns } from '../../utils/reports'
 import { filterTransactions, sortTransactions, transactionPeriod } from '../../utils/transactions'
+import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
 import { NotificationBell } from './NotificationBell'
@@ -31,7 +33,10 @@ export function Header() {
     getCustomerName,
     toggleSidebar,
     formatDate,
+    isDemo,
+    clearDemoData,
   } = useDashboard()
+  const confirm = useConfirm()
 
   const title = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
   const options = { delimiter: settings.csvDelimiter }
@@ -52,11 +57,29 @@ export function Header() {
     downloadJson(`apex-zaxira-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
   }
 
+  const handleClearDemo = async () => {
+    const ok = await confirm({
+      title: 'Demo ma\'lumotni tozalash',
+      message: `Barcha mijozlar (${customers.length}) va tranzaksiyalar (${transactions.length}) o'chiriladi, jumladan demo rejimda o'zingiz qo'shganlari ham. Sozlamalar va kurslar saqlanib qoladi. Davom etasizmi?`,
+      confirmLabel: 'Tozalash',
+    })
+    if (ok) clearDemoData()
+  }
+
   return (
     <header className="header">
       <div className="header-title">
         <IconButton icon="menu" label="Menyuni ochish" className="menu-btn" onClick={toggleSidebar} />
         <h1>{title}</h1>
+        {isDemo && (
+          <span className="demo-banner">
+            <Badge tone="primary">Demo ma'lumot</Badge>
+            <Button variant="ghost" size="sm" icon="trash" onClick={handleClearDemo}>
+              <span className="hide-mobile">Demo ma'lumotni tozalash</span>
+              <span className="show-mobile">Tozalash</span>
+            </Button>
+          </span>
+        )}
       </div>
 
       <div className="header-actions">

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { STATUS_LABELS } from '../constants/navigation'
 import { useConfirm } from '../hooks/useConfirm'
 import { useToast } from '../hooks/useToast'
-import { loadData, readStored, resetToMock, saveAll, saveErrorMessage, setItem, STORAGE_KEYS } from '../services/storage.service'
+import { combineResults, isDemoMode, loadData, readStored, resetToMock, saveAll, saveErrorMessage, setDemoMode, setItem, STORAGE_KEYS } from '../services/storage.service'
 import type { SaveResult, StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
@@ -43,6 +43,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [customers, setCustomers] = useState(initial.data.customers)
   const [transactions, setTransactions] = useState(initial.data.transactions)
   const [settings, setSettings] = useState(initial.data.settings)
+  const [isDemo, setIsDemo] = useState(isDemoMode)
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
   const [activeSection, setSection] = useState<Section>('overview')
@@ -91,8 +92,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.storageArea !== localStorage) return
-      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings]
+      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.demo]
       if (!watched.includes(event.key)) return
+      if (event.key === null || event.key === STORAGE_KEYS.demo) setIsDemo(isDemoMode())
       const { data } = readStored()
       if (event.key === null || event.key === STORAGE_KEYS.customers) setCustomers(data.customers)
       if (event.key === null || event.key === STORAGE_KEYS.transactions) setTransactions(data.transactions)
@@ -130,6 +132,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     modal,
     sidebarOpen,
     balance,
+    isDemo,
     customerFilters,
     customerSort,
     transactionFilters,
@@ -203,13 +206,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     resetData: () => {
       const { data, saved } = resetToMock()
       applyData(data)
+      setIsDemo(true)
       reportSave('all', saved)
       if (saved.ok) toast.success('Demo ma\'lumotlar tiklandi')
     },
+    clearDemoData: () => {
+      setCustomers([])
+      setTransactions([])
+      setSearch('')
+      setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
+      setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+      setIsDemo(false)
+      reportSave(STORAGE_KEYS.demo, setDemoMode(false))
+      toast.success('Demo ma\'lumot tozalandi — endi o\'z ma\'lumotlaringizni kiritishingiz mumkin')
+    },
     replaceData: (data) => {
+      // Zaxiradan tiklangan ma'lumot foydalanuvchiniki hisoblanadi
       const saved = saveAll(data)
       applyData(data)
-      reportSave('all', saved)
+      setIsDemo(false)
+      reportSave('all', combineResults([saved, setDemoMode(false)]))
       if (saved.ok) toast.success(`Zaxira tiklandi: ${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
     },
     money,

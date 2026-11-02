@@ -15,6 +15,8 @@ export interface DashboardContextValue {
   modal: ModalState
   sidebarOpen: boolean
   balance: number
+  // Demo ma'lumot bilan ishlanmoqda
+  isDemo: boolean
   customerFilters: CustomerFilters
   customerSort: SortState<CustomerSortKey>
   transactionFilters: TransactionFilters
@@ -39,6 +41,8 @@ export interface DashboardContextValue {
   deleteTransaction: (id: string) => void
   updateSettings: (settings: Settings, options?: { silent?: boolean }) => void
   resetData: () => void
+  // Demo mijoz va tranzaksiyalarni o'chiradi (sozlamalar qoladi), demo rejimdan chiqadi
+  clearDemoData: () => void
   replaceData: (data: StoredData) => void
   money: (amount: number) => string
   formatDate: (iso: string) => string

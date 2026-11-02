@@ -481,6 +481,7 @@ body.scroll-locked {
 
 .header-title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -2026,6 +2027,69 @@ body.scroll-locked {
   border-radius: 4px;
   background: var(--surface-sunken);
   color: var(--text);
+}
+
+/* ===== Birinchi ishga tushish ===== */
+.first-run {
+  width: min(460px, 100%);
+}
+
+.first-run-options {
+  display: grid;
+  gap: 12px;
+}
+
+.first-run-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease), background 150ms var(--ease);
+}
+
+.first-run-option:hover {
+  border-color: var(--primary);
+  background: var(--surface-sunken);
+}
+
+.first-run-option:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.first-run-option strong,
+.first-run-option small {
+  display: block;
+}
+
+.first-run-option small {
+  margin-top: 2px;
+}
+
+.first-run-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+/* ===== Demo belgisi ===== */
+.demo-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ===== Xato ekrani ===== */
