@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.ts'],
     restoreMocks: true,
     // PBKDF2 (210 000 iteratsiya) sekin CI mashinalarida bir necha soniya olishi mumkin
     testTimeout: 20_000,

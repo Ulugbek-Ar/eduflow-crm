@@ -1,4 +1,5 @@
 import type { CsvDelimiter } from '../types/dashboard.types'
+import { EXPORT_FILE_PREFIX } from '../constants/app'
 
 export interface ExportColumn<T> {
   header: string
@@ -105,7 +106,7 @@ export function exportRows<T>(
   format: ExportFormat,
   options: { delimiter: CsvDelimiter; sheetName: string },
 ): string {
-  const filename = `apex-${baseName}-${dateStamp()}.${format}`
+  const filename = `${EXPORT_FILE_PREFIX}-${baseName}-${dateStamp()}.${format}`
   if (format === 'csv') downloadFile(filename, toCsv(rows, columns, options.delimiter), 'text/csv;charset=utf-8')
   else downloadFile(filename, toSpreadsheetXml(rows, columns, options.sheetName), 'application/vnd.ms-excel;charset=utf-8')
   return filename

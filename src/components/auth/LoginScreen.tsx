@@ -6,6 +6,7 @@ import { DEFAULT_LOGIN, DEFAULT_PASSWORD, isCryptoAvailable } from '../../servic
 import { formatLockWait, lockRemaining, MAX_ATTEMPTS, readLockState, registerFailure, registerSuccess } from '../../services/loginLock.service'
 import { Button, IconButton } from '../ui/Button'
 import { Input } from '../ui/Input'
+import { APP_NAME, pageTitle } from '../../constants/app'
 
 export function LoginScreen() {
   const { login, usingDefaultPassword } = useAuth()
@@ -28,7 +29,7 @@ export function LoginScreen() {
   }, [locked])
 
   useEffect(() => {
-    document.title = 'Kirish · Apex Dashboard'
+    document.title = pageTitle('Kirish')
   }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -65,7 +66,7 @@ export function LoginScreen() {
             <Icon name="logo" size={22} />
           </span>
           <div>
-            <h1 id="login-title">Apex Dashboard</h1>
+            <h1 id="login-title">{APP_NAME}</h1>
             <p className="muted">Boshqaruv paneliga kirish</p>
           </div>
         </div>

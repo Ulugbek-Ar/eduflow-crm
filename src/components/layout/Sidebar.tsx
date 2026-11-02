@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useToast } from '../../hooks/useToast'
 import { cx } from '../../utils/cx'
 import { IconButton } from '../ui/Button'
+import { APP_NAME } from '../../constants/app'
 
 export function Sidebar() {
   const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar } = useDashboard()
@@ -33,7 +34,7 @@ export function Sidebar() {
           </span>
           <div>
             <strong>{settings.orgName}</strong>
-            <small>Apex Dashboard</small>
+            <small>{APP_NAME}</small>
           </div>
         </div>
 

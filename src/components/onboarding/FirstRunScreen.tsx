@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
 import { saveErrorMessage, startFresh } from '../../services/storage.service'
+import { pageTitle } from '../../constants/app'
 
 type Mode = 'empty' | 'demo'
 
@@ -25,7 +26,7 @@ export function FirstRunScreen({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    document.title = 'Boshlash · Apex Dashboard'
+    document.title = pageTitle('Boshlash')
   }, [])
 
   const choose = (mode: Mode) => {

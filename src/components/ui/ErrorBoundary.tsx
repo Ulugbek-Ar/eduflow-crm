@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Icon } from '../../constants/navigation'
+import { APP_NAME } from '../../constants/app'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -20,7 +21,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
-    console.error('Apex Dashboard xatosi:', error, info.componentStack)
+    console.error(`${APP_NAME} xatosi:`, error, info.componentStack)
   }
 
   render() {

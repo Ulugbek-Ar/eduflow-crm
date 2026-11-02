@@ -9,6 +9,7 @@ import type { StoredData } from '../../services/storage.service'
 import { cx } from '../../utils/cx'
 import { formatKilobytes, formatPercent } from '../../utils/format'
 import { Button } from '../ui/Button'
+import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
 interface ImportPreview {
   fileName: string
@@ -31,7 +32,7 @@ export function DataSettings() {
   const [error, setError] = useState('')
 
   const handleBackup = () => {
-    downloadJson(`apex-zaxira-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
   }
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {

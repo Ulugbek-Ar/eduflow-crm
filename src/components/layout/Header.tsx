@@ -13,6 +13,7 @@ import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
 import { NotificationBell } from './NotificationBell'
 import { ThemeToggle } from './ThemeToggle'
+import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
 const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 
@@ -54,7 +55,7 @@ export function Header() {
   }
 
   const exportBackup = () => {
-    downloadJson(`apex-zaxira-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
   }
 
   const handleClearDemo = async () => {

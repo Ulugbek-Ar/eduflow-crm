@@ -22,9 +22,12 @@
   [headers.values]
     Cache-Control = "no-cache"
 
+# Content-Security-Policy: vercel.json dagi bilan bir xil bo'lishi kerak (test tekshiradi).
+# Inline skript yo'q (mavzu skripti public/theme-init.js da), shuning uchun script-src 'self' yetarli
 [[headers]]
   for = "/*"
   [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"

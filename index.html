@@ -3,11 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Apex Dashboard</title>
-    <meta
-      name="description"
-      content="Apex Dashboard — ta'lim markazlari va kichik biznes uchun CRM: mijozlar bazasi, to'lovlar, kassa balansi, hisobotlar va analitika bitta panelda."
-    />
+    <title>%APP_NAME%</title>
+    <meta name="description" content="%APP_NAME% — %APP_DESCRIPTION%." />
     <meta name="theme-color" content="#4f46e5" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -15,8 +12,8 @@
 
     <!-- Open Graph: deploy qilingandan so'ng og:url va og:image ni to'liq domen bilan almashtiring -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Apex Dashboard" />
-    <meta property="og:title" content="Apex Dashboard — Business & Education CRM" />
+    <meta property="og:site_name" content="%APP_NAME%" />
+    <meta property="og:title" content="%APP_NAME% — Business & Education CRM" />
     <meta property="og:description" content="Mijozlar, to'lovlar va analitika bitta panelda. O'zbek tilida, mobil va dark mode bilan." />
     <meta property="og:locale" content="uz_UZ" />
     <meta property="og:image" content="/og-image.jpg" />
@@ -24,16 +21,11 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <script>
-      // Mavzuni birinchi chizishdan oldin qo'llash (oq "miltillash" bo'lmasligi uchun)
-      try {
-        var theme = JSON.parse(localStorage.getItem('apex:theme'))
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
-      } catch (e) {}
-    </script>
+    <!-- Mavzu (dark/light) birinchi chizishdan oldin; inline emas — CSP uchun -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
-    <noscript>Apex Dashboard ishlashi uchun brauzerda JavaScript yoqilgan bo'lishi kerak.</noscript>
+    <noscript>%APP_NAME% ishlashi uchun brauzerda JavaScript yoqilgan bo'lishi kerak.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

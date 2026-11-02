@@ -3,6 +3,7 @@ import type { Customer } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
 import type { Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
 import { isCustomer, isRecord, isTransaction, keepValid, sanitizeSettings } from '../utils/guards'
+import { APP_NAME, BACKUP_APP_ID } from '../constants/app'
 
 export const STORAGE_KEYS = {
   customers: 'apex:customers',
@@ -265,13 +266,13 @@ export function resetToMock(): { data: StoredData; saved: SaveResult } {
 // ===== Zaxira (JSON) =====
 
 export interface Backup extends StoredData {
-  app: 'apex-dashboard'
+  app: typeof BACKUP_APP_ID
   version: number
   exportedAt: string
 }
 
 export function createBackup(data: StoredData): Backup {
-  return { app: 'apex-dashboard', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), ...data }
+  return { app: BACKUP_APP_ID, version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), ...data }
 }
 
 export type BackupParseResult = { ok: true; data: StoredData; dropped: number; exportedAt?: string } | { ok: false; error: string }
@@ -284,7 +285,7 @@ export function parseBackup(text: string): BackupParseResult {
     return { ok: false, error: 'Fayl JSON formatida emas yoki buzilgan' }
   }
   if (!isRecord(json) || !Array.isArray(json.customers) || !Array.isArray(json.transactions)) {
-    return { ok: false, error: 'Bu Apex Dashboard zaxira fayli emas: mijozlar yoki tranzaksiyalar ro\'yxati topilmadi' }
+    return { ok: false, error: `Bu ${APP_NAME} zaxira fayli emas: mijozlar yoki tranzaksiyalar ro'yxati topilmadi` }
   }
   if (typeof json.version === 'number' && json.version > SCHEMA_VERSION) {
     return { ok: false, error: 'Zaxira ilovaning yangiroq versiyasida yaratilgan' }

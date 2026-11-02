@@ -20,6 +20,7 @@ import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
 import { useAuth } from './hooks/useAuth'
 import { isFirstRun } from './services/storage.service'
+import { pageTitle } from './constants/app'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
@@ -101,7 +102,7 @@ function Shell() {
 
   useEffect(() => {
     const label = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
-    document.title = `${label} · Apex Dashboard`
+    document.title = pageTitle(label)
   }, [activeSection])
 
   useEffect(() => {
