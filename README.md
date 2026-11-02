@@ -91,6 +91,8 @@ Birinchi kirishda parolni almashtirish taklif qilinadi (Sozlamalar → Xavfsizli
 
 Ketma-ket 5 ta noto'g'ri urinishdan keyin kirish bloklanadi: 30 s → 60 s → 120 s → … (eng ko'pi 15 daqiqa).
 Blok `localStorage`'da saqlanadi — sahifani yangilash uni bekor qilmaydi. To'g'ri kirish hisoblagichni tozalaydi.
+Oxirgi blok tugaganidan 24 soat o'tsa (blok bo'lmagan bo'lsa — oxirgi noto'g'ri urinishdan), hisoblagich va blok tarixi
+nolga tushadi: keyingi blok yana 30 soniyadan boshlanadi.
 
 ## Scriptlar
 
@@ -147,7 +149,7 @@ Backend yo'q — barcha ma'lumot **foydalanuvchi brauzerining `localStorage`'ida
 | `apex:version`                                       | Sxema versiyasi (hozir 3; migratsiyalar uchun)   |
 | `apex:seeded`, `apex:demo`                           | Birinchi tanlov qilingan / demo rejim            |
 | `apex:auth`                                          | Login, tuz va parol xeshi (PBKDF2-SHA256, `algo` va `iterations` bilan) |
-| `apex:login-lock`                                    | Noto'g'ri urinishlar hisoblagichi va blok muddati |
+| `apex:login-lock`                                    | Noto'g'ri urinishlar hisoblagichi, blok muddati va oxirgi urinish vaqti |
 | `apex:theme`, `apex:notifications`                   | Mavzu va o'qilgan eslatmalar                     |
 | `apex:session` (sessionStorage)                      | Joriy sessiya — tab yopilganda tugaydi           |
 

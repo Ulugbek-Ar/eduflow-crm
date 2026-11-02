@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { LOGIN_LOCK_KEY, MAX_ATTEMPTS } from '../../services/loginLock.service'
+import { LOCK_RESET_MS, LOGIN_LOCK_KEY, MAX_ATTEMPTS } from '../../services/loginLock.service'
 import { renderApp, seedCredentials, TEST_LOGIN, TEST_PASSWORD } from '../../test/helpers'
 
 async function submit(user: ReturnType<typeof renderApp>['user'], login: string, password: string) {
@@ -45,6 +45,16 @@ describe('LoginScreen', () => {
     renderApp()
     expect(screen.getByRole('alert').textContent).toContain('Kirish vaqtincha bloklandi')
     expect((screen.getByRole('button', { name: 'Kirish' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('24 soatdan oldin tugagan blok xalaqit bermaydi, urinishlar noldan sanaladi (eski format)', async () => {
+    await seedCredentials()
+    localStorage.setItem(LOGIN_LOCK_KEY, JSON.stringify({ failures: 3, lockCount: 6, lockedUntil: Date.now() - LOCK_RESET_MS - 1000 }))
+    const { user } = renderApp()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect((screen.getByRole('button', { name: 'Kirish' }) as HTMLButtonElement).disabled).toBe(false)
+    await submit(user, TEST_LOGIN, 'xato-parol')
+    expect(await screen.findByText(`Login yoki parol noto'g'ri. Yana ${MAX_ATTEMPTS - 1} ta urinish qoldi`)).toBeTruthy()
   })
 
   it('blok paytida to\'g\'ri parol ham qabul qilinmaydi', async () => {
