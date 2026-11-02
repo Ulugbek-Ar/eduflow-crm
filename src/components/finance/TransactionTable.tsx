@@ -39,6 +39,7 @@ export function TransactionTable() {
     setSearch,
     dateRange,
     money,
+    getCustomer,
     getCustomerName,
     deleteTransaction,
     openModal,
@@ -219,7 +220,9 @@ export function TransactionTable() {
                       <td data-label="Kategoriya">{CATEGORY_LABELS[t.category]}</td>
                       <td data-label="Izoh">{t.note || '—'}</td>
                       <td data-label="Mijoz">
-                        {t.customerId ? (
+                        {t.customerId && !getCustomer(t.customerId) ? (
+                          <span className="muted">{getCustomerName(t.customerId)}</span>
+                        ) : t.customerId ? (
                           <button
                             type="button"
                             className="link-btn"

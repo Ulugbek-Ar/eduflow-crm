@@ -5,7 +5,7 @@ import { useConfirm } from '../../hooks/useConfirm'
 import type { Customer, CustomerFilters, CustomerSortKey, CustomerStatus } from '../../types/customer.types'
 import type { SortDirection } from '../../types/dashboard.types'
 import { toOptions } from '../../utils/cx'
-import { EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
+import { deleteCustomerMessage, EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
 import { paginate } from '../../utils/list'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -39,6 +39,8 @@ export function CustomerTable() {
     deleteCustomer,
     openModal,
     formatDate,
+    transactions,
+    money,
   } = useDashboard()
   const confirm = useConfirm()
   const [page, setPage] = useState(1)
@@ -70,7 +72,7 @@ export function CustomerTable() {
   const handleDelete = async (customer: Customer) => {
     const ok = await confirm({
       title: 'Mijozni o\'chirish',
-      message: `"${customer.name}" mijozi butunlay o'chiriladi. Unga bog'liq to'lovlar jurnalda qoladi. Davom etasizmi?`,
+      message: deleteCustomerMessage(customer, transactions, money),
       confirmLabel: 'O\'chirish',
     })
     if (ok) deleteCustomer(customer.id)

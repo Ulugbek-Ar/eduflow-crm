@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Customer } from '../types/customer.types'
-import { filterCustomers, sortCustomers, validateCustomer } from './customers'
+import type { Transaction } from '../types/finance.types'
+import { customerPayments, deleteCustomerMessage, deletedCustomerName, filterCustomers, resolveCustomerName, sortCustomers, validateCustomer } from './customers'
 import { paginate } from './list'
 import { formatPhone, isValidPhone } from './phone'
 
@@ -67,5 +68,42 @@ describe('filtr, saralash, sahifalash', () => {
     const page = paginate(Array.from({ length: 37 }, (_, i) => i), 9, 10)
     expect(page).toMatchObject({ page: 4, pageCount: 4, from: 31, to: 37, total: 37 })
     expect(paginate([], 1, 10)).toMatchObject({ from: 0, to: 0, pageCount: 1 })
+  })
+})
+
+describe('mijozni o\'chirish va bog\'liq to\'lovlar', () => {
+  const tx = (id: string, amount: number, type: Transaction['type'] = 'income', customerId: string | undefined = 'c1'): Transaction => ({
+    id,
+    type,
+    amount,
+    method: 'cash',
+    category: type === 'income' ? 'course_fee' : 'rent',
+    note: '',
+    customerId,
+    date: '2026-10-01T10:00:00.000Z',
+  })
+  const money = (amount: number) => `${amount} so'm`
+
+  it('customerPayments: soni va jami kirim', () => {
+    expect(customerPayments('c1', [tx('t1', 500), tx('t2', 300), tx('t3', 900, 'income', 'c2')])).toEqual({ count: 2, total: 800 })
+  })
+
+  it('tasdiqlash matnida to\'lovlar soni va summasi bor', () => {
+    const message = deleteCustomerMessage(base, [tx('t1', 500), tx('t2', 300)], money)
+    expect(message).toContain('2 ta to\'lov')
+    expect(message).toContain('jami 800 so\'m')
+    expect(message).toContain('"Aziza Karimova (o\'chirilgan)"')
+  })
+
+  it('to\'lov bo\'lmasa buni aytadi', () => {
+    expect(deleteCustomerMessage(base, [], money)).toContain('to\'lovlar yo\'q')
+  })
+
+  it('resolveCustomerName: mavjud, o\'chirilgan va bog\'lanmagan', () => {
+    expect(resolveCustomerName('c1', base, 'Eski')).toBe('Aziza Karimova')
+    expect(resolveCustomerName('c1', undefined, 'Aziza Karimova')).toBe('Aziza Karimova (o\'chirilgan)')
+    expect(resolveCustomerName('c1', undefined, undefined)).toBe(deletedCustomerName())
+    expect(deletedCustomerName()).toBe('Mijoz (o\'chirilgan)')
+    expect(resolveCustomerName(undefined, undefined, undefined)).toBe('—')
   })
 })

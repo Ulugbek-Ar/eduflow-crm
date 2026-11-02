@@ -71,6 +71,7 @@ export function isTransaction(value: unknown): value is Transaction {
     CATEGORY_TYPE[value.category] === value.type &&
     typeof value.note === 'string' &&
     isOptionalString(value.customerId) &&
+    isOptionalString(value.customerName) &&
     isIsoDate(value.date) &&
     (value.updatedAt === undefined || isIsoDate(value.updatedAt))
   )

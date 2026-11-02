@@ -16,6 +16,9 @@ export interface Transaction {
   category: TransactionCategory
   note: string
   customerId?: string
+  // Mijoz nomi snapshot'i: to'lov yaratilganda yoki mijoz o'chirilganda yoziladi,
+  // mijoz o'chirilgandan keyin ham jurnalda kimning to'lovi ekani ko'rinib turadi
+  customerName?: string
   date: string
   updatedAt?: string
 }

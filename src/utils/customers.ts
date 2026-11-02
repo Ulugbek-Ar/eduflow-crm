@@ -1,5 +1,6 @@
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey, CustomerStatus } from '../types/customer.types'
 import type { SortState } from '../types/dashboard.types'
+import type { Transaction } from '../types/finance.types'
 import { applyDirection, compareText } from './list'
 import { isValidPhone, phoneDigits } from './phone'
 
@@ -83,4 +84,31 @@ export function getInitials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
+}
+
+// Mijozga bog'liq to'lovlar: soni va jami kirim summasi
+export function customerPayments(customerId: string, transactions: readonly Transaction[]): { count: number; total: number } {
+  const own = transactions.filter((t) => t.customerId === customerId)
+  return { count: own.length, total: own.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : 0), 0) }
+}
+
+// O'chirishni tasdiqlash matni — jadvalda ham, mijoz kartasida ham bir xil
+export function deleteCustomerMessage(customer: Customer, transactions: readonly Transaction[], money: (amount: number) => string): string {
+  const { count, total } = customerPayments(customer.id, transactions)
+  const payments =
+    count > 0
+      ? `Unga bog'liq ${count} ta to'lov (jami ${money(total)}) jurnalda "${deletedCustomerName(customer.name)}" nomi bilan qoladi.`
+      : 'Unga bog\'liq to\'lovlar yo\'q.'
+  return `"${customer.name}" mijozi butunlay o'chiriladi. ${payments} Davom etasizmi?`
+}
+
+export function deletedCustomerName(name?: string): string {
+  return `${name || 'Mijoz'} (o'chirilgan)`
+}
+
+// Mijoz bazada bo'lsa — joriy ismi; o'chirilgan bo'lsa — tranzaksiyadagi snapshot + "(o'chirilgan)"
+export function resolveCustomerName(customerId: string | undefined, customer: Customer | undefined, snapshot: string | undefined): string {
+  if (!customerId) return '—'
+  if (customer) return customer.name
+  return deletedCustomerName(snapshot)
 }

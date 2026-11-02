@@ -8,7 +8,7 @@ import type { SaveResult, StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
 import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
-import { EMPTY_CUSTOMER_FILTERS } from '../utils/customers'
+import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
 import { createSaveMonitor } from '../utils/saveMonitor'
 import { EMPTY_TRANSACTION_FILTERS } from '../utils/transactions'
@@ -19,7 +19,10 @@ function cleanTransaction<T extends Partial<TransactionInput>>(data: T): T {
   const result = { ...data }
   if (result.note !== undefined) result.note = result.note.trim()
   if (result.type === 'expense') result.customerId = undefined
-  if ('customerId' in result && !result.customerId) result.customerId = undefined
+  if ('customerId' in result && !result.customerId) {
+    result.customerId = undefined
+    result.customerName = undefined
+  }
   return result
 }
 
@@ -110,6 +113,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const courses = settings.courses
 
   const getCustomer = (id?: string) => (id ? customers.find((c) => c.id === id) : undefined)
+
+  // Mijoz tanlangan bo'lsa, uning joriy ismi snapshot sifatida yoziladi
+  const withCustomerName = <T extends Partial<TransactionInput>>(data: T): T => {
+    const customer = getCustomer(data.customerId)
+    return customer ? { ...data, customerName: customer.name } : data
+  }
+
+  // O'chirilgan mijozlar ismi tranzaksiyalardagi snapshot'dan olinadi
+  const snapshotNames = new Map<string, string>()
+  for (const t of transactions) if (t.customerId && t.customerName) snapshotNames.set(t.customerId, t.customerName)
   const money = (amount: number) => formatMoney(amount, settings.currency)
 
   const applyData = (data: StoredData) => {
@@ -184,15 +197,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     deleteCustomer: (id) => {
       const name = getCustomer(id)?.name ?? 'Mijoz'
       setCustomers((list) => list.filter((c) => c.id !== id))
+      // Bog'liq to'lovlar jurnalda qoladi — ism snapshot'i o'chirish paytidagi holatga yangilanadi
+      setTransactions((list) => list.map((t) => (t.customerId === id ? { ...t, customerName: name } : t)))
       toast.success(`"${name}" o'chirildi`)
     },
     addTransaction: (data) => {
-      setTransactions((list) => [{ ...cleanTransaction(data), id: createId('t') }, ...list])
+      setTransactions((list) => [{ ...withCustomerName(cleanTransaction(data)), id: createId('t') }, ...list])
       toast.success(`${data.type === 'income' ? 'To\'lov' : 'Xarajat'} qayd etildi: ${money(data.amount)}`)
     },
     updateTransaction: (id, patch) => {
       const updatedAt = new Date().toISOString()
-      setTransactions((list) => list.map((t) => (t.id === id ? { ...t, ...cleanTransaction(patch), updatedAt } : t)))
+      const clean = withCustomerName(cleanTransaction(patch))
+      setTransactions((list) => list.map((t) => (t.id === id ? { ...t, ...clean, updatedAt } : t)))
       toast.success('Tranzaksiya yangilandi')
     },
     deleteTransaction: (id) => {
@@ -230,7 +246,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     },
     money,
     formatDate: (iso) => formatDateWith(iso, settings.dateFormat),
-    getCustomerName: (id) => getCustomer(id)?.name ?? '—',
+    getCustomerName: (id) => resolveCustomerName(id, getCustomer(id), id ? snapshotNames.get(id) : undefined),
   }
 
   return <DashboardContext value={value}>{children}</DashboardContext>

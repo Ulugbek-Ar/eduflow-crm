@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../constants/mockData'
+import type { Customer } from '../types/customer.types'
+import type { Transaction } from '../types/finance.types'
 import { isCustomer, isSettings, isTransaction, sanitizeSettings } from '../utils/guards'
 import {
   combineResults,
   createBackup,
   createMockData,
   estimateStorageUsage,
+  fillCustomerNames,
   getStorageUsage,
   getItem,
   inferCategory,
@@ -319,5 +322,35 @@ describe('birinchi ishga tushish va demo rejim', () => {
     expect(isDemoMode()).toBe(true)
     setDemoMode(false)
     expect(isDemoMode()).toBe(false)
+  })
+})
+
+describe('v2 -> v3: mijoz nomi snapshot\'i', () => {
+  const v2Income = { ...v1Income, category: 'course_fee' }
+
+  it('mavjud mijozlar nomi tranzaksiyalarga ko\'chiriladi va versiya 3 bo\'ladi', () => {
+    seedV1([validCustomer], [v2Income, { ...v2Income, id: 't9', customerId: 'yoq' }, v1Expense])
+    localStorage.setItem(STORAGE_KEYS.version, '2')
+    const { data } = loadData()
+    expect(SCHEMA_VERSION).toBe(3)
+    expect(data.transactions.map((t) => t.customerName)).toEqual(['Aziza Karimova', undefined, undefined])
+    expect(readJson(STORAGE_KEYS.version)).toBe(3)
+    const stored = readJson(STORAGE_KEYS.transactions) as Array<{ customerName?: string }>
+    expect(stored[0].customerName).toBe('Aziza Karimova')
+  })
+
+  it('mavjud snapshot ustidan yozilmaydi', () => {
+    const tx = { ...v2Income, customerName: 'Eski ism' } as Transaction
+    expect(fillCustomerNames([tx], [validCustomer as Customer])[0].customerName).toBe('Eski ism')
+  })
+
+  it('guard: customerName ixtiyoriy satr', () => {
+    expect(isTransaction({ ...v2Income, customerName: 'Aziza' })).toBe(true)
+    expect(isTransaction({ ...v2Income, customerName: 42 })).toBe(false)
+  })
+
+  it('v2 zaxirasi ham migratsiya qilinadi', () => {
+    const result = parseBackup(JSON.stringify({ version: 2, settings: {}, customers: [validCustomer], transactions: [v2Income] }))
+    expect(result.ok && result.data.transactions[0].customerName).toBe('Aziza Karimova')
   })
 })

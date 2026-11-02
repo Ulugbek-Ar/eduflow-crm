@@ -16,8 +16,9 @@ export const STORAGE_KEYS = {
 
 type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 
-// v1 — MVP; v2 — category, ixtiyoriy mijoz maydonlari, kengaytirilgan sozlamalar
-export const SCHEMA_VERSION = 2
+// v1 — MVP; v2 — category, ixtiyoriy mijoz maydonlari, kengaytirilgan sozlamalar;
+// v3 — tranzaksiyada mijoz nomi snapshot'i (customerName)
+export const SCHEMA_VERSION = 3
 
 export interface StoredData {
   customers: Customer[]
@@ -160,6 +161,16 @@ function migrateTransaction(value: unknown): unknown {
   return { ...value, note, category: inferCategory(type, note, value.customerId) }
 }
 
+// v2 -> v3: mijozi bazada bor tranzaksiyalarga ism snapshot'i ko'chiriladi
+export function fillCustomerNames(transactions: readonly Transaction[], customers: readonly Customer[]): Transaction[] {
+  const names = new Map(customers.map((c) => [c.id, c.name]))
+  return transactions.map((t) => {
+    if (!t.customerId || t.customerName) return t
+    const name = names.get(t.customerId)
+    return name ? { ...t, customerName: name } : t
+  })
+}
+
 function usedCourses(customers: readonly Customer[]): string[] {
   return Array.from(new Set([...DEFAULT_SETTINGS.courses, ...customers.map((c) => c.course).filter(Boolean)]))
 }
@@ -169,11 +180,12 @@ export function normalizeData(raw: { customers: unknown; transactions: unknown; 
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
   const customers = keepValid(rawCustomers, isCustomer)
-  const transactions = keepValid(rawTransactions, isTransaction)
+  const valid = keepValid(rawTransactions, isTransaction)
+  const transactions = fillCustomerNames(valid, customers)
   const settings = sanitizeSettings(raw.settings, usedCourses(customers))
   return {
     data: { customers, transactions, settings },
-    dropped: rawCustomers.length - customers.length + (rawTransactions.length - transactions.length),
+    dropped: rawCustomers.length - customers.length + (rawTransactions.length - valid.length),
   }
 }
 

@@ -1,7 +1,7 @@
 import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
-import { getInitials } from '../../utils/customers'
+import { deleteCustomerMessage, getInitials } from '../../utils/customers'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -27,7 +27,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const handleDelete = async () => {
     const ok = await confirm({
       title: 'Mijozni o\'chirish',
-      message: `"${customer.name}" mijozi butunlay o'chiriladi. Davom etasizmi?`,
+      message: deleteCustomerMessage(customer, transactions, money),
       confirmLabel: 'O\'chirish',
     })
     if (ok) {
