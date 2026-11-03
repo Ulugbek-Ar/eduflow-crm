@@ -312,3 +312,75 @@ export function recentActivity(customers: readonly Customer[], transactions: rea
   ]
   return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit)
 }
+
+// ===== Tahlil va hisobotlar =====
+
+// O'rtacha chek (AOV) = davrdagi "To'langan" kirimlar summasi / shunday to'lovlar soni; to'lov bo'lmasa null
+export function averageOrderValue(transactions: readonly Transaction[]): { value: number | null; count: number; total: number } {
+  const paid = transactions.filter((t) => t.type === 'income' && isPaid(t))
+  const total = paid.reduce((sum, t) => sum + t.amount, 0)
+  return { value: paid.length > 0 ? total / paid.length : null, count: paid.length, total }
+}
+
+export interface SourcePerformance {
+  source: CustomerSource
+  // Davrda shu manbadan kelgan lidlar
+  leads: number
+  // Ulardan "To'lov qildi" bosqichidagilar
+  paid: number
+  // paid / leads × 100; lid bo'lmasa null
+  conversion: number | null
+  // Davrdagi "To'langan" marketing chiqimlari (manbasi ko'rsatilgan)
+  spend: number
+  // CPL = chiqim / lidlar; chiqim yoki lid 0 bo'lsa null ("—", nolga bo'linmaydi)
+  cpl: number | null
+  // Shu manbadan kelgan (istalgan vaqtda) mijozlarning davrdagi "To'langan" kirimlari
+  revenue: number
+  // ROI = (kirim − chiqim) / chiqim × 100; chiqim 0 bo'lsa null
+  roi: number | null
+}
+
+export function safeRatio(numerator: number, denominator: number): number | null {
+  return denominator > 0 ? numerator / denominator : null
+}
+
+function performanceRow(source: CustomerSource, leads: number, paid: number, spend: number, revenue: number): SourcePerformance {
+  const conversionRatio = safeRatio(paid, leads)
+  const roiRatio = safeRatio(revenue - spend, spend)
+  return {
+    source,
+    leads,
+    paid,
+    conversion: conversionRatio === null ? null : conversionRatio * 100,
+    spend,
+    cpl: spend > 0 ? safeRatio(spend, leads) : null,
+    revenue,
+    roi: roiRatio === null ? null : roiRatio * 100,
+  }
+}
+
+export function sourcePerformance(
+  customers: readonly Customer[],
+  transactions: readonly Transaction[],
+  sources: readonly CustomerSource[],
+  period: Period,
+): SourcePerformance[] {
+  const leadsInPeriod = filterByPeriod(customers, (c) => c.createdAt, period)
+  const txInPeriod = filterByPeriod(transactions, (t) => t.date, period).filter(isPaid)
+  const sourceOf = new Map(customers.map((c) => [c.id, c.source]))
+  return sources.map((source) => {
+    const leads = leadsInPeriod.filter((c) => c.source === source)
+    const spend = txInPeriod.filter((t) => t.type === 'expense' && t.category === 'marketing' && t.source === source).reduce((sum, t) => sum + t.amount, 0)
+    const revenue = txInPeriod
+      .filter((t) => t.type === 'income' && t.customerId !== undefined && sourceOf.get(t.customerId) === source)
+      .reduce((sum, t) => sum + t.amount, 0)
+    return performanceRow(source, leads.length, leads.filter((c) => c.status === 'paid').length, spend, revenue)
+  })
+}
+
+// Jadvalning "Jami" qatori: yig'indilardan qayta hisoblanadi (o'rtachalarning o'rtachasi emas)
+export function totalPerformance(rows: readonly SourcePerformance[]): Omit<SourcePerformance, 'source'> {
+  const sum = (key: 'leads' | 'paid' | 'spend' | 'revenue') => rows.reduce((total, r) => total + r[key], 0)
+  const { source: _source, ...total } = performanceRow('website', sum('leads'), sum('paid'), sum('spend'), sum('revenue'))
+  return total
+}

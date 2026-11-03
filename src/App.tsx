@@ -7,7 +7,6 @@ import { RecentActivity } from './components/overview/RecentActivity'
 import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
-import { EmptyState } from './components/ui/EmptyState'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
@@ -54,21 +53,12 @@ function ActiveSection() {
     case 'courses':
       return <CoursesPanel />
     case 'analytics':
-      return <SectionPlaceholder section={activeSection} />
+      return <AnalyticsPanel />
     case 'settings':
       return <SettingsPanel />
   }
 }
 
-// Yangi bo'limlar to'liq tayyor bo'lgunga qadar vaqtinchalik ekran
-function SectionPlaceholder({ section }: { section: 'analytics' }) {
-  const label = NAV_ITEMS.find((item) => item.id === section)?.label ?? ''
-  return (
-    <section className="card">
-      <EmptyState title={label} description="Bu bo'lim tayyorlanmoqda." />
-    </section>
-  )
-}
 
 // Og'irroq bo'limlar va modallar alohida chunk'larda: birinchi ochilishda yuklanadigan JS kamayadi
 const loadTransactionTable = () => import('./components/finance/TransactionTable')
@@ -77,6 +67,7 @@ const loadCustomerForm = () => import('./components/customers/CustomerFormModal'
 const loadCustomerDetail = () => import('./components/customers/CustomerDetail')
 const loadTransactionForm = () => import('./components/finance/TransactionFormModal')
 const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
+const loadAnalyticsPanel = () => import('./components/analytics/AnalyticsPanel')
 const loadCourseForm = () => import('./components/courses/CourseFormModal')
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
@@ -85,11 +76,12 @@ const CustomerFormModal = lazy(() => loadCustomerForm().then((m) => ({ default: 
 const CustomerDetail = lazy(() => loadCustomerDetail().then((m) => ({ default: m.CustomerDetail })))
 const TransactionFormModal = lazy(() => loadTransactionForm().then((m) => ({ default: m.TransactionFormModal })))
 const CoursesPanel = lazy(() => loadCoursesPanel().then((m) => ({ default: m.CoursesPanel })))
+const AnalyticsPanel = lazy(() => loadAnalyticsPanel().then((m) => ({ default: m.AnalyticsPanel })))
 const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.CourseFormModal })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
-  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm]) {
+  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel]) {
     load().catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })

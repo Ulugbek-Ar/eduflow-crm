@@ -3,6 +3,7 @@ import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import {
   activeCustomersAt,
+  averageOrderValue,
   breakdown,
   cashBalance,
   conversion,
@@ -21,10 +22,13 @@ import {
   payingCustomers,
   pointChange,
   recentActivity,
+  safeRatio,
   shiftMonths,
+  sourcePerformance,
   sourceStats,
   sumExpense,
   sumIncome,
+  totalPerformance,
   trend,
 } from './analytics'
 
@@ -300,5 +304,62 @@ describe('overviewKpis', () => {
       newLeads: { value: 0, change: null },
       conversion: { value: null, change: null },
     })
+  })
+})
+
+describe('tahlil formulalari', () => {
+  const october = getPeriod('month', NOW)
+
+  it('AOV = to\'langan kirimlar summasi / ular soni; to\'lov bo\'lmasa null', () => {
+    const list = [
+      tx({ type: 'income', amount: 600, date: at(2026, 9, 1) }),
+      tx({ type: 'income', amount: 300, date: at(2026, 9, 2) }),
+      tx({ type: 'income', amount: 5000, date: at(2026, 9, 2), status: 'pending' }),
+      tx({ type: 'expense', amount: 999, date: at(2026, 9, 2) }),
+    ]
+    expect(averageOrderValue(list)).toEqual({ value: 450, count: 2, total: 900 })
+    expect(averageOrderValue([])).toEqual({ value: null, count: 0, total: 0 })
+  })
+
+  it('manbalar samaradorligi: lidlar, konversiya, CPL, ROI', () => {
+    const people = [
+      customer({ id: 'i1', source: 'instagram', status: 'paid', createdAt: at(2026, 9, 2) }),
+      customer({ id: 'i2', source: 'instagram', status: 'new', createdAt: at(2026, 9, 3) }),
+      customer({ id: 'i3', source: 'instagram', status: 'paid', createdAt: at(2026, 9, 4) }),
+      customer({ id: 'i4', source: 'instagram', status: 'contacted', createdAt: at(2026, 9, 5) }),
+      // O'tgan oyda kelgan, lekin shu oy to'lagan — kirim ROI ga kiradi, lid soniga emas
+      customer({ id: 'i0', source: 'instagram', status: 'paid', createdAt: at(2026, 8, 5) }),
+      customer({ id: 't1', source: 'telegram', status: 'new', createdAt: at(2026, 9, 5) }),
+    ]
+    const money = [
+      tx({ type: 'expense', category: 'marketing', source: 'instagram', amount: 400_000, date: at(2026, 9, 1) }),
+      tx({ type: 'expense', category: 'marketing', source: 'instagram', amount: 999_000, date: at(2026, 9, 1), status: 'pending' }),
+      tx({ type: 'expense', category: 'marketing', amount: 50_000, date: at(2026, 9, 1) }), // manbasiz
+      tx({ type: 'income', customerId: 'i1', amount: 650_000, date: at(2026, 9, 10) }),
+      tx({ type: 'income', customerId: 'i0', amount: 350_000, date: at(2026, 9, 11) }),
+      tx({ type: 'income', customerId: 'i3', amount: 100_000, date: at(2026, 8, 11) }), // davrdan tashqari
+    ]
+    const [instagram, telegram, website] = sourcePerformance(people, money, ['instagram', 'telegram', 'website'], october)
+    expect(instagram).toEqual({ source: 'instagram', leads: 4, paid: 2, conversion: 50, spend: 400_000, cpl: 100_000, revenue: 1_000_000, roi: 150 })
+    // Chiqim 0 — CPL va ROI "—" (null), nolga bo'linmaydi
+    expect(telegram).toMatchObject({ leads: 1, paid: 0, conversion: 0, spend: 0, cpl: null, revenue: 0, roi: null })
+    expect(website).toMatchObject({ leads: 0, conversion: null, cpl: null, roi: null })
+    expect(totalPerformance([instagram, telegram, website])).toEqual({
+      leads: 5,
+      paid: 2,
+      conversion: 40,
+      spend: 400_000,
+      cpl: 80_000,
+      revenue: 1_000_000,
+      roi: 150,
+    })
+  })
+
+  it('ROI manfiy bo\'lishi mumkin; safeRatio nolga bo\'lmaydi', () => {
+    const people = [customer({ id: 'a', source: 'website', createdAt: at(2026, 9, 2) })]
+    const money = [tx({ type: 'expense', category: 'marketing', source: 'website', amount: 200, date: at(2026, 9, 2) })]
+    expect(sourcePerformance(people, money, ['website'], october)[0]).toMatchObject({ cpl: 200, roi: -100 })
+    expect(safeRatio(1, 0)).toBeNull()
+    expect(safeRatio(3, 4)).toBe(0.75)
   })
 })

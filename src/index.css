@@ -1795,6 +1795,42 @@ body.scroll-locked {
   font-size: 1.25rem;
 }
 
+.report-list {
+  display: grid;
+}
+
+.report-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.report-list li > div:first-child {
+  display: grid;
+}
+
+.table-total th,
+.table-total td {
+  border-top: 2px solid var(--border-strong);
+  font-weight: 600;
+}
+
+.table .table-total th {
+  background: transparent;
+  color: var(--text);
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.formula-note {
+  margin-top: 12px;
+}
+
 .summary-hint {
   display: block;
   margin-top: 2px;
@@ -2894,10 +2930,17 @@ body.scroll-locked {
 
   .table,
   .table tbody,
+  .table tfoot,
   .table tr,
-  .table td {
+  .table td,
+  .table .table-total th {
     display: block;
     width: 100%;
+  }
+
+  .table .table-total th {
+    padding: 4px 0;
+    border: 0;
   }
 
   .table tr {

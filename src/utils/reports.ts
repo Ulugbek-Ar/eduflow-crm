@@ -2,6 +2,8 @@ import { CATEGORY_LABELS, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS
 import type { ExportColumn } from '../services/export.service'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
+import type { SourcePerformance } from './analytics'
+import type { DebtRow } from './debts'
 
 export function customerColumns(formatDate: (iso: string) => string): ExportColumn<Customer>[] {
   return [
@@ -30,5 +32,33 @@ export function transactionColumns(
     { header: 'Manba', value: (t) => (t.source ? SOURCE_LABELS[t.source] : ''), width: 90 },
     { header: 'Mijoz', value: (t) => (t.customerId ? getCustomerName(t.customerId) : ''), width: 160 },
     { header: 'Izoh', value: (t) => t.note, width: 220 },
+  ]
+}
+
+export function debtColumns(): ExportColumn<DebtRow>[] {
+  return [
+    { header: 'Mijoz', value: (r) => r.customer.name, width: 160 },
+    { header: 'Telefon', value: (r) => r.customer.phone, width: 130 },
+    { header: 'Kurs', value: (r) => r.course.name, width: 150 },
+    { header: 'Kutilgan', value: (r) => r.expected, type: 'number', width: 100 },
+    { header: 'To\'langan', value: (r) => r.paid, type: 'number', width: 100 },
+    { header: 'Qarz', value: (r) => r.debt, type: 'number', width: 100 },
+    { header: 'Kutilmoqda', value: (r) => r.pending, type: 'number', width: 100 },
+  ]
+}
+
+// Bo'sh qiymat ("—") eksportda bo'sh katak bo'lib chiqadi — Excel'da raqam ustuni buzilmaydi
+const optionalNumber = (value: number | null) => (value === null ? '' : Math.round(value * 10) / 10)
+
+export function sourceColumns(): ExportColumn<SourcePerformance>[] {
+  return [
+    { header: 'Manba', value: (r) => SOURCE_LABELS[r.source], width: 100 },
+    { header: 'Lidlar', value: (r) => r.leads, type: 'number', width: 70 },
+    { header: 'To\'lov qildi', value: (r) => r.paid, type: 'number', width: 80 },
+    { header: 'Konversiya, %', value: (r) => optionalNumber(r.conversion), type: 'number', width: 90 },
+    { header: 'Marketing chiqimi', value: (r) => r.spend, type: 'number', width: 110 },
+    { header: 'CPL', value: (r) => optionalNumber(r.cpl === null ? null : Math.round(r.cpl)), type: 'number', width: 90 },
+    { header: 'Kirim', value: (r) => r.revenue, type: 'number', width: 110 },
+    { header: 'ROI, %', value: (r) => optionalNumber(r.roi), type: 'number', width: 80 },
   ]
 }
