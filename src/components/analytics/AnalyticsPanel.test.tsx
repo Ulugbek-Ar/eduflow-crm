@@ -93,3 +93,15 @@ describe('Umumiy CPL va manbasiz marketing chiqimi', () => {
     expect(plain(screen.getByText(/Manbasi ko'rsatilmagan marketing chiqimi/).textContent)).toContain('100 000 so\'m')
   })
 })
+
+describe('Voronka va kurslar bo\'yicha tushum', () => {
+  it('davr lidlari bosqichlar bo\'yicha va kurslar tushumi', async () => {
+    await openAnalytics(data)
+    const funnel = screen.getByRole('region', { name: 'Sotuv voronkasi' })
+    expect(within(funnel).getByRole('progressbar', { name: 'To\'lov qildi ulushi' }).getAttribute('aria-valuenow')).toBe('50')
+    expect(within(funnel).getByRole('progressbar', { name: 'Yangi ulushi' }).getAttribute('aria-valuenow')).toBe('50')
+    const table = screen.getByRole('table', { name: 'Kurslar bo\'yicha tushum' })
+    const first = within(table).getAllByRole('row')[1]
+    expect(within(first).getAllByRole('cell').map((c) => plain(c.textContent))).toEqual(['Ingliz tili (IELTS)', '1', '800 000 so\'m', '650 000 so\'m'])
+  })
+})

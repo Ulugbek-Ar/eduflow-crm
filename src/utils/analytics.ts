@@ -1,4 +1,5 @@
-import type { Customer, CustomerSource } from '../types/customer.types'
+import type { Course } from '../types/course.types'
+import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
 
@@ -383,4 +384,45 @@ export function totalPerformance(rows: readonly SourcePerformance[]): Omit<Sourc
   const sum = (key: 'leads' | 'paid' | 'spend' | 'revenue') => rows.reduce((total, r) => total + r[key], 0)
   const { source: _source, ...total } = performanceRow('website', sum('leads'), sum('paid'), sum('spend'), sum('revenue'))
   return total
+}
+
+// ===== Voronka va kurslar =====
+
+export interface FunnelRow {
+  stage: CustomerStatus
+  count: number
+  // Davr lidlariga nisbatan ulush (0–100)
+  share: number
+}
+
+// Davrda kelgan lidlar hozir qaysi bosqichda turibdi
+export function funnelStats(customers: readonly Customer[], stages: readonly CustomerStatus[], period: Period): FunnelRow[] {
+  const leads = filterByPeriod(customers, (c) => c.createdAt, period)
+  return stages.map((stage) => {
+    const count = leads.filter((c) => c.status === stage).length
+    return { stage, count, share: leads.length > 0 ? (count / leads.length) * 100 : 0 }
+  })
+}
+
+export interface CourseRevenueRow {
+  course: Course
+  // "To'lov qildi" bosqichidagi talabalar
+  students: number
+  // Davrda shu kurs mijozlaridan tushgan "To'langan" kirim
+  revenue: number
+  // Oylik kutilayotgan tushum = talabalar × oylik narx
+  expectedMonthly: number
+}
+
+export function courseRevenue(customers: readonly Customer[], courses: readonly Course[], transactions: readonly Transaction[], period: Period): CourseRevenueRow[] {
+  const courseOf = new Map(customers.map((c) => [c.id, c.course]))
+  const income = filterByPeriod(transactions, (t) => t.date, period).filter((t) => t.type === 'income' && isPaid(t) && t.customerId)
+  return courses
+    .map((course) => {
+      const students = customers.filter((c) => c.course === course.name && c.status === 'paid').length
+      const revenue = income.filter((t) => courseOf.get(t.customerId ?? '') === course.name).reduce((sum, t) => sum + t.amount, 0)
+      return { course, students, revenue, expectedMonthly: students * course.monthlyPrice }
+    })
+    .filter((row) => row.course.status === 'active' || row.revenue > 0 || row.students > 0)
+    .sort((a, b) => b.revenue - a.revenue || b.expectedMonthly - a.expectedMonthly)
 }

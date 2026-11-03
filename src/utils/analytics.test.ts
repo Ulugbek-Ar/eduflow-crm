@@ -7,8 +7,10 @@ import {
   breakdown,
   cashBalance,
   conversion,
+  courseRevenue,
   customPeriod,
   filterByPeriod,
+  funnelStats,
   getPeriod,
   getPreviousPeriod,
   groupByMonth,
@@ -373,5 +375,57 @@ describe('activeCustomersAt: paidAt bo\'yicha', () => {
     ]
     expect(activeCustomersAt(list, new Date(2026, 8, 30))).toBe(2)
     expect(activeCustomersAt(list, new Date(2026, 9, 28))).toBe(3)
+  })
+})
+
+describe('voronka va kurslar bo\'yicha tushum', () => {
+  const october = getPeriod('month', NOW)
+
+  it('funnelStats: davr lidlari bosqichlar bo\'yicha, ulushlar', () => {
+    const people = [
+      customer({ status: 'new', createdAt: at(2026, 9, 2) }),
+      customer({ status: 'paid', createdAt: at(2026, 9, 3) }),
+      customer({ status: 'paid', createdAt: at(2026, 9, 4) }),
+      customer({ status: 'cancelled', createdAt: at(2026, 9, 5) }),
+      customer({ status: 'paid', createdAt: at(2026, 8, 5) }), // davrdan tashqari
+    ]
+    const rows = funnelStats(people, ['new', 'contacted', 'thinking', 'paid', 'cancelled'], october)
+    expect(rows.map((r) => [r.stage, r.count, r.share])).toEqual([
+      ['new', 1, 25],
+      ['contacted', 0, 0],
+      ['thinking', 0, 0],
+      ['paid', 2, 50],
+      ['cancelled', 1, 25],
+    ])
+    expect(funnelStats([], ['new'], october)).toEqual([{ stage: 'new', count: 0, share: 0 }])
+  })
+
+  it('courseRevenue: kurs mijozlaridan davrdagi to\'langan kirim, talabalar va kutilgan tushum', () => {
+    const course = (id: string, name: string, monthlyPrice: number, status: 'active' | 'archived' = 'active') => ({
+      id,
+      name,
+      type: 'course' as const,
+      durationMonths: 6,
+      monthlyPrice,
+      activeGroups: 1,
+      status,
+      createdAt: at(2026, 0, 1),
+    })
+    const people = [
+      customer({ id: 'a', course: 'IELTS', status: 'paid' }),
+      customer({ id: 'b', course: 'IELTS', status: 'new' }),
+      customer({ id: 'c', course: 'Python', status: 'paid' }),
+    ]
+    const money = [
+      tx({ type: 'income', customerId: 'a', amount: 650, date: at(2026, 9, 5) }),
+      tx({ type: 'income', customerId: 'c', amount: 900, date: at(2026, 9, 6) }),
+      tx({ type: 'income', customerId: 'c', amount: 900, date: at(2026, 9, 7), status: 'pending' }),
+      tx({ type: 'income', customerId: 'a', amount: 650, date: at(2026, 8, 5) }), // davrdan tashqari
+    ]
+    const rows = courseRevenue(people, [course('k1', 'IELTS', 650), course('k2', 'Python', 900), course('k3', 'Koreys', 500, 'archived')], money, october)
+    expect(rows.map((r) => [r.course.name, r.students, r.revenue, r.expectedMonthly])).toEqual([
+      ['Python', 1, 900, 900],
+      ['IELTS', 1, 650, 650],
+    ])
   })
 })

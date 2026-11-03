@@ -1,9 +1,20 @@
-import { DATE_RANGE_LABELS, Icon, SOURCE_LABELS } from '../../constants/navigation'
+import { DATE_RANGE_LABELS, FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
 import type { CustomerSource } from '../../types/customer.types'
-import { averageOrderValue, conversion, filterByPeriod, getPeriod, safeRatio, sourcePerformance, sumExpense, totalPerformance } from '../../utils/analytics'
+import {
+  averageOrderValue,
+  conversion,
+  courseRevenue,
+  filterByPeriod,
+  funnelStats,
+  getPeriod,
+  safeRatio,
+  sourcePerformance,
+  sumExpense,
+  totalPerformance,
+} from '../../utils/analytics'
 import { computeDebts } from '../../utils/debts'
 import { formatNumber, formatPercent } from '../../utils/format'
 import { customerColumns, debtColumns, sourceColumns, transactionColumns } from '../../utils/reports'
@@ -32,6 +43,8 @@ export function AnalyticsPanel() {
   const unattributed = marketing - total.spend
   const overallCpl = marketing > 0 ? safeRatio(marketing, leadsInPeriod.length) : null
   const overallConversion = conversion(leadsInPeriod)
+  const funnel = funnelStats(customers, FUNNEL_STAGES, period)
+  const byCourse = courseRevenue(customers, courses, transactions, period)
 
   const percent = (value: number | null) => (value === null ? '—' : formatPercent(value))
   const signedPercent = (value: number | null) => (value === null ? '—' : `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatPercent(Math.abs(value))}`)
@@ -110,6 +123,94 @@ export function AnalyticsPanel() {
           </div>
         </article>
       </section>
+
+      <div className="split-grid">
+        <section className="card" aria-labelledby="funnel-title">
+          <div className="card-head">
+            <div>
+              <h2 id="funnel-title">Sotuv voronkasi</h2>
+              <span className="muted">
+                {periodLabel} kelgan {leadsInPeriod.length} ta lid hozir qaysi bosqichda
+              </span>
+            </div>
+          </div>
+          {leadsInPeriod.length === 0 ? (
+            <p className="muted">Bu davrda lid kelmagan.</p>
+          ) : (
+            <ul className="progress-list">
+              {funnel.map((row) => (
+                <li key={row.stage}>
+                  <div className="progress-meta">
+                    <span>
+                      <span className={`stage-dot stage-${row.stage}`} aria-hidden="true" /> {STATUS_LABELS[row.stage]}
+                    </span>
+                    <span className="muted">
+                      {row.count} ta · {Math.round(row.share)}%
+                    </span>
+                  </div>
+                  <div
+                    className="progress"
+                    role="progressbar"
+                    aria-label={`${STATUS_LABELS[row.stage]} ulushi`}
+                    aria-valuenow={Math.round(row.share)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div className={`progress-fill stage-${row.stage}`} style={{ width: `${row.share}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="card" aria-labelledby="course-revenue-title">
+          <div className="card-head">
+            <div>
+              <h2 id="course-revenue-title">Kurslar bo'yicha tushum</h2>
+              <span className="muted">{periodLabel} · to'langan kirimlar</span>
+            </div>
+          </div>
+          {byCourse.length === 0 ? (
+            <p className="muted">Kurs qo'shilmagan.</p>
+          ) : (
+            <div className="table-wrap">
+              <table className="table" aria-label="Kurslar bo'yicha tushum">
+                <thead>
+                  <tr>
+                    <th scope="col">Kurs</th>
+                    <th scope="col" className="align-right">
+                      Talabalar
+                    </th>
+                    <th scope="col" className="align-right">
+                      Tushum
+                    </th>
+                    <th scope="col" className="align-right">
+                      Oylik kutilgan
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {byCourse.map((row) => (
+                    <tr key={row.course.id}>
+                      <td data-label="Kurs">{row.course.name}</td>
+                      <td data-label="Talabalar" className="align-right">
+                        {row.students}
+                      </td>
+                      <td data-label="Tushum" className="align-right nowrap strong">
+                        {money(row.revenue)}
+                      </td>
+                      <td data-label="Oylik kutilgan" className="align-right nowrap">
+                        {money(row.expectedMonthly)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
 
       <section className="card" aria-labelledby="sources-perf-title">
         <div className="card-head">

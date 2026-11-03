@@ -1,22 +1,26 @@
+import { useState } from 'react'
 import { DATE_RANGE_LABELS, Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import { createBackup } from '../../services/storage.service'
 import { dateStamp, downloadJson, exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
-import type { DateRange } from '../../types/dashboard.types'
+import type { DateRange, Section } from '../../types/dashboard.types'
 import { filterCustomers, sortCustomers } from '../../utils/customers'
 import { customerColumns, transactionColumns } from '../../utils/reports'
+import { globalSearch } from '../../utils/search'
 import { filterTransactions, sortTransactions, transactionPeriod } from '../../utils/transactions'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
 import { NotificationBell } from './NotificationBell'
 import { ProfileMenu } from './ProfileMenu'
+import { SearchResults } from './SearchResults'
 import { ThemeToggle } from './ThemeToggle'
 import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
 const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
+const LIST_SECTIONS: readonly Section[] = ['customers', 'finance', 'courses']
 
 export function Header() {
   const {
@@ -40,6 +44,9 @@ export function Header() {
     clearDemoData,
   } = useDashboard()
   const confirm = useConfirm()
+  const [resultsOpen, setResultsOpen] = useState(false)
+  // Bu bo'limlar ro'yxatni o'zi filtrlaydi; qolganlarida natijalar oynasi chiqadi
+  const showResults = resultsOpen && !LIST_SECTIONS.includes(activeSection) && search.trim().length >= 2
 
   const title = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
   const options = { delimiter: settings.csvDelimiter }
@@ -86,7 +93,13 @@ export function Header() {
       </div>
 
       <div className="header-actions">
-        <div className="search" role="search">
+        <div
+          className="search"
+          role="search"
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setResultsOpen(false)
+          }}
+        >
           <Icon name="search" size={16} />
           <label htmlFor="global-search" className="sr-only">
             Qidiruv
@@ -96,9 +109,33 @@ export function Header() {
             type="search"
             placeholder="Qidiruv..."
             aria-keyshortcuts="Control+K Meta+K"
+            aria-controls={showResults ? 'search-results' : undefined}
+            aria-expanded={showResults}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setResultsOpen(true)
+            }}
+            onFocus={() => setResultsOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown' && showResults) {
+                e.preventDefault()
+                document.querySelector<HTMLElement>('#search-results .search-result')?.focus()
+              } else if (e.key === 'Escape' && showResults) {
+                setResultsOpen(false)
+              }
+            }}
           />
+          {showResults && (
+            <SearchResults
+              id="search-results"
+              results={globalSearch(search, customers, courses, transactions, getCustomerName)}
+              onClose={(focusInput) => {
+                setResultsOpen(false)
+                if (focusInput) document.getElementById('global-search')?.focus()
+              }}
+            />
+          )}
           <kbd className="search-kbd" aria-hidden="true">
             Ctrl K
           </kbd>
