@@ -41,6 +41,14 @@ function cleanCustomer<T extends Partial<CustomerInput>>(data: T): T {
   return result
 }
 
+// "To'lov qildi" bosqichiga o'tilsa — shu vaqt, chiqilsa — o'chiriladi; bosqich o'zgarmasa — avvalgisi
+function withPaidAt(before: Customer, after: Customer, now: string): Customer {
+  if (after.status === before.status) return after
+  if (after.status === 'paid') return { ...after, paidAt: now }
+  const { paidAt: _paidAt, ...rest } = after
+  return rest
+}
+
 export const SIDEBAR_COLLAPSED_KEY = 'apex:sidebar-collapsed'
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
@@ -195,13 +203,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     getCustomer,
     getTransaction: (id) => (id ? transactions.find((t) => t.id === id) : undefined),
     addCustomer: (data) => {
-      const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt: new Date().toISOString() }
+      const createdAt = new Date().toISOString()
+      const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt, ...(data.status === 'paid' ? { paidAt: createdAt } : {}) }
       setCustomers((list) => [customer, ...list])
       toast.success(`"${customer.name}" mijozlar bazasiga qo'shildi`)
     },
     updateCustomer: (id, patch) => {
       const updatedAt = new Date().toISOString()
-      setCustomers((list) => list.map((c) => (c.id === id ? { ...c, ...cleanCustomer(patch), updatedAt } : c)))
+      setCustomers((list) => list.map((c) => (c.id === id ? withPaidAt(c, { ...c, ...cleanCustomer(patch), updatedAt }, updatedAt) : c)))
       const name = getCustomer(id)?.name ?? 'Mijoz'
       const keys = Object.keys(patch)
       if (keys.length === 1 && patch.status) toast.success(`${name}: bosqich "${STATUS_LABELS[patch.status]}" ga o'zgartirildi`)

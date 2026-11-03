@@ -1930,6 +1930,10 @@ body.scroll-locked {
   min-width: 0;
 }
 
+.stage-quick {
+  display: inline-block;
+}
+
 .detail-total.is-debt {
   background: var(--danger-soft);
 }

@@ -17,9 +17,12 @@ export interface Customer {
   note?: string
   createdAt: string
   updatedAt?: string
+  // v9: "To'lov qildi" bosqichiga o'tgan vaqt (faqat shu bosqichda). Faol mijozlar trendi va
+  // kurs davomiyligi (qarz hisobi) shundan hisoblanadi
+  paidAt?: string
 }
 
-export type CustomerInput = Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>
+export type CustomerInput = Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'paidAt'>
 
 export type CustomerSortKey = 'name' | 'course' | 'status' | 'createdAt'
 

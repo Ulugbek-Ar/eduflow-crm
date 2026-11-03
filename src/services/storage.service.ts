@@ -25,8 +25,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v5 — mijoz holatlari sotuv voronkasi bosqichlariga (LEGACY_STATUS_MAP);
 // v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi;
 // v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi;
-// v8 — sozlamalarda logotip rasmi (settings.logoImage)
-export const SCHEMA_VERSION = 8
+// v8 — sozlamalarda logotip rasmi (settings.logoImage);
+// v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt)
+export const SCHEMA_VERSION = 9
 
 export interface StoredData {
   customers: Customer[]
@@ -204,6 +205,25 @@ export function fillCustomerNames(transactions: readonly Transaction[], customer
   })
 }
 
+// v8 -> v9: "To'lov qildi" bosqichidagi mijozga paidAt — birinchi to'langan kirim sanasi, bo'lmasa qo'shilgan sana.
+// Boshqa bosqichdagi mijozda paidAt bo'lmaydi
+export function fillPaidAt(customers: readonly Customer[], transactions: readonly Transaction[]): Customer[] {
+  const firstPayment = new Map<string, string>()
+  for (const t of transactions) {
+    if (t.type !== 'income' || t.status !== 'paid' || !t.customerId) continue
+    const known = firstPayment.get(t.customerId)
+    if (!known || t.date < known) firstPayment.set(t.customerId, t.date)
+  }
+  return customers.map((c) => {
+    if (c.status !== 'paid') {
+      if (c.paidAt === undefined) return c
+      const { paidAt: _paidAt, ...rest } = c
+      return rest
+    }
+    return c.paidAt ? c : { ...c, paidAt: firstPayment.get(c.id) ?? c.createdAt }
+  })
+}
+
 // v5 -> v6: kurslar ro'yxati (settings.courses) va mijozlarda uchraydigan kurs nomlari to'liq kursga aylanadi.
 // Narx 0 (keyin to'ldiriladi), davomiyligi 1 oy, guruhlar 0, holati faol
 export function migrateCourses(rawSettings: unknown, customers: readonly Customer[], now = new Date()): Course[] {
@@ -241,8 +261,8 @@ function uniqueCourseNames(courses: readonly Course[]): Course[] {
 export function normalizeData(raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown }): LoadResult {
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
-  const customers = keepValid(rawCustomers, isCustomer)
   const valid = keepValid(rawTransactions, isTransaction)
+  const customers = fillPaidAt(keepValid(rawCustomers, isCustomer), valid)
   const transactions = fillCustomerNames(valid, customers)
   const settings = sanitizeSettings(raw.settings)
   // Kurslar massivi bo'lsa (v6+) — tekshiriladi; bo'lmasa (eski ma'lumot/zaxira) — migratsiya
@@ -273,9 +293,10 @@ export function createEmptyData(): StoredData {
 }
 
 export function createMockData(): StoredData {
+  const transactions = createMockTransactions()
   return {
-    customers: createMockCustomers(),
-    transactions: createMockTransactions(),
+    customers: fillPaidAt(createMockCustomers(), transactions),
+    transactions,
     courses: createMockCourses(),
     settings: { ...DEFAULT_SETTINGS },
   }

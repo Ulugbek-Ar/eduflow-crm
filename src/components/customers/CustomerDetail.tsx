@@ -1,14 +1,14 @@
-import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
+import { FUNNEL_STAGES, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
+import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
-import { customerDebt } from '../../utils/debts'
-import { Badge } from '../ui/Badge'
+import { customerDebt, studyMonthNumber } from '../../utils/debts'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, formatDate } = useDashboard()
+  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate } = useDashboard()
   const confirm = useConfirm()
   const customer = getCustomer(customerId)
 
@@ -26,6 +26,9 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   // Faqat "To'langan" kirimlar
   const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' && t.status === 'paid' ? t.amount : 0), 0)
   const debt = customerDebt(customer, courses, transactions)
+  const course = courses.find((c) => c.name === customer.course)
+  const studyMonth = customer.status === 'paid' ? studyMonthNumber(customer) : null
+  const finished = course && studyMonth !== null && studyMonth > course.durationMonths
 
   const handleDelete = async () => {
     const ok = await confirm({
@@ -65,7 +68,22 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
       <div className="profile-head">
         <span className="avatar avatar-lg">{getInitials(customer.name)}</span>
         <div>
-          <Badge tone={customer.status}>{STATUS_LABELS[customer.status]}</Badge>
+          {/* Bosqich rangli tanlov ko'rinishida — badge vazifasini ham bajaradi */}
+          <label className="stage-quick">
+            <span className="sr-only">Bosqich</span>
+            <select
+            className={`status-select badge-${customer.status}`}
+            value={customer.status}
+            aria-label="Bosqichni o'zgartirish"
+            onChange={(e) => updateCustomer(customer.id, { status: e.target.value as CustomerStatus })}
+          >
+            {FUNNEL_STAGES.map((stage) => (
+              <option key={stage} value={stage}>
+                {STATUS_LABELS[stage]}
+              </option>
+            ))}
+            </select>
+          </label>
           <p className="muted">{SOURCE_LABELS[customer.source]} orqali kelgan</p>
         </div>
       </div>
@@ -89,6 +107,18 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           <dt>Yangilangan</dt>
           <dd>{customer.updatedAt ? formatDate(customer.updatedAt) : '—'}</dd>
         </div>
+        {customer.paidAt && (
+          <div>
+            <dt>To'lov qildi</dt>
+            <dd>{formatDate(customer.paidAt)}</dd>
+          </div>
+        )}
+        {course && studyMonth !== null && (
+          <div>
+            <dt>O'qish</dt>
+            <dd>{finished ? `Tugagan (${course.durationMonths} oy)` : `${studyMonth}-oy / ${course.durationMonths}`}</dd>
+          </div>
+        )}
         {customer.note && (
           <div className="detail-wide">
             <dt>Izoh</dt>
@@ -107,7 +137,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           <span>
             Joriy oy: kutilgan {money(debt.expected)}, to'langan {money(debt.paid)}
           </span>
-          <strong className={debt.debt > 0 ? 'text-danger' : 'text-success'}>{debt.debt > 0 ? `Qarz: ${money(debt.debt)}` : 'Qarz yo\'q'}</strong>
+          <strong className={debt.debt > 0 ? 'text-danger nowrap' : 'text-success nowrap'}>{debt.debt > 0 ? `Qarz: ${money(debt.debt)}` : 'Qarz yo\'q'}</strong>
         </div>
       )}
 

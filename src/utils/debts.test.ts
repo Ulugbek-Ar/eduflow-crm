@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
-import { computeDebts, currentMonth, customerDebt, pendingPayments, totalDebt } from './debts'
+import { computeDebts, currentMonth, customerDebt, pendingPayments, studyMonthNumber, totalDebt } from './debts'
 
 // 2026-yil 15-noyabr
 const NOW = new Date(2026, 10, 15, 12)
@@ -84,5 +84,20 @@ describe('qarzdorlik qoidasi', () => {
       { ...pay('d', 4, at(10, 1), { status: 'pending' }), type: 'expense', category: 'rent', customerId: undefined },
     ])
     expect(pending.map((t) => t.amount)).toEqual([2, 1])
+  })
+})
+
+describe('kurs davomiyligi (paidAt)', () => {
+  it('o\'qish oyi: "To\'lov qildi" ga o\'tgan oy — 1-oy', () => {
+    expect(studyMonthNumber(customer('a', { paidAt: at(10, 3) }), NOW)).toBe(1)
+    expect(studyMonthNumber(customer('a', { paidAt: at(5, 28) }), NOW)).toBe(6)
+    expect(studyMonthNumber(customer('a'), NOW)).toBeNull()
+  })
+
+  it('kurs davomiyligi tugagan mijozga qarz yozilmaydi', () => {
+    // IELTS — 6 oy: iyun (1-oy) ... noyabr (6-oy) — hali o'qiydi; may oyidan boshlagan — tugatgan
+    expect(customerDebt(customer('a', { paidAt: at(5, 1) }), courses, [], NOW)).toMatchObject({ debt: 650_000, studyMonth: 6 })
+    expect(customerDebt(customer('b', { paidAt: at(4, 30) }), courses, [], NOW)).toBeNull()
+    expect(computeDebts([customer('a', { paidAt: at(5, 1) }), customer('b', { paidAt: at(4, 30) })], courses, [], NOW).map((r) => r.customer.id)).toEqual(['a'])
   })
 })

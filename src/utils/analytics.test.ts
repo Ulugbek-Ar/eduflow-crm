@@ -363,3 +363,15 @@ describe('tahlil formulalari', () => {
     expect(safeRatio(3, 4)).toBe(0.75)
   })
 })
+
+describe('activeCustomersAt: paidAt bo\'yicha', () => {
+  it('eski mijoz yaqinda to\'lov qilgan bo\'lsa, oldingi davr oxirida faol hisoblanmaydi', () => {
+    const list = [
+      customer({ status: 'paid', createdAt: at(2026, 0, 5), paidAt: at(2026, 9, 10) }),
+      customer({ status: 'paid', createdAt: at(2026, 0, 5), paidAt: at(2026, 6, 1) }),
+      customer({ status: 'paid', createdAt: at(2026, 0, 5) }), // paidAt yo'q — qo'shilgan sana
+    ]
+    expect(activeCustomersAt(list, new Date(2026, 8, 30))).toBe(2)
+    expect(activeCustomersAt(list, new Date(2026, 9, 28))).toBe(3)
+  })
+})

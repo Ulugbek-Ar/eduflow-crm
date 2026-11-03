@@ -159,10 +159,10 @@ export function payingCustomers(transactions: readonly Transaction[]): number {
   return new Set(transactions.filter((t) => t.type === 'income' && isPaid(t) && t.customerId).map((t) => t.customerId)).size
 }
 
-// Davr oxirida "To'lov qildi" bosqichidagi mijozlar (qo'shilgan sana bo'yicha). Bosqich tarixi saqlanmaydi,
-// shuning uchun oldingi davr uchun joriy bosqich va qo'shilgan sana asosida taxmin qilinadi
+// Davr oxirida "To'lov qildi" bosqichidagi mijozlar: shu bosqichga o'tgan vaqt (paidAt) bo'yicha.
+// Keyin bosqichdan chiqqanlar tarixi saqlanmaydi — ular hisobga kirmaydi
 export function activeCustomersAt(customers: readonly Customer[], end: Date): number {
-  return customers.filter((c) => c.status === 'paid' && new Date(c.createdAt).getTime() <= end.getTime()).length
+  return customers.filter((c) => c.status === 'paid' && new Date(c.paidAt ?? c.createdAt).getTime() <= end.getTime()).length
 }
 
 export interface OverviewKpis {

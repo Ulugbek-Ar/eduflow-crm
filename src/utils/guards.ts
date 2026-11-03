@@ -58,7 +58,8 @@ export function isCustomer(value: unknown): value is Customer {
     isIsoDate(value.createdAt) &&
     isOptionalString(value.email) &&
     isOptionalString(value.note) &&
-    (value.updatedAt === undefined || isIsoDate(value.updatedAt))
+    (value.updatedAt === undefined || isIsoDate(value.updatedAt)) &&
+    (value.paidAt === undefined || isIsoDate(value.paidAt))
   )
 }
 

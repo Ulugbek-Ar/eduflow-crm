@@ -10,6 +10,7 @@ import {
   createMockData,
   estimateStorageUsage,
   fillCustomerNames,
+  fillPaidAt,
   getStorageUsage,
   getItem,
   inferCategory,
@@ -475,5 +476,32 @@ describe('v7 -> v8: logotip rasmi', () => {
     const backup = createBackup({ ...data, settings: { ...data.settings, logoImage: png } })
     const restored = parseBackup(JSON.stringify(backup))
     expect(restored.ok && restored.data.settings.logoImage).toBe(png)
+  })
+})
+
+describe('v8 -> v9: "To\'lov qildi" sanasi (paidAt)', () => {
+  it('to\'lov qilgan mijozga birinchi to\'langan kirim sanasi, to\'lovi bo\'lmasa qo\'shilgan sana; boshqalarda yo\'q', () => {
+    const customers = [
+      { ...validCustomer, id: 'a', phone: '+998 90 000 00 01', status: 'paid' },
+      { ...validCustomer, id: 'b', phone: '+998 90 000 00 02', status: 'paid' },
+      { ...validCustomer, id: 'c', phone: '+998 90 000 00 03', status: 'new', paidAt: '2026-05-01T00:00:00.000Z' },
+    ]
+    const pay = (id: string, customerId: string, date: string, status = 'paid') => ({ ...v1Income, id, customerId, date, method: 'card', status, category: 'course_fee' })
+    seedV1(customers, [pay('t1', 'a', '2026-07-10T10:00:00.000Z'), pay('t2', 'a', '2026-06-02T10:00:00.000Z'), pay('t3', 'a', '2026-05-01T10:00:00.000Z', 'pending')])
+    const { data } = loadData()
+    expect(data.customers.map((c) => c.paidAt)).toEqual(['2026-06-02T10:00:00.000Z', validCustomer.createdAt, undefined])
+    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
+  })
+
+  it('guard: paidAt ixtiyoriy ISO sana; mavjud qiymat o\'zgarmaydi', () => {
+    expect(isCustomer({ ...validCustomer, status: 'paid', paidAt: 'kecha' })).toBe(false)
+    const kept = fillPaidAt([{ ...validCustomer, status: 'paid', paidAt: '2026-02-02T00:00:00.000Z' } as Customer], [])
+    expect(kept[0].paidAt).toBe('2026-02-02T00:00:00.000Z')
+  })
+
+  it('demo ma\'lumotda to\'lov qilgan har bir mijozda paidAt bor', () => {
+    const { customers } = createMockData()
+    expect(customers.filter((c) => c.status === 'paid').every((c) => c.paidAt)).toBe(true)
+    expect(customers.filter((c) => c.status !== 'paid').some((c) => c.paidAt)).toBe(false)
   })
 })
