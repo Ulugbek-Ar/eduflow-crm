@@ -2,13 +2,14 @@ import { DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Course, CourseStatus, CourseType } from '../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { CsvDelimiter, Currency, DateFormat, Settings } from '../types/dashboard.types'
-import type { PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
+import type { PaymentMethod, Transaction, TransactionCategory, TransactionStatus, TransactionType } from '../types/finance.types'
 
 // Record<T, true> ko'rinishi: yangi qiymat qo'shilsa TypeScript bu yerni ham yangilashni talab qiladi
 const STATUSES: Record<CustomerStatus, true> = { new: true, contacted: true, thinking: true, paid: true, cancelled: true }
 const SOURCES: Record<CustomerSource, true> = { telegram: true, instagram: true, website: true, referral: true }
 const TYPES: Record<TransactionType, true> = { income: true, expense: true }
-const METHODS: Record<PaymentMethod, true> = { payme: true, click: true, cash: true, bank: true }
+const METHODS: Record<PaymentMethod, true> = { cash: true, card: true, transfer: true }
+const TX_STATUSES: Record<TransactionStatus, true> = { paid: true, pending: true, cancelled: true }
 const CATEGORY_TYPE: Record<TransactionCategory, TransactionType> = {
   course_fee: 'income',
   other_income: 'income',
@@ -75,6 +76,8 @@ export function isTransaction(value: unknown): value is Transaction {
     typeof value.note === 'string' &&
     isOptionalString(value.customerId) &&
     isOptionalString(value.customerName) &&
+    oneOf(TX_STATUSES, value.status) &&
+    (value.source === undefined || (value.category === 'marketing' && oneOf(SOURCES, value.source))) &&
     isIsoDate(value.date) &&
     (value.updatedAt === undefined || isIsoDate(value.updatedAt))
   )

@@ -16,7 +16,7 @@ export interface SortState<K extends string> {
 export type ModalState =
   | { type: 'customer'; payload?: { id?: string } }
   | { type: 'customerDetail'; payload: { id: string } }
-  | { type: 'transaction'; payload?: { id?: string; kind?: TransactionType; customerId?: string } }
+  | { type: 'transaction'; payload?: { id?: string; kind?: TransactionType; customerId?: string; amount?: number } }
   | { type: 'course'; payload?: { id?: string } }
   | null
 

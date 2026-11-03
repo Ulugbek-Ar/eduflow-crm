@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
+import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, SOURCE_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
-import type { PaymentMethod, TransactionCategory, TransactionType } from '../../types/finance.types'
+import type { CustomerSource } from '../../types/customer.types'
+import type { PaymentMethod, TransactionCategory, TransactionInput, TransactionStatus, TransactionType } from '../../types/finance.types'
 import { cx, toOptions } from '../../utils/cx'
 import { formatAmountInput, parseAmount, toInputDate, todayInputValue } from '../../utils/format'
 import type { TransactionFormErrors } from '../../utils/transactions'
@@ -20,6 +21,9 @@ interface FormState {
   customerId: string
   note: string
   date: string
+  status: TransactionStatus
+  // Faqat marketing chiqimida; '' — ko'rsatilmagan
+  source: CustomerSource | ''
 }
 
 const MAX_AMOUNT = 1_000_000_000_000
@@ -28,9 +32,11 @@ interface TransactionFormModalProps {
   transactionId?: string
   kind?: TransactionType
   customerId?: string
+  // Qarzdorlar ro'yxatidan: qarz summasi oldindan to'ldiriladi
+  amount?: number
 }
 
-export function TransactionFormModal({ transactionId, kind, customerId }: TransactionFormModalProps) {
+export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount }: TransactionFormModalProps) {
   const { customers, getTransaction, addTransaction, updateTransaction, closeModal } = useDashboard()
   const editing = getTransaction(transactionId)
 
@@ -38,12 +44,14 @@ export function TransactionFormModal({ transactionId, kind, customerId }: Transa
     const type = editing?.type ?? kind ?? 'income'
     return {
       type,
-      amount: editing ? formatAmountInput(String(editing.amount)) : '',
-      method: editing?.method ?? 'payme',
+      amount: editing ? formatAmountInput(String(editing.amount)) : presetAmount ? formatAmountInput(String(presetAmount)) : '',
+      method: editing?.method ?? 'card',
       category: editing?.category ?? categoriesFor(type)[0],
       customerId: editing?.customerId ?? customerId ?? '',
       note: editing?.note ?? '',
       date: editing ? toInputDate(editing.date) : todayInputValue(),
+      status: editing?.status ?? 'paid',
+      source: editing?.source ?? '',
     }
   })
   const [errors, setErrors] = useState<TransactionFormErrors>({})
@@ -82,13 +90,15 @@ export function TransactionFormModal({ transactionId, kind, customerId }: Transa
     if (next.amount) return amountRef.current?.focus()
     if (next.date) return dateRef.current?.focus()
 
-    const data = {
+    const data: TransactionInput = {
       type: form.type,
       amount,
       method: form.method,
       category: form.category,
       note: form.note,
       customerId: form.type === 'income' ? form.customerId || undefined : undefined,
+      status: form.status,
+      source: form.type === 'expense' && form.category === 'marketing' && form.source ? form.source : undefined,
       date: toIsoDate(),
     }
     if (editing) updateTransaction(editing.id, data)
@@ -160,11 +170,30 @@ export function TransactionFormModal({ transactionId, kind, customerId }: Transa
             options={categoriesFor(form.type).map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))}
           />
           <Select
-            label="To'lov usuli"
+            label="To'lov turi"
             value={form.method}
             onChange={(e) => update('method', e.target.value as PaymentMethod)}
             options={toOptions(METHOD_LABELS)}
           />
+        </div>
+
+        <div className="form-row">
+          <Select
+            label="Status"
+            value={form.status}
+            hint={form.status === 'paid' ? undefined : 'Balans va hisobotlarga faqat "To\'langan" kiradi'}
+            onChange={(e) => update('status', e.target.value as TransactionStatus)}
+            options={toOptions(TX_STATUS_LABELS)}
+          />
+          {form.type === 'expense' && form.category === 'marketing' && (
+            <Select
+              label="Manba"
+              value={form.source}
+              hint="Ixtiyoriy — CPL va ROI hisobi uchun"
+              onChange={(e) => update('source', e.target.value as FormState['source'])}
+              options={[{ value: '', label: 'Ko\'rsatilmagan' }, ...toOptions(SOURCE_LABELS)]}
+            />
+          )}
         </div>
 
         {form.type === 'income' && (

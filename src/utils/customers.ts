@@ -110,7 +110,7 @@ export function getInitials(name: string): string {
 // Mijozga bog'liq to'lovlar: soni va jami kirim summasi
 export function customerPayments(customerId: string, transactions: readonly Transaction[]): { count: number; total: number } {
   const own = transactions.filter((t) => t.customerId === customerId)
-  return { count: own.length, total: own.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : 0), 0) }
+  return { count: own.length, total: own.reduce((sum, t) => sum + (t.type === 'income' && t.status === 'paid' ? t.amount : 0), 0) }
 }
 
 // O'chirishni tasdiqlash matni — jadvalda ham, mijoz kartasida ham bir xil

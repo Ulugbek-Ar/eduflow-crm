@@ -10,6 +10,7 @@ import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
 import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 import type { Course } from '../types/course.types'
+import { cashBalance } from '../utils/analytics'
 import { normalizeCourseName, usedByCustomers } from '../utils/courses'
 import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
@@ -21,6 +22,8 @@ import type { DashboardContextValue } from './useDashboard'
 function cleanTransaction<T extends Partial<TransactionInput>>(data: T): T {
   const result = { ...data }
   if (result.note !== undefined) result.note = result.note.trim()
+  // Manba faqat marketing chiqimida saqlanadi
+  if (result.category !== undefined && result.category !== 'marketing') result.source = undefined
   if (result.type === 'expense') result.customerId = undefined
   if ('customerId' in result && !result.customerId) {
     result.customerId = undefined
@@ -117,7 +120,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi
-  const balance = transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0)
+  const balance = cashBalance(transactions)
 
   const getCustomer = (id?: string) => (id ? customers.find((c) => c.id === id) : undefined)
 

@@ -182,6 +182,7 @@ function Shell() {
             transactionId={modal.payload?.id}
             kind={modal.payload?.kind}
             customerId={modal.payload?.customerId}
+            amount={modal.payload?.amount}
           />
         )}
       </Suspense>

@@ -1,7 +1,9 @@
 import type { Customer } from '../types/customer.types'
 import type { Section } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
+import type { Course } from '../types/course.types'
 import { filterByPeriod, getPeriod, sumExpense, sumIncome } from './analytics'
+import { computeDebts, totalDebt } from './debts'
 
 export interface AppNotification {
   // Holat o'zgarsa id ham o'zgaradi va eslatma qaytadan "o'qilmagan" bo'ladi
@@ -25,9 +27,21 @@ export function buildNotifications(
   transactions: readonly Transaction[],
   balance: number,
   money: (amount: number) => string,
+  courses: readonly Course[] = [],
   now = new Date(),
 ): AppNotification[] {
   const result: AppNotification[] = []
+
+  const debts = computeDebts(customers, courses, transactions, now)
+  if (debts.length > 0) {
+    result.push({
+      id: `debts:${now.getFullYear()}-${now.getMonth() + 1}:${debts.map((d) => `${d.customer.id}=${d.debt}`).join(',')}`,
+      tone: 'warning',
+      title: `${debts.length} ta mijozning shu oy qarzi bor`,
+      description: `Jami qarz: ${money(totalDebt(debts))}`,
+      target: 'finance',
+    })
+  }
 
   const staleLeads = customers.filter(
     (c) => c.status === 'new' && now.getTime() - new Date(c.createdAt).getTime() > STALE_LEAD_DAYS * DAY_MS,

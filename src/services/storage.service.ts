@@ -2,7 +2,7 @@ import { createMockCourses, createMockCustomers, createMockTransactions, DEFAULT
 import type { Course } from '../types/course.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
-import type { Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
+import type { LegacyPaymentMethod, PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
 import { isCourse, isCustomer, isRecord, isTransaction, keepValid, sanitizeSettings } from '../utils/guards'
 import { APP_NAME, BACKUP_APP_ID } from '../constants/app'
 
@@ -23,8 +23,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v3 — tranzaksiyada mijoz nomi snapshot'i (customerName);
 // v4 — sozlamalarda profil (profileName, profileRole);
 // v5 — mijoz holatlari sotuv voronkasi bosqichlariga (LEGACY_STATUS_MAP);
-// v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi
-export const SCHEMA_VERSION = 6
+// v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi;
+// v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi
+export const SCHEMA_VERSION = 7
 
 export interface StoredData {
   customers: Customer[]
@@ -159,7 +160,6 @@ export function inferCategory(type: TransactionType, note: string, customerId?: 
   return 'other_expense'
 }
 
-// v1 -> v2: tranzaksiyaga kategoriya, bo'sh izohga ''
 // v4 -> v5: eski holat -> voronka bosqichi
 export const LEGACY_STATUS_MAP: Record<LegacyCustomerStatus, CustomerStatus> = {
   lead: 'new',
@@ -173,12 +173,24 @@ function migrateCustomer(value: unknown): unknown {
   return { ...value, status: LEGACY_STATUS_MAP[value.status as LegacyCustomerStatus] }
 }
 
+// v6 -> v7: eski to'lov usuli -> to'lov turi (cash o'zgarmaydi)
+export const LEGACY_METHOD_MAP: Record<LegacyPaymentMethod, PaymentMethod> = {
+  payme: 'card',
+  click: 'card',
+  bank: 'transfer',
+}
+
+// v1 -> v2: kategoriya va bo'sh izoh; v6 -> v7: to'lov turi va status (eski yozuvlar to'langan hisoblanadi)
 function migrateTransaction(value: unknown): unknown {
   if (!isRecord(value)) return value
   const note = typeof value.note === 'string' ? value.note : ''
   const type = value.type === 'income' || value.type === 'expense' ? value.type : null
-  if (value.category !== undefined || !type) return { ...value, note }
-  return { ...value, note, category: inferCategory(type, note, value.customerId) }
+  const legacy = typeof value.method === 'string' && Object.hasOwn(LEGACY_METHOD_MAP, value.method)
+  const method = legacy ? LEGACY_METHOD_MAP[value.method as LegacyPaymentMethod] : value.method
+  const status = value.status === undefined ? 'paid' : value.status
+  const base = { ...value, note, method, status }
+  if (value.category !== undefined || !type) return base
+  return { ...base, category: inferCategory(type, note, value.customerId) }
 }
 
 // v2 -> v3: mijozi bazada bor tranzaksiyalarga ism snapshot'i ko'chiriladi

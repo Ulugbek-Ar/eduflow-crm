@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
+import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import type { SortDirection } from '../../types/dashboard.types'
-import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey } from '../../types/finance.types'
+import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey, TransactionStatus } from '../../types/finance.types'
 import { filterByPeriod } from '../../utils/analytics'
 import { toOptions } from '../../utils/cx'
 import { paginate } from '../../utils/list'
@@ -14,14 +14,17 @@ import {
   sortTransactions,
   transactionPeriod,
 } from '../../utils/transactions'
-import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { Input } from '../ui/Input'
 import { Pagination } from '../ui/Pagination'
 import { Select } from '../ui/Select'
 import { SortHeader } from '../ui/SortHeader'
-import { FinanceSummary } from './FinanceSummary'
+import { DebtsCard } from './DebtsCard'
+import { FinanceBreakdowns, FinanceSummary } from './FinanceSummary'
+
+// Status select rangi: badge klasslari bilan bir xil tokenlar
+const STATUS_TONE: Record<TransactionStatus, string> = { paid: 'paid', pending: 'warning', cancelled: 'neutral' }
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TransactionCategory[]
 
@@ -42,6 +45,7 @@ export function TransactionTable() {
     getCustomer,
     getCustomerName,
     deleteTransaction,
+    updateTransaction,
     openModal,
     transactionFilters: filters,
     setTransactionFilters,
@@ -126,11 +130,18 @@ export function TransactionTable() {
             options={[{ value: 'all', label: 'Barcha turlar' }, ...toOptions(TYPE_LABELS)]}
           />
           <Select
-            label="To'lov usuli"
+            label="To'lov turi"
             hideLabel
             value={filters.method}
             onChange={(e) => setFilter('method', e.target.value as TransactionFilters['method'])}
-            options={[{ value: 'all', label: 'Barcha usullar' }, ...toOptions(METHOD_LABELS)]}
+            options={[{ value: 'all', label: 'Barcha to\'lov turlari' }, ...toOptions(METHOD_LABELS)]}
+          />
+          <Select
+            label="Status"
+            hideLabel
+            value={filters.status}
+            onChange={(e) => setFilter('status', e.target.value as TransactionFilters['status'])}
+            options={[{ value: 'all', label: 'Barcha statuslar' }, ...toOptions(TX_STATUS_LABELS)]}
           />
           <Select
             label="Kategoriya"
@@ -197,12 +208,10 @@ export function TransactionTable() {
                 <thead>
                   <tr>
                     <SortHeader label="Sana" sortKey="date" sort={sort} onSort={setTransactionSort} />
-                    <th scope="col">Turi</th>
-                    <th scope="col">Kategoriya</th>
-                    <th scope="col">Izoh</th>
                     <th scope="col">Mijoz</th>
-                    <th scope="col">Usul</th>
                     <SortHeader label="Summa" sortKey="amount" sort={sort} onSort={setTransactionSort} align="right" />
+                    <th scope="col">To'lov turi</th>
+                    <th scope="col">Status</th>
                     <th scope="col">
                       <span className="sr-only">Amallar</span>
                     </th>
@@ -214,11 +223,6 @@ export function TransactionTable() {
                       <td data-label="Sana" className="nowrap">
                         {formatDate(t.date)}
                       </td>
-                      <td data-label="Turi">
-                        <Badge tone={t.type}>{TYPE_LABELS[t.type]}</Badge>
-                      </td>
-                      <td data-label="Kategoriya">{CATEGORY_LABELS[t.category]}</td>
-                      <td data-label="Izoh">{t.note || '—'}</td>
                       <td data-label="Mijoz">
                         {t.customerId && !getCustomer(t.customerId) ? (
                           <span className="muted">{getCustomerName(t.customerId)}</span>
@@ -231,13 +235,32 @@ export function TransactionTable() {
                             {getCustomerName(t.customerId)}
                           </button>
                         ) : (
-                          '—'
+                          <span>{CATEGORY_LABELS[t.category]}</span>
                         )}
+                        <small className="cell-sub">
+                          {TYPE_LABELS[t.type]} · {t.customerId ? CATEGORY_LABELS[t.category] : t.note || '—'}
+                          {t.customerId && t.note ? ` · ${t.note}` : ''}
+                        </small>
                       </td>
-                      <td data-label="Usul">{METHOD_LABELS[t.method]}</td>
                       <td data-label="Summa" className={`align-right nowrap strong ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
+                        <span className="sr-only">{TYPE_LABELS[t.type]}: </span>
                         {t.type === 'income' ? '+' : '−'}
                         {money(t.amount)}
+                      </td>
+                      <td data-label="To'lov turi">{METHOD_LABELS[t.method]}</td>
+                      <td data-label="Status">
+                        <select
+                          className={`status-select badge-${STATUS_TONE[t.status]}`}
+                          value={t.status}
+                          aria-label={`Status: ${TYPE_LABELS[t.type]} ${money(t.amount)}, ${formatDate(t.date)}`}
+                          onChange={(e) => updateTransaction(t.id, { status: e.target.value as TransactionStatus })}
+                        >
+                          {(Object.keys(TX_STATUS_LABELS) as TransactionStatus[]).map((status) => (
+                            <option key={status} value={status}>
+                              {TX_STATUS_LABELS[status]}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="cell-actions">
                         <div className="row-actions">
@@ -266,6 +289,9 @@ export function TransactionTable() {
           </>
         )}
       </section>
+
+      <DebtsCard />
+      <FinanceBreakdowns transactions={inPeriod} />
     </>
   )
 }

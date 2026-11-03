@@ -74,11 +74,12 @@ export function makeTransaction(patch: Partial<Transaction> = {}): Transaction {
     id: 't1',
     type: 'income',
     amount: 650_000,
-    method: 'payme',
+    method: 'card',
     category: 'course_fee',
     note: 'IELTS 1-oy',
     customerId: 'c1',
     customerName: 'Aziza Karimova',
+    status: 'paid',
     date: new Date().toISOString(),
     ...patch,
   }

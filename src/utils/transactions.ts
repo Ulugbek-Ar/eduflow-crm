@@ -5,10 +5,17 @@ import { customPeriod, getPeriod, inPeriod } from './analytics'
 import type { Period } from './analytics'
 import { applyDirection } from './list'
 
-export const EMPTY_TRANSACTION_FILTERS: TransactionFilters = { type: 'all', method: 'all', category: 'all', from: '', to: '' }
+export const EMPTY_TRANSACTION_FILTERS: TransactionFilters = { type: 'all', method: 'all', status: 'all', category: 'all', from: '', to: '' }
 
 export function hasTransactionFilters(filters: TransactionFilters): boolean {
-  return filters.type !== 'all' || filters.method !== 'all' || filters.category !== 'all' || filters.from !== '' || filters.to !== ''
+  return (
+    filters.type !== 'all' ||
+    filters.method !== 'all' ||
+    filters.status !== 'all' ||
+    filters.category !== 'all' ||
+    filters.from !== '' ||
+    filters.to !== ''
+  )
 }
 
 // Sana oralig'i tanlansa u ishlatiladi, aks holda Header'dagi davr
@@ -32,6 +39,7 @@ export function filterTransactions(
       inPeriod(t.date, period) &&
       (filters.type === 'all' || t.type === filters.type) &&
       (filters.method === 'all' || t.method === filters.method) &&
+      (filters.status === 'all' || t.status === filters.status) &&
       (filters.category === 'all' || t.category === filters.category) &&
       (!query || t.note.toLowerCase().includes(query) || getCustomerName(t.customerId).toLowerCase().includes(query)),
   )

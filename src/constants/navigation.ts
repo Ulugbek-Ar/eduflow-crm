@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import type { CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange, Section } from '../types/dashboard.types'
-import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategory, TransactionType } from '../types/finance.types'
+import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategory, TransactionStatus, TransactionType } from '../types/finance.types'
 
 // Ikonlar: 24x24 viewBox, stroke uslubida chiziladigan path'lar
 export const ICONS = {
@@ -170,10 +170,15 @@ export const SOURCE_LABELS: Record<CustomerSource, string> = {
 }
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
-  payme: 'Payme',
-  click: 'Click',
   cash: 'Naqd',
-  bank: 'Bank o\'tkazmasi',
+  card: 'Karta',
+  transfer: 'O\'tkazma',
+}
+
+export const TX_STATUS_LABELS: Record<TransactionStatus, string> = {
+  paid: 'To\'langan',
+  pending: 'Kutilmoqda',
+  cancelled: 'Bekor qilingan',
 }
 
 export const TYPE_LABELS: Record<TransactionType, string> = {

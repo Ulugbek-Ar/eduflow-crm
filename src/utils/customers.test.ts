@@ -77,6 +77,7 @@ describe('mijozni o\'chirish va bog\'liq to\'lovlar', () => {
     type,
     amount,
     method: 'cash',
+    status: 'paid',
     category: type === 'income' ? 'course_fee' : 'rent',
     note: '',
     customerId,

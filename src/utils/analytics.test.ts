@@ -3,6 +3,7 @@ import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import {
   breakdown,
+  cashBalance,
   conversion,
   customPeriod,
   filterByPeriod,
@@ -11,8 +12,10 @@ import {
   groupByMonth,
   groupByWeek,
   inPeriod,
+  isPaid,
   niceScale,
   overlaps,
+  paidOnly,
   payingCustomers,
   pointChange,
   recentActivity,
@@ -29,7 +32,7 @@ const NOW = new Date(2026, 9, 28, 15, 0)
 const at = (y: number, m: number, d: number, h = 12) => new Date(y, m, d, h).toISOString()
 
 function tx(partial: Partial<Transaction> & Pick<Transaction, 'type' | 'amount' | 'date'>): Transaction {
-  return { id: Math.random().toString(36), method: 'cash', category: partial.type === 'income' ? 'course_fee' : 'rent', note: '', ...partial }
+  return { id: Math.random().toString(36), method: 'cash', category: partial.type === 'income' ? 'course_fee' : 'rent', note: '', status: 'paid', ...partial }
 }
 
 function customer(partial: Partial<Customer>): Customer {
@@ -197,11 +200,17 @@ describe('guruhlash', () => {
 describe('taqsimotlar', () => {
   it('breakdown: ulushlar 100 ga teng, nollar saqlanadi, kamayish tartibida', () => {
     const rows = breakdown(
-      [tx({ type: 'income', amount: 300, date: at(2026, 9, 1), method: 'click' }), tx({ type: 'income', amount: 100, date: at(2026, 9, 1), method: 'cash' })],
-      ['payme', 'click', 'cash', 'bank'] as const,
+      [
+        tx({ type: 'income', amount: 300, date: at(2026, 9, 1), method: 'card' }),
+        tx({ type: 'income', amount: 100, date: at(2026, 9, 1), method: 'cash' }),
+        // Kutilmoqda va bekor qilingan taqsimotga kirmaydi
+        tx({ type: 'income', amount: 900, date: at(2026, 9, 1), method: 'transfer', status: 'pending' }),
+        tx({ type: 'income', amount: 900, date: at(2026, 9, 1), method: 'transfer', status: 'cancelled' }),
+      ],
+      ['cash', 'card', 'transfer'] as const,
       (t) => t.method,
     )
-    expect(rows.map((r) => r.key)).toEqual(['click', 'cash', 'payme', 'bank'])
+    expect(rows.map((r) => r.key)).toEqual(['card', 'cash', 'transfer'])
     expect(rows[0].share).toBe(75)
     expect(rows.reduce((s, r) => s + r.share, 0)).toBe(100)
   })
@@ -226,5 +235,25 @@ describe('taqsimotlar', () => {
       2,
     )
     expect(items.map((i) => i.id)).toEqual(['t1', 'c'])
+  })
+})
+
+describe('faqat "To\'langan" hisoblanadi', () => {
+  it('sumIncome, sumExpense, cashBalance, payingCustomers va grafik kutilmoqda/bekor qilinganni o\'tkazib yuboradi', () => {
+    const list = [
+      tx({ type: 'income', amount: 1000, date: at(2026, 9, 5), customerId: 'a' }),
+      tx({ type: 'income', amount: 500, date: at(2026, 9, 6), customerId: 'b', status: 'pending' }),
+      tx({ type: 'income', amount: 700, date: at(2026, 9, 7), customerId: 'c', status: 'cancelled' }),
+      tx({ type: 'expense', amount: 300, date: at(2026, 9, 8) }),
+      tx({ type: 'expense', amount: 900, date: at(2026, 9, 8), status: 'pending' }),
+    ]
+    expect(isPaid(list[0])).toBe(true)
+    expect(paidOnly(list)).toHaveLength(2)
+    expect(sumIncome(list)).toBe(1000)
+    expect(sumExpense(list)).toBe(300)
+    expect(cashBalance(list)).toBe(700)
+    expect(payingCustomers(list)).toBe(1)
+    const october = groupByMonth(list, 1, NOW)[0]
+    expect(october).toMatchObject({ income: 1000, expense: 300 })
   })
 })

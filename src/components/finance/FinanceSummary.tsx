@@ -57,32 +57,42 @@ function BreakdownCard<K extends string>({ title, subtitle, rows, labels, tone }
 }
 
 export function FinanceSummary({ transactions, periodLabel }: { transactions: Transaction[]; periodLabel: string }) {
-  const { money } = useDashboard()
+  const { money, balance } = useDashboard()
+  // Faqat "To'langan" tranzaksiyalar (sumIncome/sumExpense va breakdown ham shunday hisoblaydi)
   const income = sumIncome(transactions)
   const expense = sumExpense(transactions)
-  const net = income - expense
-  const incomes = transactions.filter((t) => t.type === 'income')
-  const expenses = transactions.filter((t) => t.type === 'expense')
 
   return (
     <>
       <div className="summary-grid">
         <div className="card summary">
-          <small>Kirim · {periodLabel}</small>
-          <strong className="text-success">{money(income)}</strong>
+          <small>Umumiy balans (kassa)</small>
+          <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
+          <span className="summary-hint">Barcha vaqt · faqat to'langanlar</span>
         </div>
         <div className="card summary">
-          <small>Chiqim · {periodLabel}</small>
+          <small>Jami kirim · {periodLabel}</small>
+          <strong className="text-success">{money(income)}</strong>
+          <span className="summary-hint">Sof natija: {money(income - expense)}</span>
+        </div>
+        <div className="card summary">
+          <small>Jami chiqim · {periodLabel}</small>
           <strong className="text-danger">{money(expense)}</strong>
         </div>
-        <div className="card summary">
-          <small>Sof natija · {periodLabel}</small>
-          <strong className={net < 0 ? 'text-danger' : undefined}>{money(net)}</strong>
-        </div>
       </div>
+    </>
+  )
+}
+
+// To'lov turlari va xarajatlar tarkibi (faqat "To'langan")
+export function FinanceBreakdowns({ transactions }: { transactions: Transaction[] }) {
+  const incomes = transactions.filter((t) => t.type === 'income')
+  const expenses = transactions.filter((t) => t.type === 'expense')
+  return (
+    <>
       <div className="split-grid">
         <BreakdownCard
-          title="To'lov usullari"
+          title="To'lov turlari"
           subtitle="Kirimlar qaysi usulda tushgan"
           rows={breakdown(incomes, METHODS, (t) => t.method)}
           labels={METHOD_LABELS}

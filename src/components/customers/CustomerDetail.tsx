@@ -1,13 +1,14 @@
-import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
+import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
+import { customerDebt } from '../../utils/debts'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, money, openModal, closeModal, deleteCustomer, formatDate } = useDashboard()
+  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, formatDate } = useDashboard()
   const confirm = useConfirm()
   const customer = getCustomer(customerId)
 
@@ -22,7 +23,9 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const payments = transactions
     .filter((t) => t.customerId === customer.id)
     .sort((a, b) => b.date.localeCompare(a.date))
-  const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : 0), 0)
+  // Faqat "To'langan" kirimlar
+  const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' && t.status === 'paid' ? t.amount : 0), 0)
+  const debt = customerDebt(customer, courses, transactions)
 
   const handleDelete = async () => {
     const ok = await confirm({
@@ -52,7 +55,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           </Button>
           <Button
             icon="plus"
-            onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id } })}
+            onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, amount: debt?.debt || undefined } })}
           >
             To'lov
           </Button>
@@ -99,6 +102,15 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
         <strong className="text-success">{money(totalPaid)}</strong>
       </div>
 
+      {debt && (
+        <div className={debt.debt > 0 ? 'detail-total is-debt' : 'detail-total'}>
+          <span>
+            Joriy oy: kutilgan {money(debt.expected)}, to'langan {money(debt.paid)}
+          </span>
+          <strong className={debt.debt > 0 ? 'text-danger' : 'text-success'}>{debt.debt > 0 ? `Qarz: ${money(debt.debt)}` : 'Qarz yo\'q'}</strong>
+        </div>
+      )}
+
       <h3 className="detail-subtitle">To'lovlar tarixi</h3>
       {payments.length === 0 ? (
         <p className="muted">Hali to'lov qayd etilmagan.</p>
@@ -109,10 +121,10 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
               <div>
                 <strong>{t.note || 'To\'lov'}</strong>
                 <small className="muted">
-                  {formatDate(t.date)} · {METHOD_LABELS[t.method]}
+                  {formatDate(t.date)} · {METHOD_LABELS[t.method]} · {TX_STATUS_LABELS[t.status]}
                 </small>
               </div>
-              <span className={t.type === 'income' ? 'text-success' : 'text-danger'}>
+              <span className={t.status !== 'paid' ? 'muted' : t.type === 'income' ? 'text-success' : 'text-danger'}>
                 {t.type === 'income' ? '+' : '−'}
                 {money(t.amount)}
               </span>

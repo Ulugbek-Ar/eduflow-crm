@@ -1795,6 +1795,35 @@ body.scroll-locked {
   font-size: 1.25rem;
 }
 
+.summary-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.pending-list {
+  display: grid;
+}
+
+.pending-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.pending-list li > div {
+  display: grid;
+  min-width: 0;
+}
+
+.detail-total.is-debt {
+  background: var(--danger-soft);
+}
+
 .split-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

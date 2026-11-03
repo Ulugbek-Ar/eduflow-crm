@@ -6,8 +6,10 @@ import { cx } from '../../utils/cx'
 import { buildNotifications } from '../../utils/notifications'
 
 export function NotificationBell() {
-  const { customers, transactions, balance, money, setActiveSection, setCustomerFilters, customerFilters } = useDashboard()
-  const { items, unread, markRead, markAllRead, clearAll } = useNotifications(buildNotifications(customers, transactions, balance, money))
+  const { customers, transactions, courses, balance, money, setActiveSection, setCustomerFilters, customerFilters } = useDashboard()
+  const { items, unread, markRead, markAllRead, clearAll } = useNotifications(
+    buildNotifications(customers, transactions, balance, money, courses),
+  )
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const panelId = useId()

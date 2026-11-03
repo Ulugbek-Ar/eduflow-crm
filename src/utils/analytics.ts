@@ -87,12 +87,27 @@ export function filterByPeriod<T>(items: readonly T[], getDate: (item: T) => str
   return items.filter((item) => inPeriod(getDate(item), period))
 }
 
+// Balans, KPI, grafiklar va hisobotlar faqat "To'langan" tranzaksiyalar bo'yicha:
+// "Kutilmoqda" hali kassaga tushmagan, "Bekor qilingan" umuman hisobga olinmaydi
+export function isPaid(t: Transaction): boolean {
+  return t.status === 'paid'
+}
+
+export function paidOnly(transactions: readonly Transaction[]): Transaction[] {
+  return transactions.filter(isPaid)
+}
+
 export function sumIncome(transactions: readonly Transaction[]): number {
-  return transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : 0), 0)
+  return transactions.reduce((sum, t) => sum + (t.type === 'income' && isPaid(t) ? t.amount : 0), 0)
 }
 
 export function sumExpense(transactions: readonly Transaction[]): number {
-  return transactions.reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : 0), 0)
+  return transactions.reduce((sum, t) => sum + (t.type === 'expense' && isPaid(t) ? t.amount : 0), 0)
+}
+
+// Kassa balansi: barcha vaqt davomidagi to'langan kirim − to'langan chiqim
+export function cashBalance(transactions: readonly Transaction[]): number {
+  return sumIncome(transactions) - sumExpense(transactions)
 }
 
 export interface BreakdownRow<K extends string> {
@@ -109,6 +124,7 @@ export function breakdown<K extends string>(
 ): BreakdownRow<K>[] {
   const totals = new Map<K, number>(keys.map((k) => [k, 0]))
   for (const t of transactions) {
+    if (!isPaid(t)) continue
     const key = getKey(t)
     totals.set(key, (totals.get(key) ?? 0) + t.amount)
   }
@@ -140,7 +156,7 @@ export function pointChange(current: number | null, previous: number | null): nu
 }
 
 export function payingCustomers(transactions: readonly Transaction[]): number {
-  return new Set(transactions.filter((t) => t.type === 'income' && t.customerId).map((t) => t.customerId)).size
+  return new Set(transactions.filter((t) => t.type === 'income' && isPaid(t) && t.customerId).map((t) => t.customerId)).size
 }
 
 // ===== Grafik uchun guruhlash =====
@@ -159,6 +175,7 @@ export interface Bucket {
 
 function fillBuckets(buckets: Bucket[], transactions: readonly Transaction[]): Bucket[] {
   for (const t of transactions) {
+    if (!isPaid(t)) continue
     const time = new Date(t.date).getTime()
     const bucket = buckets.find((b) => time >= b.start.getTime() && time <= b.end.getTime())
     if (!bucket) continue

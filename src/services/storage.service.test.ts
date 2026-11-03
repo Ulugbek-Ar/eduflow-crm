@@ -16,6 +16,7 @@ import {
   isDemoMode,
   isFirstRun,
   isQuotaError,
+  LEGACY_METHOD_MAP,
   LEGACY_STATUS_MAP,
   resetToMock,
   setDemoMode,
@@ -136,7 +137,7 @@ describe('type guard\'lar', () => {
   })
 
   it('isTransaction: kategoriya turi bilan mos bo\'lishi kerak', () => {
-    const valid = { ...v1Income, category: 'course_fee' }
+    const valid = { ...v1Income, method: 'card', status: 'paid', category: 'course_fee' }
     expect(isTransaction(valid)).toBe(true)
     expect(isTransaction({ ...valid, category: 'rent' })).toBe(false)
     expect(isTransaction({ ...valid, amount: Number.NaN })).toBe(false)
@@ -326,7 +327,7 @@ describe('birinchi ishga tushish va demo rejim', () => {
 })
 
 describe('v2 -> v3: mijoz nomi snapshot\'i', () => {
-  const v2Income = { ...v1Income, category: 'course_fee' }
+  const v2Income = { ...v1Income, method: 'card', status: 'paid', category: 'course_fee' }
 
   it('mavjud mijozlar nomi tranzaksiyalarga ko\'chiriladi va versiya yangilanadi', () => {
     seedV1([validCustomer], [v2Income, { ...v2Income, id: 't9', customerId: 'yoq' }, v1Expense])
@@ -424,5 +425,35 @@ describe('v5 -> v6: kurslar entity', () => {
     expect(courses.some((c) => c.type === 'service')).toBe(true)
     expect(courses.some((c) => c.status === 'archived')).toBe(true)
     expect(courses.filter((c) => c.status === 'active').every((c) => c.monthlyPrice > 0)).toBe(true)
+  })
+})
+
+describe('v6 -> v7: to\'lov turi va status', () => {
+  it('payme, click -> card; bank -> transfer; cash o\'zgarmaydi; status "To\'langan"', () => {
+    expect(LEGACY_METHOD_MAP).toEqual({ payme: 'card', click: 'card', bank: 'transfer' })
+    const methods = ['payme', 'click', 'bank', 'cash']
+    seedV1([validCustomer], methods.map((method, i) => ({ ...v1Income, id: `t${i}`, method })))
+    const { data, dropped } = loadData()
+    expect(dropped).toBe(0)
+    expect(data.transactions.map((t) => t.method)).toEqual(['card', 'card', 'transfer', 'cash'])
+    expect(data.transactions.every((t) => t.status === 'paid')).toBe(true)
+    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
+  })
+
+  it('guard: status majburiy, manba faqat marketing chiqimida', () => {
+    const tx = { ...v1Expense, method: 'card', status: 'paid', category: 'marketing' }
+    expect(isTransaction({ ...tx, source: 'instagram' })).toBe(true)
+    expect(isTransaction({ ...tx, source: 'tv' })).toBe(false)
+    expect(isTransaction({ ...tx, category: 'rent', source: 'instagram' })).toBe(false)
+    expect(isTransaction({ ...tx, status: 'done' })).toBe(false)
+    expect(isTransaction({ ...tx, method: 'payme' })).toBe(false)
+  })
+
+  it('demo ma\'lumotda kutilayotgan, bekor qilingan va manbali marketing chiqimlari bor', () => {
+    const { transactions } = createMockData()
+    expect(transactions.every(isTransaction)).toBe(true)
+    expect(transactions.some((t) => t.status === 'pending')).toBe(true)
+    expect(transactions.some((t) => t.status === 'cancelled')).toBe(true)
+    expect(new Set(transactions.filter((t) => t.source).map((t) => t.source))).toEqual(new Set(['instagram', 'telegram']))
   })
 })
