@@ -77,3 +77,14 @@ describe('dateStamp', () => {
     expect(dateStamp(new Date(2026, 9, 5, 23, 30))).toBe('2026-10-05')
   })
 })
+
+describe('Excel: kasr qiymatlar', () => {
+  it('butun son #,##0, kasr #,##0.0 formatida', () => {
+    const xml = toSpreadsheetXml([{ a: 66.7, b: 1200 }], [
+      { header: 'A', value: (r: { a: number; b: number }) => r.a, type: 'number' },
+      { header: 'B', value: (r: { a: number; b: number }) => r.b, type: 'number' },
+    ], 'Test')
+    expect(xml).toContain('<Cell ss:StyleID="decimal"><Data ss:Type="Number">66.7</Data></Cell>')
+    expect(xml).toContain('<Cell ss:StyleID="number"><Data ss:Type="Number">1200</Data></Cell>')
+  })
+})

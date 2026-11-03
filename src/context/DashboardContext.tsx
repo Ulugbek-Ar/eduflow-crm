@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { STATUS_LABELS } from '../constants/navigation'
+import { STATUS_LABELS, TX_STATUS_LABELS } from '../constants/navigation'
 import { useConfirm } from '../hooks/useConfirm'
 import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
 import { useToast } from '../hooks/useToast'
@@ -204,7 +204,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setCustomers((list) => list.map((c) => (c.id === id ? { ...c, ...cleanCustomer(patch), updatedAt } : c)))
       const name = getCustomer(id)?.name ?? 'Mijoz'
       const keys = Object.keys(patch)
-      if (keys.length === 1 && patch.status) toast.success(`${name}: holat "${STATUS_LABELS[patch.status]}" ga o'zgartirildi`)
+      if (keys.length === 1 && patch.status) toast.success(`${name}: bosqich "${STATUS_LABELS[patch.status]}" ga o'zgartirildi`)
       else toast.success(`${name} ma'lumotlari saqlandi`)
     },
     deleteCustomer: (id) => {
@@ -221,8 +221,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     updateTransaction: (id, patch) => {
       const updatedAt = new Date().toISOString()
       const clean = withCustomerName(cleanTransaction(patch))
-      setTransactions((list) => list.map((t) => (t.id === id ? { ...t, ...clean, updatedAt } : t)))
-      toast.success('Tranzaksiya yangilandi')
+      setTransactions((list) =>
+        list.map((t) => {
+          if (t.id !== id) return t
+          const next = { ...t, ...clean, updatedAt }
+          // To'langan to'lov kelajakda bo'lolmaydi: kutilgan sana o'tmagan bo'lsa, bugungi kun yoziladi
+          if (next.status === 'paid' && new Date(next.date).getTime() > Date.now()) next.date = updatedAt
+          return next
+        }),
+      )
+      const keys = Object.keys(patch)
+      if (keys.every((k) => k === 'status' || k === 'date') && patch.status) toast.success(`Status: "${TX_STATUS_LABELS[patch.status]}"`)
+      else toast.success('Tranzaksiya yangilandi')
     },
     deleteTransaction: (id) => {
       setTransactions((list) => list.filter((t) => t.id !== id))

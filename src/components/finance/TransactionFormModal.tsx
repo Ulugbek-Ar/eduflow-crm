@@ -85,7 +85,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     if (amount <= 0) next.amount = 'Summa 0 dan katta bo\'lishi kerak'
     else if (amount > MAX_AMOUNT) next.amount = 'Summa juda katta'
     if (!form.date) next.date = 'Sanani tanlang'
-    else if (form.date > today) next.date = 'Kelajakdagi sana kiritib bo\'lmaydi'
+    // Kutilayotgan to'lov kelajakda bo'lishi mumkin; to'langan yoki bekor qilingan — yo'q
+    else if (form.date > today && form.status !== 'pending') next.date = 'Kelajakdagi sana faqat "Kutilmoqda" statusida'
     setErrors(next)
     if (next.amount) return amountRef.current?.focus()
     if (next.date) return dateRef.current?.focus()
@@ -155,7 +156,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             label="Sana"
             required
             type="date"
-            max={today}
+            max={form.status === 'pending' ? undefined : today}
+            hint={form.status === 'pending' ? 'Kutilayotgan to\'lov sanasi kelajakda bo\'lishi mumkin' : undefined}
             value={form.date}
             error={errors.date}
             onChange={(e) => update('date', e.target.value)}

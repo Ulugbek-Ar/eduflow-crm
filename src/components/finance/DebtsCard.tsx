@@ -95,7 +95,7 @@ export function DebtsCard() {
                 </small>
               </div>
               <strong className="nowrap">{money(t.amount)}</strong>
-              <Button size="sm" variant="ghost" icon="check" onClick={() => updateTransaction(t.id, { status: 'paid' })}>
+              <Button size="sm" variant="ghost" icon="check" onClick={() => updateTransaction(t.id, { status: 'paid', date: new Date().toISOString() })}>
                 To'landi
               </Button>
             </li>

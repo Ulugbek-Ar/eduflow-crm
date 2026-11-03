@@ -91,3 +91,57 @@ describe('Moliya va kassa', () => {
     expect(storedTx()[0]).toMatchObject({ type: 'expense', category: 'marketing', source: 'telegram', status: 'pending', method: 'card' })
   })
 })
+
+describe('Kutilayotgan to\'lovlar sanasi', () => {
+  const inDays = (days: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    return d
+  }
+  const inputDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  it('"Kutilmoqda" kelajakdagi sana bilan kiritiladi; "To\'langan" uchun kelajak rad etiladi', async () => {
+    const { user } = await openFinance({ customers: [makeCustomer()] })
+    await user.click(screen.getAllByRole('button', { name: 'To\'lov qabul qilish' })[0])
+    const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
+    await user.type(within(dialog).getByLabelText(/Summa/), '300000')
+    const date = within(dialog).getByLabelText(/^Sana/)
+    await user.clear(date)
+    await user.type(date, inputDate(inDays(10)))
+    await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
+    expect(within(dialog).getByText('Kelajakdagi sana faqat "Kutilmoqda" statusida')).toBeTruthy()
+
+    await user.selectOptions(within(dialog).getByLabelText('Status'), 'pending')
+    await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const [saved] = storedTx()
+    expect(saved.status).toBe('pending')
+    expect(new Date(String(saved.date)).getTime()).toBeGreaterThan(Date.now())
+  })
+
+  it('"To\'landi" bosilganda to\'lov sanasi bugun bo\'ladi va joriy oy qarzidan ayiriladi', async () => {
+    const [ielts] = createMockCourses()
+    const lastMonth = new Date()
+    lastMonth.setDate(0)
+    const { user } = await openFinance({
+      customers: [makeCustomer({ course: ielts.name, status: 'paid', createdAt: today })],
+      transactions: [makeTransaction({ id: 'p1', amount: 650_000, date: lastMonth.toISOString(), status: 'pending' })],
+    })
+    await user.click(screen.getByRole('button', { name: 'To\'landi' }))
+    const saved = storedTx()[0]
+    expect(saved.status).toBe('paid')
+    expect(String(saved.date).slice(0, 10)).toBe(new Date().toISOString().slice(0, 10))
+    expect(screen.getByText('Joriy oy uchun qarzdorlik yo\'q.')).toBeTruthy()
+  })
+
+  it('jadvalda kelajakdagi kutilgan to\'lov "To\'langan" qilinsa, sanasi bugunga tushadi', async () => {
+    const { user } = await openFinance({
+      transactions: [makeTransaction({ id: 'f1', amount: 100_000, date: inDays(3).toISOString(), status: 'pending' })],
+    })
+    // Kelajakdagi yozuv "Shu oy" davriga kirishi uchun sana oralig'i tanlanadi
+    const journal = screen.getByRole('region', { name: 'Tranzaksiyalar jurnali' })
+    await user.type(within(journal).getByLabelText('Gacha'), inputDate(inDays(30)))
+    await user.selectOptions(within(journal).getByRole('combobox', { name: /^Status: Kirim/ }), 'paid')
+    expect(new Date(String(storedTx()[0].date)).getTime()).toBeLessThanOrEqual(Date.now())
+  })
+})

@@ -53,7 +53,9 @@ function escapeXml(value: string): string {
 function cell(value: string | number, type: 'string' | 'number', style?: string): string {
   const styleAttr = style ? ` ss:StyleID="${style}"` : ''
   if (type === 'number' && typeof value === 'number' && Number.isFinite(value)) {
-    return `<Cell${styleAttr}><Data ss:Type="Number">${value}</Data></Cell>`
+    // Kasr qiymat (konversiya, ROI) yaxlitlanib ketmasligi uchun bir xonali format
+    const numberStyle = style === 'number' && !Number.isInteger(value) ? ' ss:StyleID="decimal"' : styleAttr
+    return `<Cell${numberStyle}><Data ss:Type="Number">${value}</Data></Cell>`
   }
   return `<Cell${styleAttr}><Data ss:Type="String">${escapeXml(String(value))}</Data></Cell>`
 }
@@ -73,6 +75,7 @@ export function toSpreadsheetXml<T>(rows: readonly T[], columns: readonly Export
     '<Styles>',
     '<Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#EEF2FF" ss:Pattern="Solid"/></Style>',
     '<Style ss:ID="number"><NumberFormat ss:Format="#,##0"/></Style>',
+    '<Style ss:ID="decimal"><NumberFormat ss:Format="#,##0.0"/></Style>',
     '</Styles>',
     `<Worksheet ss:Name="${safeName}">`,
     `<Table>${cols}`,

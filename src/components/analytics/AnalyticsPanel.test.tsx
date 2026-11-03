@@ -77,3 +77,19 @@ describe('Tahlil va hisobotlar', () => {
     expect(sourcesCsv).toContain('Telegram;0;0;;0;;0;')
   })
 })
+
+describe('Umumiy CPL va manbasiz marketing chiqimi', () => {
+  it('umumiy CPL barcha marketing chiqimidan; manbasiz chiqim alohida ko\'rsatiladi', async () => {
+    await openAnalytics({
+      customers: data.customers,
+      transactions: [
+        ...data.transactions,
+        makeTransaction({ id: 'm2', type: 'expense', category: 'marketing', customerId: undefined, customerName: undefined, amount: 100_000, date: today }),
+      ],
+    })
+    const kpis = screen.getByRole('region', { name: /Tahlil ko'rsatkichlari/ })
+    // (200 000 + 100 000) / 2 ta lid
+    expect(plain(within(kpis).getByText(/Umumiy CPL/).textContent)).toBe('Umumiy CPL: 150 000 so\'m')
+    expect(plain(screen.getByText(/Manbasi ko'rsatilmagan marketing chiqimi/).textContent)).toContain('100 000 so\'m')
+  })
+})

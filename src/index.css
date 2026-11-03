@@ -1520,6 +1520,15 @@ body.scroll-locked {
     display: block;
   }
 
+  /* Planshetda Header bir qatorga sig'ishi uchun: Hisobot tugmasi faqat ikonka */
+  .header-export > span {
+    display: none;
+  }
+
+  .search {
+    width: 170px;
+  }
+
   .row-actions {
     gap: 0;
   }
@@ -2013,6 +2022,15 @@ body.scroll-locked {
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   animation: drop-in 150ms var(--ease);
+}
+
+/* Scroll konteyner ichidagi menyu (Kanban): koordinatalar JS'da hisoblanadi */
+.dropdown-menu.is-fixed {
+  position: fixed;
+  top: 0;
+  right: auto;
+  left: 0;
+  z-index: 60;
 }
 
 .dropdown-menu.align-left {
@@ -2904,7 +2922,9 @@ body.scroll-locked {
     animation: fade-in 200ms var(--ease);
   }
 
+  /* Mobilda Header baland (qidiruv, davr, tugmalar) — sticky bo'lsa ekranning uchdan birini egallaydi */
   .header {
+    position: relative;
     padding: 12px 16px;
   }
 

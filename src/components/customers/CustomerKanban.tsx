@@ -114,6 +114,7 @@ export function CustomerKanban({ customers }: { customers: Customer[] }) {
                       </button>
                       <Dropdown
                         label={`${c.name}: bosqichni tanlash`}
+                        strategy="fixed"
                         trigger={(props) => (
                           <button type="button" className="icon-btn kanban-move" aria-label={`${c.name}: bosqichni o'zgartirish`} title="Bosqichni o'zgartirish" {...props}>
                             <Icon name="move" size={14} />

@@ -111,7 +111,7 @@ export function RevenueChart() {
                 className={cx('chart-group', !inRange && 'is-dim', active === i && 'is-active')}
                 tabIndex={i === (active ?? buckets.length - 1) ? 0 : -1}
                 role="img"
-                aria-label={`${b.longLabel}: kirim ${money(b.income)}, chiqim ${money(b.expense)}, sof ${money(b.income - b.expense)}`}
+                aria-label={`${b.longLabel}: tushum ${money(b.income)}, xarajat ${money(b.expense)}, sof ${money(b.income - b.expense)}`}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}
@@ -137,10 +137,10 @@ export function RevenueChart() {
           >
             <strong>{activeBucket.longLabel}</strong>
             <span>
-              <i className="dot dot-income" /> Kirim: {money(activeBucket.income)}
+              <i className="dot dot-income" /> Tushum: {money(activeBucket.income)}
             </span>
             <span>
-              <i className="dot dot-expense" /> Chiqim: {money(activeBucket.expense)}
+              <i className="dot dot-expense" /> Xarajat: {money(activeBucket.expense)}
             </span>
             <span className={activeBucket.income - activeBucket.expense < 0 ? 'text-danger' : 'text-success'}>
               Sof: {money(activeBucket.income - activeBucket.expense)}

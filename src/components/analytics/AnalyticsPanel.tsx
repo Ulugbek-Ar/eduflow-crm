@@ -3,7 +3,7 @@ import { useDashboard } from '../../context/useDashboard'
 import { exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
 import type { CustomerSource } from '../../types/customer.types'
-import { averageOrderValue, conversion, filterByPeriod, getPeriod, sourcePerformance, sumExpense, totalPerformance } from '../../utils/analytics'
+import { averageOrderValue, conversion, filterByPeriod, getPeriod, safeRatio, sourcePerformance, sumExpense, totalPerformance } from '../../utils/analytics'
 import { computeDebts } from '../../utils/debts'
 import { formatNumber, formatPercent } from '../../utils/format'
 import { customerColumns, debtColumns, sourceColumns, transactionColumns } from '../../utils/reports'
@@ -27,7 +27,10 @@ export function AnalyticsPanel() {
   const aov = averageOrderValue(txInPeriod)
   const rows = sourcePerformance(customers, transactions, SOURCES, period)
   const total = totalPerformance(rows)
+  // Barcha marketing chiqimi (manbasi ko'rsatilmaganlari ham) — umumiy CPL shundan; jadvalga faqat manbalilar kiradi
   const marketing = sumExpense(txInPeriod.filter((t) => t.category === 'marketing'))
+  const unattributed = marketing - total.spend
+  const overallCpl = marketing > 0 ? safeRatio(marketing, leadsInPeriod.length) : null
   const overallConversion = conversion(leadsInPeriod)
 
   const percent = (value: number | null) => (value === null ? '—' : formatPercent(value))
@@ -93,7 +96,7 @@ export function AnalyticsPanel() {
           <div className="kpi-body">
             <h2 className="kpi-title">Marketing chiqimi</h2>
             <strong>{money(marketing)}</strong>
-            <span className="kpi-foot muted">Umumiy CPL: {optionalMoney(total.cpl)}</span>
+            <span className="kpi-foot muted">Umumiy CPL: {optionalMoney(overallCpl)}</span>
           </div>
         </article>
         <article className="card kpi">
@@ -194,6 +197,12 @@ export function AnalyticsPanel() {
             </tfoot>
           </table>
         </div>
+        {unattributed > 0 && (
+          <p className="notice notice-warning formula-note">
+            Manbasi ko'rsatilmagan marketing chiqimi: {money(unattributed)} — u jadvaldagi CPL va ROI ga kirmaydi. Xarajatni tahrirlab
+            manbasini tanlang.
+          </p>
+        )}
         <p className="field-hint formula-note">
           CPL = marketing chiqimi / lidlar soni. ROI = (shu manbadan kelgan mijozlarning kirimi − chiqim) / chiqim × 100.
           Chiqim 0 bo'lsa "—". Marketing chiqimiga manba Moliya va kassa'da xarajat yozishda tanlanadi.

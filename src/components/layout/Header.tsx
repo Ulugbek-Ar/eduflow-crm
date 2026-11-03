@@ -120,7 +120,7 @@ export function Header() {
         <Dropdown
           label="Hisobot yuklash"
           trigger={(props) => (
-            <Button icon="download" {...props}>
+            <Button icon="download" className="header-export" aria-label="Hisobot yuklash" {...props}>
               <span className="hide-mobile">Hisobot yuklash</span>
               <span className="show-mobile">Hisobot</span>
               <Icon name="chevronDown" size={14} />
