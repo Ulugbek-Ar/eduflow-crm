@@ -9,6 +9,8 @@ import type { SaveResult, StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
 import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
+import type { Course } from '../types/course.types'
+import { normalizeCourseName, usedByCustomers } from '../utils/courses'
 import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
 import { createSaveMonitor } from '../utils/saveMonitor'
@@ -49,6 +51,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [customers, setCustomers] = useState(initial.data.customers)
   const [transactions, setTransactions] = useState(initial.data.transactions)
   const [settings, setSettings] = useState(initial.data.settings)
+  const [courses, setCourses] = useState(initial.data.courses)
   const [isDemo, setIsDemo] = useState(isDemoMode)
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
@@ -94,18 +97,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers)), [customers])
   useEffect(() => onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions)), [transactions])
   useEffect(() => onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings)), [settings])
+  useEffect(() => onSaved(STORAGE_KEYS.courses, setItem(STORAGE_KEYS.courses, courses)), [courses])
 
   // Boshqa tabda o'zgargan ma'lumotni shu tabga olib kelish (storage event faqat boshqa tablarda chiqadi)
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.storageArea !== localStorage) return
-      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.demo]
+      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.courses, STORAGE_KEYS.demo]
       if (!watched.includes(event.key)) return
       if (event.key === null || event.key === STORAGE_KEYS.demo) setIsDemo(isDemoMode())
       const { data } = readStored()
       if (event.key === null || event.key === STORAGE_KEYS.customers) setCustomers(data.customers)
       if (event.key === null || event.key === STORAGE_KEYS.transactions) setTransactions(data.transactions)
       if (event.key === null || event.key === STORAGE_KEYS.settings) setSettings(data.settings)
+      if (event.key === null || event.key === STORAGE_KEYS.courses) setCourses(data.courses)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -113,8 +118,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi
   const balance = transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0)
-
-  const courses = settings.courses
 
   const getCustomer = (id?: string) => (id ? customers.find((c) => c.id === id) : undefined)
 
@@ -133,6 +136,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setCustomers(data.customers)
     setTransactions(data.transactions)
     setSettings(data.settings)
+    setCourses(data.courses)
     setSearch('')
     setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
@@ -220,6 +224,38 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     deleteTransaction: (id) => {
       setTransactions((list) => list.filter((t) => t.id !== id))
       toast.success('Tranzaksiya o\'chirildi')
+    },
+    getCourse: (id) => (id ? courses.find((c) => c.id === id) : undefined),
+    addCourse: (data) => {
+      const course: Course = { ...data, name: normalizeCourseName(data.name), id: createId('k'), createdAt: new Date().toISOString() }
+      setCourses((list) => [...list, course])
+      toast.success(`"${course.name}" qo'shildi`)
+    },
+    updateCourse: (id, patch) => {
+      const before = courses.find((c) => c.id === id)
+      if (!before) return
+      const name = patch.name === undefined ? before.name : normalizeCourseName(patch.name)
+      setCourses((list) => list.map((c) => (c.id === id ? { ...c, ...patch, name, updatedAt: new Date().toISOString() } : c)))
+      if (name !== before.name) {
+        setCustomers((list) => list.map((c) => (c.course === before.name ? { ...c, course: name } : c)))
+      }
+      const keys = Object.keys(patch)
+      if (keys.length === 1 && patch.status) {
+        toast.success(patch.status === 'archived' ? `"${name}" arxivlandi` : `"${name}" arxivdan qaytarildi`)
+      } else {
+        toast.success(`"${name}" saqlandi`)
+      }
+    },
+    removeCourse: (id) => {
+      const course = courses.find((c) => c.id === id)
+      if (!course) return
+      if (usedByCustomers(course, customers) > 0) {
+        setCourses((list) => list.map((c) => (c.id === id ? { ...c, status: 'archived', updatedAt: new Date().toISOString() } : c)))
+        toast.info(`"${course.name}" mijozlari bor — o'chirish o'rniga arxivlandi`)
+        return
+      }
+      setCourses((list) => list.filter((c) => c.id !== id))
+      toast.success(`"${course.name}" o'chirildi`)
     },
     updateSettings: (next, options) => {
       setSettings(next)

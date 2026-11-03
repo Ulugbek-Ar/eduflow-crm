@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { Course, CourseInput } from '../types/course.types'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, Settings, SortState } from '../types/dashboard.types'
 import type { StoredData } from '../services/storage.service'
@@ -8,7 +9,7 @@ export interface DashboardContextValue {
   customers: Customer[]
   transactions: Transaction[]
   settings: Settings
-  courses: string[]
+  courses: Course[]
   search: string
   dateRange: DateRange
   activeSection: Section
@@ -42,6 +43,12 @@ export interface DashboardContextValue {
   addTransaction: (data: TransactionInput) => void
   updateTransaction: (id: string, patch: Partial<TransactionInput>) => void
   deleteTransaction: (id: string) => void
+  addCourse: (data: CourseInput) => void
+  // Nom o'zgarsa, shu kursdagi mijozlarning kurs nomi ham yangilanadi
+  updateCourse: (id: string, patch: Partial<CourseInput>) => void
+  // Mijozi bor kurs o'chirilmaydi — arxivlanadi
+  removeCourse: (id: string) => void
+  getCourse: (id?: string) => Course | undefined
   updateSettings: (settings: Settings, options?: { silent?: boolean }) => void
   resetData: () => void
   // Demo mijoz va tranzaksiyalarni o'chiradi (sozlamalar qoladi), demo rejimdan chiqadi

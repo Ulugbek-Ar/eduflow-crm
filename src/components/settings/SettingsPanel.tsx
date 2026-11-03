@@ -11,7 +11,6 @@ import { formatPhone, phoneDigits } from '../../utils/phone'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
-import { CourseSettings } from './CourseSettings'
 import { DataSettings } from './DataSettings'
 import { SecuritySettings } from './SecuritySettings'
 
@@ -39,7 +38,6 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName }> = [
   { id: 'organization', label: 'Tashkilot', icon: 'building' },
   { id: 'region', label: 'Mintaqa', icon: 'globe' },
   { id: 'profile', label: 'Profil', icon: 'user' },
-  { id: 'courses', label: 'Kurslar', icon: 'book' },
   { id: 'data', label: 'Ma\'lumotlar', icon: 'database' },
 ]
 
@@ -225,10 +223,6 @@ export function SettingsPanel() {
           </div>
           <h3 className="settings-subtitle">Login va parol</h3>
           <SecuritySettings />
-        </SettingsCard>
-
-        <SettingsCard id="courses" title="Kurslar" description="Mijoz formalarida tanlanadigan kurslar ro'yxati">
-          <CourseSettings courses={form.courses} onChange={(courses) => update('courses', courses)} />
         </SettingsCard>
 
         <SettingsCard id="data" title="Ma'lumotlar" description="Zaxira, tiklash va demo ma'lumotlar">

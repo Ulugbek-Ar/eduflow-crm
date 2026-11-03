@@ -1,3 +1,4 @@
+import type { Course } from '../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
 import type { PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
@@ -23,7 +24,33 @@ export const DEFAULT_SETTINGS: Settings = {
   adminLogin: 'admin',
   profileName: '',
   profileRole: 'Administrator',
-  courses: [...COURSES],
+}
+
+// [nom, turi, davomiyligi (oy), oylik narx, faol guruhlar, holati]
+type CourseSeed = [string, Course['type'], number, number, number, Course['status']]
+
+const COURSE_SEED: CourseSeed[] = [
+  [COURSES[0], 'course', 6, 650_000, 3, 'active'],
+  [COURSES[1], 'course', 8, 1_200_000, 2, 'active'],
+  [COURSES[2], 'course', 4, 900_000, 2, 'active'],
+  [COURSES[3], 'course', 9, 500_000, 4, 'active'],
+  [COURSES[4], 'course', 6, 450_000, 1, 'active'],
+  [COURSES[5], 'course', 5, 800_000, 1, 'active'],
+  ['Individual konsultatsiya', 'service', 1, 300_000, 0, 'active'],
+  ['Koreys tili', 'course', 6, 600_000, 0, 'archived'],
+]
+
+export function createMockCourses(): Course[] {
+  return COURSE_SEED.map(([name, type, durationMonths, monthlyPrice, activeGroups, status], index) => ({
+    id: `k${index + 1}`,
+    name,
+    type,
+    durationMonths,
+    monthlyPrice,
+    activeGroups,
+    status,
+    createdAt: daysAgo(200 - index),
+  }))
 }
 
 // Sanalar "hozir"ga nisbatan hisoblanadi, shunda demo ma'lumotlar doim oxirgi 6 oyni qamrab oladi

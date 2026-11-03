@@ -1,14 +1,16 @@
-import { createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
+import { createMockCourses, createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
+import type { Course } from '../types/course.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
 import type { Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
-import { isCustomer, isRecord, isTransaction, keepValid, sanitizeSettings } from '../utils/guards'
+import { isCourse, isCustomer, isRecord, isTransaction, keepValid, sanitizeSettings } from '../utils/guards'
 import { APP_NAME, BACKUP_APP_ID } from '../constants/app'
 
 export const STORAGE_KEYS = {
   customers: 'apex:customers',
   transactions: 'apex:transactions',
   settings: 'apex:settings',
+  courses: 'apex:courses',
   seeded: 'apex:seeded',
   version: 'apex:version',
   // Demo ma'lumot bilan boshlangan (Header'da belgi va tozalash tugmasi ko'rinadi)
@@ -20,12 +22,14 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v1 — MVP; v2 — category, ixtiyoriy mijoz maydonlari, kengaytirilgan sozlamalar;
 // v3 — tranzaksiyada mijoz nomi snapshot'i (customerName);
 // v4 — sozlamalarda profil (profileName, profileRole);
-// v5 — mijoz holatlari sotuv voronkasi bosqichlariga (LEGACY_STATUS_MAP)
-export const SCHEMA_VERSION = 5
+// v5 — mijoz holatlari sotuv voronkasi bosqichlariga (LEGACY_STATUS_MAP);
+// v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi
+export const SCHEMA_VERSION = 6
 
 export interface StoredData {
   customers: Customer[]
   transactions: Transaction[]
+  courses: Course[]
   settings: Settings
 }
 
@@ -187,21 +191,53 @@ export function fillCustomerNames(transactions: readonly Transaction[], customer
   })
 }
 
-function usedCourses(customers: readonly Customer[]): string[] {
-  return Array.from(new Set([...DEFAULT_SETTINGS.courses, ...customers.map((c) => c.course).filter(Boolean)]))
+// v5 -> v6: kurslar ro'yxati (settings.courses) va mijozlarda uchraydigan kurs nomlari to'liq kursga aylanadi.
+// Narx 0 (keyin to'ldiriladi), davomiyligi 1 oy, guruhlar 0, holati faol
+export function migrateCourses(rawSettings: unknown, customers: readonly Customer[], now = new Date()): Course[] {
+  const listed = isRecord(rawSettings) && Array.isArray(rawSettings.courses) ? rawSettings.courses : []
+  const names: string[] = []
+  for (const value of [...listed, ...customers.map((c) => c.course)]) {
+    if (typeof value !== 'string') continue
+    const name = value.trim().replace(/\s+/g, ' ')
+    if (name && !names.some((n) => n.toLowerCase() === name.toLowerCase())) names.push(name)
+  }
+  return names.map((name, index) => ({
+    id: `k${index + 1}`,
+    name,
+    type: 'course',
+    durationMonths: 1,
+    monthlyPrice: 0,
+    activeGroups: 0,
+    status: 'active',
+    createdAt: now.toISOString(),
+  }))
+}
+
+// Kurs nomlari takrorlanmasligi kerak (mijoz kursga nom orqali bog'lanadi)
+function uniqueCourseNames(courses: readonly Course[]): Course[] {
+  const seen = new Set<string>()
+  return courses.filter((c) => {
+    const key = c.name.trim().toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 // Istalgan (eski yoki buzuq) xom ma'lumotdan joriy sxemaga mos ma'lumot yasaydi
-export function normalizeData(raw: { customers: unknown; transactions: unknown; settings: unknown }): LoadResult {
+export function normalizeData(raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown }): LoadResult {
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
   const customers = keepValid(rawCustomers, isCustomer)
   const valid = keepValid(rawTransactions, isTransaction)
   const transactions = fillCustomerNames(valid, customers)
-  const settings = sanitizeSettings(raw.settings, usedCourses(customers))
+  const settings = sanitizeSettings(raw.settings)
+  // Kurslar massivi bo'lsa (v6+) — tekshiriladi; bo'lmasa (eski ma'lumot/zaxira) — migratsiya
+  const rawCourses = Array.isArray(raw.courses) ? raw.courses : null
+  const courses = rawCourses ? uniqueCourseNames(keepValid(rawCourses, isCourse)) : migrateCourses(raw.settings, customers)
   return {
-    data: { customers, transactions, settings },
-    dropped: rawCustomers.length - customers.length + (rawTransactions.length - valid.length),
+    data: { customers, transactions, courses, settings },
+    dropped: rawCustomers.length - customers.length + (rawTransactions.length - valid.length) + (rawCourses ? rawCourses.length - courses.length : 0),
   }
 }
 
@@ -212,20 +248,23 @@ export function saveAll(data: StoredData): SaveResult {
     setItem(STORAGE_KEYS.customers, data.customers),
     setItem(STORAGE_KEYS.transactions, data.transactions),
     setItem(STORAGE_KEYS.settings, data.settings),
+    setItem(STORAGE_KEYS.courses, data.courses),
     setItem(STORAGE_KEYS.seeded, true),
     setItem(STORAGE_KEYS.version, SCHEMA_VERSION),
   ])
 }
 
+// "Bo'sh boshlash": kurslar ham bo'sh — Kurslar va xizmatlar bo'limida qo'shiladi
 export function createEmptyData(): StoredData {
-  return { customers: [], transactions: [], settings: { ...DEFAULT_SETTINGS, courses: [...DEFAULT_SETTINGS.courses] } }
+  return { customers: [], transactions: [], courses: [], settings: { ...DEFAULT_SETTINGS } }
 }
 
 export function createMockData(): StoredData {
   return {
     customers: createMockCustomers(),
     transactions: createMockTransactions(),
-    settings: { ...DEFAULT_SETTINGS, courses: [...DEFAULT_SETTINGS.courses] },
+    courses: createMockCourses(),
+    settings: { ...DEFAULT_SETTINGS },
   }
 }
 
@@ -234,6 +273,7 @@ export function readStored(): LoadResult {
     customers: readJson(STORAGE_KEYS.customers),
     transactions: readJson(STORAGE_KEYS.transactions),
     settings: readJson(STORAGE_KEYS.settings),
+    courses: readJson(STORAGE_KEYS.courses),
   })
 }
 
@@ -305,6 +345,6 @@ export function parseBackup(text: string): BackupParseResult {
   if (typeof json.version === 'number' && json.version > SCHEMA_VERSION) {
     return { ok: false, error: 'Zaxira ilovaning yangiroq versiyasida yaratilgan' }
   }
-  const { data, dropped } = normalizeData({ customers: json.customers, transactions: json.transactions, settings: json.settings })
+  const { data, dropped } = normalizeData({ customers: json.customers, transactions: json.transactions, settings: json.settings, courses: json.courses })
   return { ok: true, data, dropped, exportedAt: typeof json.exportedAt === 'string' ? json.exportedAt : undefined }
 }

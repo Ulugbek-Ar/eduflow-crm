@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
-import { isCustomer, isSettings, isTransaction, sanitizeSettings } from '../utils/guards'
+import { isCourse, isCustomer, isSettings, isTransaction, sanitizeSettings } from '../utils/guards'
 import {
   combineResults,
   createBackup,
@@ -95,7 +95,7 @@ describe('loadData', () => {
     expect(dropped).toBe(0)
     expect(data.transactions.map((t) => t.category)).toEqual(['course_fee', 'rent'])
     expect(data.settings).toMatchObject({ orgName: 'Eski Markaz', dateFormat: 'dd.mm.yyyy', csvDelimiter: ';' })
-    expect(data.settings.courses).toContain('Robototexnika')
+    expect(data.courses.map((c) => c.name)).toContain('Robototexnika')
     expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
     const stored = readJson(STORAGE_KEYS.transactions)
     expect(Array.isArray(stored) && stored.every(isTransaction)).toBe(true)
@@ -146,16 +146,14 @@ describe('type guard\'lar', () => {
   it('isSettings', () => {
     expect(isSettings(DEFAULT_SETTINGS)).toBe(true)
     expect(isSettings({ ...DEFAULT_SETTINGS, csvDelimiter: '|' })).toBe(false)
-    expect(isSettings({ ...DEFAULT_SETTINGS, courses: [''] })).toBe(false)
     expect(isSettings(sanitizeSettings({ currency: 'EUR' }))).toBe(true)
   })
 
   it('sanitizeSettings maydonma-maydon tuzatadi', () => {
-    const settings = sanitizeSettings({ orgName: 'Markaz', currency: 'EUR', dateFormat: 'mm/dd', courses: ['A', '', 'A', 7, ' B '] })
+    const settings = sanitizeSettings({ orgName: 'Markaz', currency: 'EUR', dateFormat: 'mm/dd' })
     expect(settings.orgName).toBe('Markaz')
     expect(settings.currency).toBe('UZS')
     expect(settings.dateFormat).toBe('dd.mm.yyyy')
-    expect(settings.courses).toEqual(['A', 'B'])
   })
 })
 
@@ -389,5 +387,42 @@ describe('v4 -> v5: voronka bosqichlari', () => {
   it('eski (v2) JSON zaxira ham yangi bosqichlar bilan ochiladi', () => {
     const result = parseBackup(JSON.stringify({ version: 2, customers: [validCustomer], transactions: [] }))
     expect(result.ok && result.data.customers[0].status).toBe('paid')
+  })
+})
+
+describe('v5 -> v6: kurslar entity', () => {
+  it('settings.courses va mijozlardagi nomlar kursga aylanadi (narx 0), sozlamalardan olib tashlanadi', () => {
+    seedV1([validCustomer], [], { orgName: 'Markaz', courses: ['IELTS', ' ielts ', 'Python', 7] })
+    const { data } = loadData()
+    expect(data.courses.map((c) => c.name)).toEqual(['IELTS', 'Python', 'Robototexnika'])
+    expect(data.courses.every(isCourse)).toBe(true)
+    expect(data.courses[0]).toMatchObject({ type: 'course', durationMonths: 1, monthlyPrice: 0, activeGroups: 0, status: 'active' })
+    expect(readJson(STORAGE_KEYS.courses)).toHaveLength(3)
+    expect(readJson(STORAGE_KEYS.settings)).not.toHaveProperty('courses')
+  })
+
+  it('saqlangan kurslar tekshiriladi: buzuq va takroriy nomlar tashlanadi', () => {
+    seedV1([], [])
+    const good = { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 6, monthlyPrice: 650000, activeGroups: 2, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }
+    localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify([good, { ...good, id: 'k2', name: 'ielts' }, { ...good, id: 'k3', monthlyPrice: -5 }]))
+    const { data, dropped } = loadData()
+    expect(data.courses.map((c) => c.id)).toEqual(['k1'])
+    expect(dropped).toBe(2)
+  })
+
+  it('kurslarsiz eski zaxira migratsiya qilinadi, yangi zaxira kurslarni saqlaydi', () => {
+    const old = parseBackup(JSON.stringify({ version: 5, settings: { courses: ['IELTS'] }, customers: [], transactions: [] }))
+    expect(old.ok && old.data.courses.map((c) => c.name)).toEqual(['IELTS'])
+    const backup = createBackup(createMockData())
+    const restored = parseBackup(JSON.stringify(backup))
+    expect(restored.ok && restored.data.courses).toEqual(backup.courses)
+  })
+
+  it('demo ma\'lumotda narxli kurslar, xizmat va arxivdagi kurs bor', () => {
+    const { courses } = createMockData()
+    expect(courses.every(isCourse)).toBe(true)
+    expect(courses.some((c) => c.type === 'service')).toBe(true)
+    expect(courses.some((c) => c.status === 'archived')).toBe(true)
+    expect(courses.filter((c) => c.status === 'active').every((c) => c.monthlyPrice > 0)).toBe(true)
   })
 })

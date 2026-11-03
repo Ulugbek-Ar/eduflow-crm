@@ -256,6 +256,14 @@ code {
   color: var(--success-text);
 }
 
+.text-warning {
+  color: var(--warning-text);
+}
+
+.table tr.is-muted td {
+  color: var(--text-muted);
+}
+
 .text-danger {
   color: var(--danger-text);
 }

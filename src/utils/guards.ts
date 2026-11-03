@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from '../constants/mockData'
+import type { Course, CourseStatus, CourseType } from '../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { CsvDelimiter, Currency, DateFormat, Settings } from '../types/dashboard.types'
 import type { PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
@@ -18,6 +19,8 @@ const CATEGORY_TYPE: Record<TransactionCategory, TransactionType> = {
   utilities: 'expense',
   other_expense: 'expense',
 }
+const COURSE_TYPES: Record<CourseType, true> = { course: true, service: true }
+const COURSE_STATUSES: Record<CourseStatus, true> = { active: true, archived: true }
 const CURRENCIES: Record<Currency, true> = { UZS: true, USD: true }
 const DATE_FORMATS: Record<DateFormat, true> = { 'dd.mm.yyyy': true, 'dd/mm/yyyy': true, 'yyyy-mm-dd': true }
 const DELIMITERS: Record<CsvDelimiter, true> = { ';': true, ',': true }
@@ -89,16 +92,35 @@ export function isSettings(value: unknown): value is Settings {
     oneOf(DELIMITERS, value.csvDelimiter) &&
     isText(value.adminLogin) &&
     typeof value.profileName === 'string' &&
-    typeof value.profileRole === 'string' &&
-    Array.isArray(value.courses) &&
-    value.courses.every(isText)
+    typeof value.profileRole === 'string'
+  )
+}
+
+function isWholeNumber(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
+}
+
+export const COURSE_LIMITS = { maxDuration: 60, maxPrice: 1_000_000_000_000, maxGroups: 999 } as const
+
+export function isCourse(value: unknown): value is Course {
+  return (
+    isRecord(value) &&
+    isText(value.id) &&
+    isText(value.name) &&
+    oneOf(COURSE_TYPES, value.type) &&
+    isWholeNumber(value.durationMonths, 1, COURSE_LIMITS.maxDuration) &&
+    isWholeNumber(value.monthlyPrice, 0, COURSE_LIMITS.maxPrice) &&
+    isWholeNumber(value.activeGroups, 0, COURSE_LIMITS.maxGroups) &&
+    oneOf(COURSE_STATUSES, value.status) &&
+    isIsoDate(value.createdAt) &&
+    (value.updatedAt === undefined || isIsoDate(value.updatedAt))
   )
 }
 
 // Har bir maydon alohida tekshiriladi: noto'g'ri maydon standart qiymat bilan almashtiriladi
-export function sanitizeSettings(value: unknown, fallbackCourses: readonly string[] = DEFAULT_SETTINGS.courses): Settings {
+// Eski (v1–v5) sozlamalardagi `courses` maydoni bu yerda e'tiborga olinmaydi — u migrateCourses'da kurslarga aylanadi
+export function sanitizeSettings(value: unknown): Settings {
   const raw = isRecord(value) ? value : {}
-  const courses = Array.isArray(raw.courses) ? raw.courses.filter(isText).map((c) => c.trim()) : [...fallbackCourses]
   return {
     orgName: isText(raw.orgName) ? raw.orgName : DEFAULT_SETTINGS.orgName,
     logoText: typeof raw.logoText === 'string' ? raw.logoText.slice(0, 3) : DEFAULT_SETTINGS.logoText,
@@ -111,7 +133,6 @@ export function sanitizeSettings(value: unknown, fallbackCourses: readonly strin
     // v4: profil maydonlari (eski sozlamalarda yo'q — standart qiymat)
     profileName: typeof raw.profileName === 'string' ? raw.profileName.trim().slice(0, 60) : DEFAULT_SETTINGS.profileName,
     profileRole: isText(raw.profileRole) ? raw.profileRole.trim().slice(0, 40) : DEFAULT_SETTINGS.profileRole,
-    courses: Array.from(new Set(courses)),
   }
 }
 

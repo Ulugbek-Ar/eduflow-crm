@@ -52,6 +52,7 @@ function ActiveSection() {
         </div>
       )
     case 'courses':
+      return <CoursesPanel />
     case 'analytics':
       return <SectionPlaceholder section={activeSection} />
     case 'settings':
@@ -60,7 +61,7 @@ function ActiveSection() {
 }
 
 // Yangi bo'limlar to'liq tayyor bo'lgunga qadar vaqtinchalik ekran
-function SectionPlaceholder({ section }: { section: 'courses' | 'analytics' }) {
+function SectionPlaceholder({ section }: { section: 'analytics' }) {
   const label = NAV_ITEMS.find((item) => item.id === section)?.label ?? ''
   return (
     <section className="card">
@@ -75,16 +76,20 @@ const loadSettingsPanel = () => import('./components/settings/SettingsPanel')
 const loadCustomerForm = () => import('./components/customers/CustomerFormModal')
 const loadCustomerDetail = () => import('./components/customers/CustomerDetail')
 const loadTransactionForm = () => import('./components/finance/TransactionFormModal')
+const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
+const loadCourseForm = () => import('./components/courses/CourseFormModal')
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
 const CustomerFormModal = lazy(() => loadCustomerForm().then((m) => ({ default: m.CustomerFormModal })))
 const CustomerDetail = lazy(() => loadCustomerDetail().then((m) => ({ default: m.CustomerDetail })))
 const TransactionFormModal = lazy(() => loadTransactionForm().then((m) => ({ default: m.TransactionFormModal })))
+const CoursesPanel = lazy(() => loadCoursesPanel().then((m) => ({ default: m.CoursesPanel })))
+const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.CourseFormModal })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
-  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel]) {
+  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm]) {
     load().catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })
@@ -169,6 +174,7 @@ function Shell() {
       )}
       <Suspense fallback={null}>
         {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
+        {modal?.type === 'course' && <CourseFormModal key={modal.payload?.id ?? 'new'} courseId={modal.payload?.id} />}
         {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
         {modal?.type === 'transaction' && (
           <TransactionFormModal

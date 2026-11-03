@@ -28,6 +28,7 @@ export function Header() {
     customers,
     transactions,
     settings,
+    courses,
     customerFilters,
     customerSort,
     transactionFilters,
@@ -56,7 +57,7 @@ export function Header() {
   }
 
   const exportBackup = () => {
-    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
   }
 
   const handleClearDemo = async () => {

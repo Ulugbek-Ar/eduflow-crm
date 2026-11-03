@@ -3,9 +3,10 @@ import { cleanup, render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach } from 'vitest'
 import App from '../App'
-import { DEFAULT_SETTINGS } from '../constants/mockData'
+import { COURSES, createMockCourses, DEFAULT_SETTINGS } from '../constants/mockData'
 import { hashPassword, PBKDF2_ITERATIONS } from '../services/auth.service'
 import { saveAll, setDemoMode } from '../services/storage.service'
+import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 
@@ -32,8 +33,12 @@ export function seedSession(login = TEST_LOGIN) {
   sessionStorage.setItem('apex:session', JSON.stringify({ login, startedAt: new Date().toISOString() }))
 }
 
-export function seedData({ customers = [], transactions = [] }: { customers?: Customer[]; transactions?: Transaction[] } = {}) {
-  saveAll({ customers, transactions, settings: { ...DEFAULT_SETTINGS, courses: [...DEFAULT_SETTINGS.courses] } })
+export function seedData({
+  customers = [],
+  transactions = [],
+  courses = createMockCourses(),
+}: { customers?: Customer[]; transactions?: Transaction[]; courses?: Course[] } = {}) {
+  saveAll({ customers, transactions, courses, settings: { ...DEFAULT_SETTINGS } })
   setDemoMode(false)
 }
 
@@ -56,7 +61,7 @@ export function makeCustomer(patch: Partial<Customer> = {}): Customer {
     id: 'c1',
     name: 'Aziza Karimova',
     phone: '+998 90 123 45 67',
-    course: DEFAULT_SETTINGS.courses[0],
+    course: COURSES[0],
     status: 'paid',
     source: 'instagram',
     createdAt: '2026-10-01T10:00:00.000Z',

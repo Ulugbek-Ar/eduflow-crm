@@ -65,8 +65,8 @@ export function CustomerTable() {
     setPage(1)
   }
 
-  // Filtrda sozlamalardagi kurslar va mijozlarda uchraydigan boshqa kurslar
-  const courseOptions = Array.from(new Set([...courses, ...customers.map((c) => c.course)])).filter(Boolean)
+  // Filtrda barcha kurslar (arxivdagilar ham) va mijozlarda uchraydigan boshqa nomlar
+  const courseOptions = Array.from(new Set([...courses.map((c) => c.name), ...customers.map((c) => c.course)])).filter(Boolean)
   const filtered = sortCustomers(filterCustomers(customers, search, filters), sort)
   const current = paginate(filtered, page, pageSize)
   const filtersActive = hasActiveFilters(filters) || search.trim() !== ''

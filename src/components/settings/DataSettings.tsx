@@ -24,7 +24,7 @@ const USAGE_WARNING_PERCENT = 80
 const LIMIT_MB = STORAGE_LIMIT_BYTES / 1024 / 1024
 
 export function DataSettings() {
-  const { customers, transactions, settings, resetData, replaceData, formatDate } = useDashboard()
+  const { customers, transactions, courses, settings, resetData, replaceData, formatDate } = useDashboard()
   const storageUsage = useStorageUsage()
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -32,7 +32,7 @@ export function DataSettings() {
   const [error, setError] = useState('')
 
   const handleBackup = () => {
-    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
   }
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -146,7 +146,7 @@ export function DataSettings() {
         <div className="import-preview" role="region" aria-label="Import oldindan ko'rish">
           <strong>{preview.fileName}</strong>
           <p>
-            {preview.data.customers.length} mijoz, {preview.data.transactions.length} tranzaksiya, {preview.data.settings.courses.length} kurs
+            {preview.data.customers.length} mijoz, {preview.data.transactions.length} tranzaksiya, {preview.data.courses.length} kurs/xizmat
             {preview.exportedAt && ` · ${formatDate(preview.exportedAt)} da yaratilgan`}
           </p>
           {preview.dropped > 0 && <p className="text-danger">{preview.dropped} ta buzuq yozuv tashlab yuboriladi</p>}

@@ -4,6 +4,7 @@ import { FUNNEL_STAGES, SOURCE_LABELS, STATUS_LABELS } from '../../constants/nav
 import { useDashboard } from '../../context/useDashboard'
 import type { CustomerInput } from '../../types/customer.types'
 import { toOptions } from '../../utils/cx'
+import { courseChoices } from '../../utils/courses'
 import { validateCustomer } from '../../utils/customers'
 import type { CustomerFormErrors } from '../../utils/customers'
 import { formatPhone } from '../../utils/phone'
@@ -23,7 +24,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
     name: editing?.name ?? '',
     phone: editing?.phone ?? '+998',
     email: editing?.email ?? '',
-    course: editing?.course ?? courses[0] ?? '',
+    course: editing?.course ?? courseChoices(courses)[0] ?? '',
     // Yangi mijoz voronkaning birinchi bosqichidan boshlanadi
     status: editing?.status ?? 'new',
     source: editing?.source ?? 'telegram',
@@ -54,7 +55,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
     closeModal()
   }
 
-  const courseOptions = Array.from(new Set([...courses, form.course])).filter(Boolean)
+  const courseOptions = courseChoices(courses, editing?.course)
 
   return (
     <Modal
@@ -108,7 +109,8 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
             label="Kurs / xizmat"
             value={form.course}
             onChange={(e) => update('course', e.target.value)}
-            options={courseOptions.map((c) => ({ value: c, label: c }))}
+            hint={courseOptions.length === 0 ? 'Avval "Kurslar va xizmatlar" bo\'limida kurs qo\'shing' : undefined}
+            options={[{ value: '', label: 'Tanlanmagan' }, ...courseOptions.map((c) => ({ value: c, label: c }))]}
           />
           {editing && (
             <Select

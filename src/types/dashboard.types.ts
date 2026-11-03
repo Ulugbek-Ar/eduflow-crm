@@ -17,6 +17,7 @@ export type ModalState =
   | { type: 'customer'; payload?: { id?: string } }
   | { type: 'customerDetail'; payload: { id: string } }
   | { type: 'transaction'; payload?: { id?: string; kind?: TransactionType; customerId?: string } }
+  | { type: 'course'; payload?: { id?: string } }
   | null
 
 export type ModalType = NonNullable<ModalState>['type']
@@ -37,5 +38,4 @@ export interface Settings {
   // Header'dagi profil menyusi: to'liq ism (bo'sh bo'lsa login ko'rsatiladi) va lavozim
   profileName: string
   profileRole: string
-  courses: string[]
 }
