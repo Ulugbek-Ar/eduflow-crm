@@ -1,0 +1,48 @@
+name: GitHub Pages
+
+# Dashboard'ning ommaviy havolasi: https://ulugbek-ar.github.io/eduflow-crm/
+# Shu branch'ga har push'da tekshiruv (npm run check) o'tsa, sayt qayta yig'ilib gh-pages branch'iga joylanadi
+on:
+  push:
+    branches:
+      - claude/crm-funnel-courses-analytics
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: build va gh-pages ga joylash
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+      # Nisbiy yo'llar (./assets/...) — sayt /eduflow-crm/ ostida ochiladi
+      - run: npx vite build --base ./ --outDir site && touch site/.nojekyll
+
+      - name: gh-pages branch'iga joylash
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "deploy: ${GITHUB_REPOSITORY}@${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.0.0
 
+**Jonli demo:** https://ulugbek-ar.github.io/eduflow-crm/ — kirish `admin` / `admin123`, so'ng "Demo ma'lumot bilan tanishish".
+Sayt `claude/crm-funnel-courses-analytics` branch'iga har push'da avtomatik yangilanadi (`.github/workflows/pages.yml`).
+
 **Ta'lim markazlari va kichik biznes uchun CRM boshqaruv paneli.** Mijozlar bazasi, to'lovlar, kassa balansi, hisobotlar va
 analitika — bitta brauzer ilovasida. Interfeys to'liq o'zbek tilida (lotin), mobil qurilmalar va qorong'i mavzu qo'llab-quvvatlanadi.
 
