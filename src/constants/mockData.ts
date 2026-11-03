@@ -37,21 +37,21 @@ function daysAgo(days: number): string {
 type CustomerSeed = [string, string, number, CustomerStatus, CustomerSource, number]
 
 const CUSTOMER_SEED: CustomerSeed[] = [
-  ['Aziza Karimova', '+998 90 123 45 67', 0, 'active', 'instagram', 170],
-  ['Jasur Toshmatov', '+998 91 234 56 78', 1, 'active', 'telegram', 160],
-  ['Dilnoza Rahimova', '+998 93 345 67 89', 3, 'left', 'referral', 150],
-  ['Sardor Yusupov', '+998 94 456 78 90', 2, 'active', 'website', 130],
-  ['Madina Abdullayeva', '+998 99 567 89 01', 4, 'paused', 'instagram', 115],
-  ['Bekzod Ergashev', '+998 97 678 90 12', 1, 'active', 'telegram', 100],
-  ['Nilufar Qodirova', '+998 90 789 01 23', 5, 'active', 'instagram', 85],
-  ['Otabek Nazarov', '+998 88 890 12 34', 0, 'lead', 'website', 70],
-  ['Shahnoza Mirzayeva', '+998 95 901 23 45', 3, 'active', 'referral', 55],
-  ['Doniyor Saidov', '+998 33 012 34 56', 2, 'active', 'telegram', 40],
-  ['Kamola Xasanova', '+998 90 111 22 33', 0, 'active', 'instagram', 25],
-  ['Rustam Aliyev', '+998 91 222 33 44', 1, 'lead', 'telegram', 14],
-  ['Gulnoza Ismoilova', '+998 93 333 44 55', 5, 'active', 'website', 8],
-  ['Javohir Umarov', '+998 94 444 55 66', 2, 'lead', 'instagram', 3],
-  ['Malika Sobirova', '+998 99 555 66 77', 4, 'lead', 'referral', 0],
+  ['Aziza Karimova', '+998 90 123 45 67', 0, 'paid', 'instagram', 170],
+  ['Jasur Toshmatov', '+998 91 234 56 78', 1, 'paid', 'telegram', 160],
+  ['Dilnoza Rahimova', '+998 93 345 67 89', 3, 'cancelled', 'referral', 150],
+  ['Sardor Yusupov', '+998 94 456 78 90', 2, 'paid', 'website', 130],
+  ['Madina Abdullayeva', '+998 99 567 89 01', 4, 'thinking', 'instagram', 115],
+  ['Bekzod Ergashev', '+998 97 678 90 12', 1, 'paid', 'telegram', 100],
+  ['Nilufar Qodirova', '+998 90 789 01 23', 5, 'paid', 'instagram', 85],
+  ['Otabek Nazarov', '+998 88 890 12 34', 0, 'thinking', 'website', 70],
+  ['Shahnoza Mirzayeva', '+998 95 901 23 45', 3, 'paid', 'referral', 55],
+  ['Doniyor Saidov', '+998 33 012 34 56', 2, 'paid', 'telegram', 40],
+  ['Kamola Xasanova', '+998 90 111 22 33', 0, 'paid', 'instagram', 25],
+  ['Rustam Aliyev', '+998 91 222 33 44', 1, 'contacted', 'telegram', 14],
+  ['Gulnoza Ismoilova', '+998 93 333 44 55', 5, 'paid', 'website', 8],
+  ['Javohir Umarov', '+998 94 444 55 66', 2, 'contacted', 'instagram', 3],
+  ['Malika Sobirova', '+998 99 555 66 77', 4, 'new', 'referral', 0],
 ]
 
 // [tur, summa, usul, kategoriya, izoh, mijoz raqami (1 dan) yoki 0, necha kun oldin]

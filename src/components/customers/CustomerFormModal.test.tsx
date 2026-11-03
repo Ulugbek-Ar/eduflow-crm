@@ -48,3 +48,30 @@ describe('Mijoz qo\'shish', () => {
     expect(within(dialog).getByText('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')).toBeTruthy()
   })
 })
+
+describe('Yangi mijoz formasi (voronka)', () => {
+  it('maydonlar: Ism, Telefon, Manba, Kurs / xizmat, Izoh; yangi mijoz "Yangi" bosqichida', async () => {
+    const { user } = await renderSignedIn()
+    const dialog = await openForm(user)
+    expect(within(dialog).queryByLabelText(/Email/)).toBeNull()
+    expect(within(dialog).queryByLabelText('Bosqich')).toBeNull()
+    await user.type(within(dialog).getByLabelText(/Ism familiya/), 'Bobur Aliyev')
+    await user.type(within(dialog).getByLabelText(/Telefon/), '935554433')
+    await user.selectOptions(within(dialog).getByLabelText('Manba'), 'telegram')
+    await user.selectOptions(within(dialog).getByLabelText('Kurs / xizmat'), 'Python asoslari')
+    await user.type(within(dialog).getByLabelText('Izoh'), 'Kechki guruh')
+    await user.click(within(dialog).getByRole('button', { name: 'Qo\'shish' }))
+    const stored = JSON.parse(localStorage.getItem('apex:customers') ?? '[]') as Array<Record<string, string>>
+    expect(stored[0]).toMatchObject({ name: 'Bobur Aliyev', status: 'new', source: 'telegram', course: 'Python asoslari', note: 'Kechki guruh' })
+  })
+
+  it('tahrirlashda bosqichni ham o\'zgartirish mumkin', async () => {
+    const { user } = await renderSignedIn({ customers: [makeCustomer({ status: 'new' })] })
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
+    await user.click(await screen.findByRole('button', { name: 'Aziza Karimovani tahrirlash' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Mijozni tahrirlash' })
+    await user.selectOptions(within(dialog).getByLabelText('Bosqich'), 'paid')
+    await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
+    expect((JSON.parse(localStorage.getItem('apex:customers') ?? '[]') as Array<{ status: string }>)[0].status).toBe('paid')
+  })
+})

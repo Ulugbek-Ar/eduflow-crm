@@ -4,7 +4,7 @@ import type { CsvDelimiter, Currency, DateFormat, Settings } from '../types/dash
 import type { PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
 
 // Record<T, true> ko'rinishi: yangi qiymat qo'shilsa TypeScript bu yerni ham yangilashni talab qiladi
-const STATUSES: Record<CustomerStatus, true> = { lead: true, active: true, paused: true, left: true }
+const STATUSES: Record<CustomerStatus, true> = { new: true, contacted: true, thinking: true, paid: true, cancelled: true }
 const SOURCES: Record<CustomerSource, true> = { telegram: true, instagram: true, website: true, referral: true }
 const TYPES: Record<TransactionType, true> = { income: true, expense: true }
 const METHODS: Record<PaymentMethod, true> = { payme: true, click: true, cash: true, bank: true }

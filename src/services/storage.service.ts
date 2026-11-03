@@ -1,5 +1,5 @@
 import { createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
-import type { Customer } from '../types/customer.types'
+import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
 import type { Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
 import { isCustomer, isRecord, isTransaction, keepValid, sanitizeSettings } from '../utils/guards'
@@ -19,8 +19,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 
 // v1 — MVP; v2 — category, ixtiyoriy mijoz maydonlari, kengaytirilgan sozlamalar;
 // v3 — tranzaksiyada mijoz nomi snapshot'i (customerName);
-// v4 — sozlamalarda profil (profileName, profileRole)
-export const SCHEMA_VERSION = 4
+// v4 — sozlamalarda profil (profileName, profileRole);
+// v5 — mijoz holatlari sotuv voronkasi bosqichlariga (LEGACY_STATUS_MAP)
+export const SCHEMA_VERSION = 5
 
 export interface StoredData {
   customers: Customer[]
@@ -155,6 +156,19 @@ export function inferCategory(type: TransactionType, note: string, customerId?: 
 }
 
 // v1 -> v2: tranzaksiyaga kategoriya, bo'sh izohga ''
+// v4 -> v5: eski holat -> voronka bosqichi
+export const LEGACY_STATUS_MAP: Record<LegacyCustomerStatus, CustomerStatus> = {
+  lead: 'new',
+  active: 'paid',
+  paused: 'thinking',
+  left: 'cancelled',
+}
+
+function migrateCustomer(value: unknown): unknown {
+  if (!isRecord(value) || typeof value.status !== 'string' || !Object.hasOwn(LEGACY_STATUS_MAP, value.status)) return value
+  return { ...value, status: LEGACY_STATUS_MAP[value.status as LegacyCustomerStatus] }
+}
+
 function migrateTransaction(value: unknown): unknown {
   if (!isRecord(value)) return value
   const note = typeof value.note === 'string' ? value.note : ''
@@ -179,7 +193,7 @@ function usedCourses(customers: readonly Customer[]): string[] {
 
 // Istalgan (eski yoki buzuq) xom ma'lumotdan joriy sxemaga mos ma'lumot yasaydi
 export function normalizeData(raw: { customers: unknown; transactions: unknown; settings: unknown }): LoadResult {
-  const rawCustomers = Array.isArray(raw.customers) ? raw.customers : []
+  const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
   const customers = keepValid(rawCustomers, isCustomer)
   const valid = keepValid(rawTransactions, isTransaction)

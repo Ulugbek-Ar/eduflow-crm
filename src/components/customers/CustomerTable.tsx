@@ -1,19 +1,29 @@
 import { useState } from 'react'
-import { SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
+import { FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
-import type { Customer, CustomerFilters, CustomerSortKey, CustomerStatus } from '../../types/customer.types'
+import { usePersistentState } from '../../hooks/usePersistentState'
+import type { Customer, CustomerFilters, CustomerSortKey, CustomerStatus, CustomerView } from '../../types/customer.types'
 import type { SortDirection } from '../../types/dashboard.types'
-import { toOptions } from '../../utils/cx'
+import { cx, toOptions } from '../../utils/cx'
 import { deleteCustomerMessage, EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
 import { paginate } from '../../utils/list'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
+import { Input } from '../ui/Input'
 import { Pagination } from '../ui/Pagination'
 import { Select } from '../ui/Select'
 import { SortHeader } from '../ui/SortHeader'
+import { CustomerKanban } from './CustomerKanban'
 
-const STATUS_OPTIONS = toOptions(STATUS_LABELS)
+const STATUS_OPTIONS = FUNNEL_STAGES.map((stage) => ({ value: stage, label: STATUS_LABELS[stage] }))
+
+export const CUSTOMER_VIEW_KEY = 'apex:customers-view'
+const isView = (value: unknown): value is CustomerView => value === 'table' || value === 'kanban'
+const VIEWS: Array<{ id: CustomerView; label: string; icon: 'list' | 'kanban' }> = [
+  { id: 'table', label: 'Jadval', icon: 'list' },
+  { id: 'kanban', label: 'Kanban', icon: 'kanban' },
+]
 
 // Mobilda jadval sarlavhasi yashiriladi, saralash shu ro'yxat orqali
 const MOBILE_SORTS = [
@@ -45,6 +55,7 @@ export function CustomerTable() {
   const confirm = useConfirm()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [view, setView] = usePersistentState<CustomerView>(CUSTOMER_VIEW_KEY, 'table', isView)
 
   // Qidiruv, filtr yoki saralash o'zgarsa birinchi sahifaga qaytiladi
   const viewKey = JSON.stringify([search, filters, sort])
@@ -82,14 +93,24 @@ export function CustomerTable() {
     <section className="card" aria-labelledby="customers-title">
       <div className="card-head">
         <div>
-          <h2 id="customers-title">Mijozlar bazasi</h2>
+          <h2 id="customers-title">Mijozlar va lidlar</h2>
           <span className="muted">
             {filtered.length} ta natija (jami {customers.length})
           </span>
         </div>
-        <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
-          Yangi mijoz
-        </Button>
+        <div className="toolbar">
+          <div className="segmented" role="group" aria-label="Ko'rinish">
+            {VIEWS.map((v) => (
+              <button key={v.id} type="button" aria-pressed={view === v.id} className={cx(view === v.id && 'is-active')} onClick={() => setView(v.id)}>
+                <Icon name={v.icon} size={15} />
+                {v.label}
+              </button>
+            ))}
+          </div>
+          <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
+            Yangi mijoz
+          </Button>
+        </div>
       </div>
 
       <div className="filters">
@@ -98,7 +119,7 @@ export function CustomerTable() {
           hideLabel
           value={filters.status}
           onChange={(e) => setFilter('status', e.target.value as CustomerFilters['status'])}
-          options={[{ value: 'all', label: 'Barcha holatlar' }, ...STATUS_OPTIONS]}
+          options={[{ value: 'all', label: 'Barcha bosqichlar' }, ...STATUS_OPTIONS]}
         />
         <Select
           label="Kurs"
@@ -114,17 +135,23 @@ export function CustomerTable() {
           onChange={(e) => setFilter('source', e.target.value as CustomerFilters['source'])}
           options={[{ value: 'all', label: 'Barcha manbalar' }, ...toOptions(SOURCE_LABELS)]}
         />
-        <Select
-          label="Saralash"
-          hideLabel
-          className="mobile-only"
-          value={`${sort.key}:${sort.direction}`}
-          onChange={(e) => {
-            const [key, direction] = e.target.value.split(':') as [CustomerSortKey, SortDirection]
-            setCustomerSort({ key, direction })
-          }}
-          options={MOBILE_SORTS}
-        />
+        <div className="date-range" role="group" aria-label="Qo'shilgan sana">
+          <Input label="Dan" type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilter('from', e.target.value)} />
+          <Input label="Gacha" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} />
+        </div>
+        {view === 'table' && (
+          <Select
+            label="Saralash"
+            hideLabel
+            className="mobile-only"
+            value={`${sort.key}:${sort.direction}`}
+            onChange={(e) => {
+              const [key, direction] = e.target.value.split(':') as [CustomerSortKey, SortDirection]
+              setCustomerSort({ key, direction })
+            }}
+            options={MOBILE_SORTS}
+          />
+        )}
         {filtersActive && (
           <Button variant="subtle" icon="close" onClick={clearFilters}>
             Filtrlarni tozalash
@@ -132,7 +159,9 @@ export function CustomerTable() {
         )}
       </div>
 
-      {current.total === 0 ? (
+      {view === 'kanban' && filtered.length > 0 ? (
+        <CustomerKanban customers={filtered} />
+      ) : current.total === 0 ? (
         customers.length === 0 ? (
           <EmptyState
             title="Hali mijoz yo'q"

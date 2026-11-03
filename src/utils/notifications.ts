@@ -30,13 +30,13 @@ export function buildNotifications(
   const result: AppNotification[] = []
 
   const staleLeads = customers.filter(
-    (c) => c.status === 'lead' && now.getTime() - new Date(c.createdAt).getTime() > STALE_LEAD_DAYS * DAY_MS,
+    (c) => c.status === 'new' && now.getTime() - new Date(c.createdAt).getTime() > STALE_LEAD_DAYS * DAY_MS,
   )
   if (staleLeads.length > 0) {
     result.push({
       id: `stale-leads:${staleLeads.map((c) => c.id).sort().join(',')}`,
       tone: 'warning',
-      title: `${staleLeads.length} ta lead ${STALE_LEAD_DAYS} kundan beri javobsiz`,
+      title: `${staleLeads.length} ta yangi lid ${STALE_LEAD_DAYS} kundan beri bog'lanilmagan`,
       description: staleLeads
         .slice(0, 3)
         .map((c) => c.name)

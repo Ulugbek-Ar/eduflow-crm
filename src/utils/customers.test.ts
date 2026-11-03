@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
-import { customerPayments, deleteCustomerMessage, deletedCustomerName, filterCustomers, resolveCustomerName, sortCustomers, validateCustomer } from './customers'
+import { customerPayments, groupByStage, neighbourStage, deleteCustomerMessage, deletedCustomerName, filterCustomers, resolveCustomerName, sortCustomers, validateCustomer } from './customers'
 import { paginate } from './list'
 import { formatPhone, isValidPhone } from './phone'
 
@@ -10,14 +10,14 @@ const base: Customer = {
   name: 'Aziza Karimova',
   phone: '+998 90 123 45 67',
   course: 'IELTS',
-  status: 'active',
+  status: 'paid',
   source: 'instagram',
   createdAt: '2026-05-01T10:00:00.000Z',
 }
 const list: Customer[] = [
   base,
-  { ...base, id: 'c2', name: 'Bekzod Ergashev', phone: '+998 97 678 90 12', status: 'lead', course: 'Python' },
-  { ...base, id: 'c3', name: 'Otabek Nazarov', phone: '+998 88 890 12 34', status: 'left', source: 'website' },
+  { ...base, id: 'c2', name: 'Bekzod Ergashev', phone: '+998 97 678 90 12', status: 'new', course: 'Python' },
+  { ...base, id: 'c3', name: 'Otabek Nazarov', phone: '+998 88 890 12 34', status: 'cancelled', source: 'website' },
 ]
 
 describe('telefon maskasi', () => {
@@ -38,7 +38,7 @@ describe('telefon maskasi', () => {
 })
 
 describe('validateCustomer', () => {
-  const input = { name: 'Yangi', phone: '+998 91 000 00 00', course: 'IELTS', status: 'lead', source: 'telegram' } as const
+  const input = { name: 'Yangi', phone: '+998 91 000 00 00', course: 'IELTS', status: 'new', source: 'telegram' } as const
 
   it('to\'g\'ri ma\'lumotda xato yo\'q', () => {
     expect(validateCustomer({ ...input }, list)).toEqual({})
@@ -57,11 +57,11 @@ describe('validateCustomer', () => {
 
 describe('filtr, saralash, sahifalash', () => {
   it('telefon raqamlari bo\'yicha qidiruv', () => {
-    expect(filterCustomers(list, '97 678', { status: 'all', course: 'all', source: 'all' }).map((c) => c.id)).toEqual(['c2'])
+    expect(filterCustomers(list, '97 678', { status: 'all', course: 'all', source: 'all', from: '', to: '' }).map((c) => c.id)).toEqual(['c2'])
   })
 
   it('holat voronka tartibida saralanadi', () => {
-    expect(sortCustomers(list, { key: 'status', direction: 'asc' }).map((c) => c.status)).toEqual(['lead', 'active', 'left'])
+    expect(sortCustomers(list, { key: 'status', direction: 'asc' }).map((c) => c.status)).toEqual(['new', 'paid', 'cancelled'])
   })
 
   it('paginate chegaralarni qisadi', () => {
@@ -105,5 +105,34 @@ describe('mijozni o\'chirish va bog\'liq to\'lovlar', () => {
     expect(resolveCustomerName('c1', undefined, undefined)).toBe(deletedCustomerName())
     expect(deletedCustomerName()).toBe('Mijoz (o\'chirilgan)')
     expect(resolveCustomerName(undefined, undefined, undefined)).toBe('—')
+  })
+})
+
+describe('voronka', () => {
+  it('filtr: qo\'shilgan sana oralig\'i (chegaralar kiradi)', () => {
+    const dated = [
+      { ...base, id: 'a', createdAt: new Date(2026, 9, 1, 9).toISOString() },
+      { ...base, id: 'b', createdAt: new Date(2026, 9, 15, 23).toISOString() },
+      { ...base, id: 'c', createdAt: new Date(2026, 9, 20, 9).toISOString() },
+    ]
+    const filters = { status: 'all', course: 'all', source: 'all', from: '2026-10-01', to: '2026-10-15' } as const
+    expect(filterCustomers(dated, '', filters).map((c) => c.id)).toEqual(['a', 'b'])
+    expect(filterCustomers(dated, '', { ...filters, from: '', to: '2026-10-01' }).map((c) => c.id)).toEqual(['a'])
+    expect(filterCustomers(dated, '', { ...filters, from: '2026-10-16', to: '' }).map((c) => c.id)).toEqual(['c'])
+  })
+
+  it('groupByStage: har bosqich uchun ustun, bo\'shlari ham bor', () => {
+    const groups = groupByStage(list, ['new', 'contacted', 'thinking', 'paid', 'cancelled'])
+    expect(Object.keys(groups)).toEqual(['new', 'contacted', 'thinking', 'paid', 'cancelled'])
+    expect(groups.new.map((c) => c.id)).toEqual(['c2'])
+    expect(groups.contacted).toEqual([])
+    expect(groups.paid.map((c) => c.id)).toEqual(['c1'])
+  })
+
+  it('neighbourStage: chetlarda null', () => {
+    expect(neighbourStage('new', 1)).toBe('contacted')
+    expect(neighbourStage('new', -1)).toBeNull()
+    expect(neighbourStage('cancelled', 1)).toBeNull()
+    expect(neighbourStage('paid', -1)).toBe('thinking')
   })
 })

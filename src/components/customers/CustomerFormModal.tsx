@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
+import { FUNNEL_STAGES, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import type { CustomerInput } from '../../types/customer.types'
 import { toOptions } from '../../utils/cx'
@@ -12,6 +12,7 @@ import { Input, Textarea } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { Select } from '../ui/Select'
 
+// Email formadan olib tashlangan (eski yozuvlarda saqlanib qoladi), lekin tekshiruv tartibi o'zgarmaydi
 const FIELD_ORDER = ['name', 'phone', 'email'] as const
 
 export function CustomerFormModal({ customerId }: { customerId?: string }) {
@@ -23,7 +24,8 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
     phone: editing?.phone ?? '+998',
     email: editing?.email ?? '',
     course: editing?.course ?? courses[0] ?? '',
-    status: editing?.status ?? 'lead',
+    // Yangi mijoz voronkaning birinchi bosqichidan boshlanadi
+    status: editing?.status ?? 'new',
     source: editing?.source ?? 'telegram',
     note: editing?.note ?? '',
   }))
@@ -57,7 +59,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
   return (
     <Modal
       title={editing ? 'Mijozni tahrirlash' : 'Yangi mijoz'}
-      description={editing ? editing.name : 'Lead yoki o\'quvchi ma\'lumotlarini kiriting'}
+      description={editing ? editing.name : 'Yangi lid "Yangi" bosqichiga qo\'shiladi'}
       onClose={closeModal}
       footer={
         <>
@@ -94,36 +96,28 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
             onChange={(e) => update('phone', formatPhone(e.target.value))}
             placeholder="+998 90 123 45 67"
           />
-          <Input
-            ref={emailRef}
-            label="Email"
-            type="email"
-            value={form.email ?? ''}
-            error={errors.email}
-            hint="Ixtiyoriy"
-            onChange={(e) => update('email', e.target.value)}
-            placeholder="ism@misol.uz"
-          />
-        </div>
-        <Select
-          label="Kurs"
-          value={form.course}
-          onChange={(e) => update('course', e.target.value)}
-          options={courseOptions.map((c) => ({ value: c, label: c }))}
-        />
-        <div className="form-row">
-          <Select
-            label="Holat"
-            value={form.status}
-            onChange={(e) => update('status', e.target.value as CustomerInput['status'])}
-            options={toOptions(STATUS_LABELS)}
-          />
           <Select
             label="Manba"
             value={form.source}
             onChange={(e) => update('source', e.target.value as CustomerInput['source'])}
             options={toOptions(SOURCE_LABELS)}
           />
+        </div>
+        <div className="form-row">
+          <Select
+            label="Kurs / xizmat"
+            value={form.course}
+            onChange={(e) => update('course', e.target.value)}
+            options={courseOptions.map((c) => ({ value: c, label: c }))}
+          />
+          {editing && (
+            <Select
+              label="Bosqich"
+              value={form.status}
+              onChange={(e) => update('status', e.target.value as CustomerInput['status'])}
+              options={FUNNEL_STAGES.map((stage) => ({ value: stage, label: STATUS_LABELS[stage] }))}
+            />
+          )}
         </div>
         <Textarea label="Izoh" rows={3} value={form.note ?? ''} onChange={(e) => update('note', e.target.value)} />
       </form>

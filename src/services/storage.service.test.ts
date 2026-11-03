@@ -16,6 +16,7 @@ import {
   isDemoMode,
   isFirstRun,
   isQuotaError,
+  LEGACY_STATUS_MAP,
   resetToMock,
   setDemoMode,
   startFresh,
@@ -127,7 +128,8 @@ describe('loadData', () => {
 
 describe('type guard\'lar', () => {
   it('isCustomer', () => {
-    expect(isCustomer(validCustomer)).toBe(true)
+    expect(isCustomer(validCustomer)).toBe(false)
+    expect(isCustomer({ ...validCustomer, status: 'paid' })).toBe(true)
     expect(isCustomer({ ...validCustomer, email: 5 })).toBe(false)
     expect(isCustomer({ ...validCustomer, name: '   ' })).toBe(false)
     expect(isCustomer({ ...validCustomer, status: 'toString' })).toBe(false)
@@ -363,5 +365,29 @@ describe('v3 -> v4: profil maydonlari', () => {
     })
     expect(isSettings(sanitizeSettings({}))).toBe(true)
     expect(isSettings({ ...sanitizeSettings({}), profileRole: 5 })).toBe(false)
+  })
+})
+
+describe('v4 -> v5: voronka bosqichlari', () => {
+  it('eski holatlar xarita bo\'yicha ko\'chiriladi', () => {
+    expect(LEGACY_STATUS_MAP).toEqual({ lead: 'new', active: 'paid', paused: 'thinking', left: 'cancelled' })
+    const old = ['lead', 'active', 'paused', 'left'].map((status, i) => ({ ...validCustomer, id: `c${i}`, phone: `+998 90 000 00 0${i}`, status }))
+    seedV1(old, [])
+    const { data, dropped } = loadData()
+    expect(dropped).toBe(0)
+    expect(data.customers.map((c) => c.status)).toEqual(['new', 'paid', 'thinking', 'cancelled'])
+    expect((readJson(STORAGE_KEYS.customers) as Array<{ status: string }>).map((c) => c.status)).toEqual(['new', 'paid', 'thinking', 'cancelled'])
+  })
+
+  it('yangi bosqichlar o\'zgarmaydi, noma\'lum holat buzuq hisoblanadi', () => {
+    seedV1([{ ...validCustomer, status: 'contacted' }, { ...validCustomer, id: 'c9', phone: '+998 90 999 99 99', status: 'vip' }], [])
+    const { data, dropped } = loadData()
+    expect(data.customers.map((c) => c.status)).toEqual(['contacted'])
+    expect(dropped).toBe(1)
+  })
+
+  it('eski (v2) JSON zaxira ham yangi bosqichlar bilan ochiladi', () => {
+    const result = parseBackup(JSON.stringify({ version: 2, customers: [validCustomer], transactions: [] }))
+    expect(result.ok && result.data.customers[0].status).toBe('paid')
   })
 })

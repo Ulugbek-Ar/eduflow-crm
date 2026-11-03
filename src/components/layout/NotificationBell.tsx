@@ -78,7 +78,7 @@ export function NotificationBell() {
                     onClick={() => {
                       markRead(n.id)
                       setOpen(false)
-                      if (n.id.startsWith('stale-leads')) setCustomerFilters({ ...customerFilters, status: 'lead' })
+                      if (n.id.startsWith('stale-leads')) setCustomerFilters({ ...customerFilters, status: 'new' })
                       setActiveSection(n.target)
                     }}
                   >

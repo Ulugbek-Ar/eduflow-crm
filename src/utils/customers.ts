@@ -1,13 +1,15 @@
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey, CustomerStatus } from '../types/customer.types'
 import type { SortState } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
+import { FUNNEL_STAGES } from '../constants/navigation'
+import { customPeriod, inPeriod } from './analytics'
 import { applyDirection, compareText } from './list'
 import { isValidPhone, phoneDigits } from './phone'
 
-export const EMPTY_CUSTOMER_FILTERS: CustomerFilters = { status: 'all', course: 'all', source: 'all' }
+export const EMPTY_CUSTOMER_FILTERS: CustomerFilters = { status: 'all', course: 'all', source: 'all', from: '', to: '' }
 
 // Holatlar voronka tartibida saralanadi, alifbo bo'yicha emas
-const STATUS_ORDER: Record<CustomerStatus, number> = { lead: 0, active: 1, paused: 2, left: 3 }
+const STATUS_ORDER: Record<CustomerStatus, number> = { new: 0, contacted: 1, thinking: 2, paid: 3, cancelled: 4 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -29,6 +31,7 @@ export function filterCustomers(customers: readonly Customer[], search: string, 
       (filters.status === 'all' || c.status === filters.status) &&
       (filters.course === 'all' || c.course === filters.course) &&
       (filters.source === 'all' || c.source === filters.source) &&
+      inDateRange(c.createdAt, filters.from, filters.to) &&
       matchesCustomer(c, search),
   )
 }
@@ -55,7 +58,25 @@ export function sortCustomers(customers: readonly Customer[], sort: SortState<Cu
 }
 
 export function hasActiveFilters(filters: CustomerFilters): boolean {
-  return filters.status !== 'all' || filters.course !== 'all' || filters.source !== 'all'
+  return filters.status !== 'all' || filters.course !== 'all' || filters.source !== 'all' || filters.from !== '' || filters.to !== ''
+}
+
+// Qo'shilgan sana oralig'i (mahalliy vaqt, chegaralar kiradi); bo'sh chegara — cheklanmagan
+function inDateRange(iso: string, from: string, to: string): boolean {
+  const period = customPeriod(from, to)
+  return period === null || inPeriod(iso, period)
+}
+
+// Alt + strelka: kartani qo'shni bosqichga o'tkazish (chetda bo'lsa null)
+export function neighbourStage(stage: CustomerStatus, step: -1 | 1, stages: readonly CustomerStatus[] = FUNNEL_STAGES): CustomerStatus | null {
+  return stages[stages.indexOf(stage) + step] ?? null
+}
+
+// Kanban ustunlari: har bosqich uchun ro'yxat (tartib FUNNEL_STAGES bo'yicha)
+export function groupByStage(customers: readonly Customer[], stages: readonly CustomerStatus[]): Record<CustomerStatus, Customer[]> {
+  const groups = Object.fromEntries(stages.map((stage) => [stage, [] as Customer[]])) as Record<CustomerStatus, Customer[]>
+  for (const customer of customers) groups[customer.status]?.push(customer)
+  return groups
 }
 
 export type CustomerFormErrors = Partial<Record<'name' | 'phone' | 'email', string>>

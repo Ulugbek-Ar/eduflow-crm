@@ -152,16 +152,20 @@ export const DATE_RANGE_LABELS: Record<DateRange, string> = {
 }
 
 export const STATUS_LABELS: Record<CustomerStatus, string> = {
-  lead: 'Lead',
-  active: 'Faol',
-  paused: 'To\'xtatilgan',
-  left: 'Ketgan',
+  new: 'Yangi',
+  contacted: 'Bog\'lanildi',
+  thinking: 'O\'ylayapti',
+  paid: 'To\'lov qildi',
+  cancelled: 'Bekor qilindi',
 }
+
+// Voronka tartibi: Kanban ustunlari, saralash va filtrlar shu tartibda
+export const FUNNEL_STAGES: readonly CustomerStatus[] = ['new', 'contacted', 'thinking', 'paid', 'cancelled']
 
 export const SOURCE_LABELS: Record<CustomerSource, string> = {
   telegram: 'Telegram',
   instagram: 'Instagram',
-  website: 'Veb-sayt',
+  website: 'Sayt',
   referral: 'Tavsiya',
 }
 

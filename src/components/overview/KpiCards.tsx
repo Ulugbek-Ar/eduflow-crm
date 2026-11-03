@@ -58,7 +58,7 @@ export function KpiCards() {
   const revenueNow = sumIncome(txNow)
   const payingNow = payingCustomers(txNow)
   const conversionNow = conversion(newNow)
-  const activeCount = customers.filter((c) => c.status === 'active').length
+  const activeCount = customers.filter((c) => c.status === 'paid').length
 
   const kpis: Kpi[] = [
     {
@@ -93,7 +93,7 @@ export function KpiCards() {
       value: conversionNow === null ? '—' : `${Math.round(conversionNow)}%`,
       change: pointChange(conversionNow, conversion(newPrev)),
       unit: 'p.b.',
-      hint: 'lead → o\'quvchi',
+      hint: 'lid → to\'lov qildi',
       icon: 'percent',
       tone: 'success',
     },

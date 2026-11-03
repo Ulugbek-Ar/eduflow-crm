@@ -120,10 +120,11 @@ export function breakdown<K extends string>(
 
 // ===== KPI va trendlar =====
 
-// Davrda kelgan mijozlardan lead bosqichidan o'tganlar ulushi (0–100); mijoz bo'lmasa null
+// Konversiya: berilgan (masalan, davrda kelgan) lidlardan "To'lov qildi" bosqichiga o'tganlar ulushi (0–100);
+// lid bo'lmasa null ("—")
 export function conversion(customers: readonly Customer[]): number | null {
   if (customers.length === 0) return null
-  return (customers.filter((c) => c.status !== 'lead').length / customers.length) * 100
+  return (customers.filter((c) => c.status === 'paid').length / customers.length) * 100
 }
 
 // Oldingi davrga nisbatan o'zgarish foizi; oldingi qiymat 0 bo'lsa null ("—")

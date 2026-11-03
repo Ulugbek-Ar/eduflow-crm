@@ -4,19 +4,19 @@ import { describe, expect, it } from 'vitest'
 import { makeCustomer, makeTransaction, plain, renderSignedIn } from '../../test/helpers'
 
 const customers = [
-  makeCustomer({ id: 'c1', name: 'Aziza Karimova', status: 'active', phone: '+998 90 111 11 11' }),
-  makeCustomer({ id: 'c2', name: 'Bobur Aliyev', status: 'lead', phone: '+998 90 222 22 22', source: 'telegram' }),
-  makeCustomer({ id: 'c3', name: 'Dilnoza Sobirova', status: 'lead', phone: '+998 90 333 33 33' }),
+  makeCustomer({ id: 'c1', name: 'Aziza Karimova', status: 'paid', phone: '+998 90 111 11 11' }),
+  makeCustomer({ id: 'c2', name: 'Bobur Aliyev', status: 'new', phone: '+998 90 222 22 22', source: 'telegram' }),
+  makeCustomer({ id: 'c3', name: 'Dilnoza Sobirova', status: 'new', phone: '+998 90 333 33 33' }),
 ]
 
 describe('Mijozlar jadvali', () => {
   it('holat va qidiruv filtrlari natijani toraytiradi', async () => {
     const { user } = await renderSignedIn({ customers })
     await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
-    const section = await screen.findByRole('region', { name: 'Mijozlar bazasi' })
+    const section = await screen.findByRole('region', { name: 'Mijozlar va lidlar' })
     expect(within(section).getByText('3 ta natija (jami 3)')).toBeTruthy()
 
-    await user.selectOptions(within(section).getByLabelText('Holat'), 'lead')
+    await user.selectOptions(within(section).getByLabelText('Holat'), 'new')
     expect(within(section).getByText('2 ta natija (jami 3)')).toBeTruthy()
     expect(within(section).queryByText('Aziza Karimova')).toBeNull()
 

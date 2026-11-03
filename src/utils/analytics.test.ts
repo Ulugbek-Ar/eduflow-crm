@@ -38,7 +38,7 @@ function customer(partial: Partial<Customer>): Customer {
     name: 'Test',
     phone: '+998 90 000 00 00',
     course: 'IELTS',
-    status: 'lead',
+    status: 'new',
     source: 'telegram',
     createdAt: at(2026, 9, 1),
     ...partial,
@@ -131,8 +131,9 @@ describe('yig\'indilar, konversiya va trend', () => {
 
   it('conversion', () => {
     expect(conversion([])).toBeNull()
-    const group = [customer({ status: 'lead' }), customer({ status: 'active' }), customer({ status: 'paused' }), customer({ status: 'left' })]
-    expect(conversion(group)).toBe(75)
+    const group = [customer({ status: 'new' }), customer({ status: 'paid' }), customer({ status: 'thinking' }), customer({ status: 'cancelled' })]
+    // Faqat "To'lov qildi" bosqichidagilar konversiya hisoblanadi
+    expect(conversion(group)).toBe(25)
   })
 
   it('trend: oldingi 0 bo\'lsa null', () => {
@@ -211,7 +212,7 @@ describe('taqsimotlar', () => {
 
   it('sourceStats: soni, ulushi va konversiyasi', () => {
     const stats = sourceStats(
-      [customer({ source: 'instagram', status: 'active' }), customer({ source: 'instagram', status: 'lead' }), customer({ source: 'telegram' })],
+      [customer({ source: 'instagram', status: 'paid' }), customer({ source: 'instagram', status: 'new' }), customer({ source: 'telegram' })],
       ['telegram', 'instagram', 'website'],
     )
     expect(stats[0]).toMatchObject({ source: 'instagram', count: 2, conversion: 50 })

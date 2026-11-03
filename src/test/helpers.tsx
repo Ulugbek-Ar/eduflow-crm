@@ -57,7 +57,7 @@ export function makeCustomer(patch: Partial<Customer> = {}): Customer {
     name: 'Aziza Karimova',
     phone: '+998 90 123 45 67',
     course: DEFAULT_SETTINGS.courses[0],
-    status: 'active',
+    status: 'paid',
     source: 'instagram',
     createdAt: '2026-10-01T10:00:00.000Z',
     ...patch,
