@@ -110,7 +110,6 @@ export function Header() {
             placeholder="Qidiruv..."
             aria-keyshortcuts="Control+K Meta+K"
             aria-controls={showResults ? 'search-results' : undefined}
-            aria-expanded={showResults}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)

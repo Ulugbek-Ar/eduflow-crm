@@ -26,7 +26,9 @@ bilan sinxron.
 **Layout**
 
 - Sidebar yig'iladi: to'liq (ikonka + nom) va ixcham (faqat ikonka, nom tooltip'da) — holat saqlanadi; mobilda chiqib keladigan menyu
-- Header: global qidiruv (`Ctrl/Cmd + K`), bildirishnomalar, bitta tugmali yorug'/qorong'i mavzu, profil menyusi (ism, rol, Profil, Chiqish)
+- Header: global qidiruv (`Ctrl/Cmd + K`), bildirishnomalar, bitta tugmali yorug'/qorong'i mavzu, profil menyusi (ism, rol, Profil, Chiqish).
+  Qidiruv Mijozlar / Moliya / Kurslar'da ro'yxatni filtrlaydi; boshqa bo'limlarda natijalar oynasi chiqadi (mijozlar, kurslar,
+  tranzaksiyalar — strelkalar va Enter bilan)
 
 **Umumiy ko'rinish**
 
@@ -42,7 +44,8 @@ bilan sinxron.
   bosqich menyusi yoki `Alt + ←/→`, `Enter` — kartani ochish). Mobilda Kanban faqat o'z ichida gorizontal aylanadi
 - Yangi mijoz: Ism, Telefon (`+998 XX XXX XX XX` maskasi, takroriy raqam taqiqlanadi), Manba, Kurs/Xizmat, Izoh
 - Qidiruv va filtrlar: bosqich, manba, kurs, qo'shilgan sana oralig'i
-- Mijoz kartasi: to'lovlar tarixi (statuslari bilan), jami to'langan, joriy oy qarzi; tahrirlash, tasdiqlash bilan o'chirish
+- Mijoz kartasi: bosqichni shu yerning o'zida o'zgartirish, "To'lov qildi" sanasi va o'qish oyi ("2-oy / 6" yoki "Tugagan"),
+  to'lovlar tarixi (statuslari bilan), jami to'langan, joriy oy qarzi; tahrirlash, tasdiqlash bilan o'chirish
   (to'lovlar jurnalda "Ism (o'chirilgan)" ko'rinishida qoladi)
 
 **Moliya va kassa**
@@ -50,7 +53,8 @@ bilan sinxron.
 - Yuqorida: umumiy balans (kassa), jami kirim, jami chiqim (tanlangan davr)
 - To'lovlar jadvali: Sana, Mijoz, Summa, To'lov turi (Naqd / Karta / O'tkazma), Status (To'langan / Kutilmoqda /
   Bekor qilingan — jadvalning o'zida almashtiriladi). **Balans va barcha KPI faqat "To'langan" bo'yicha hisoblanadi**
-- Kirim / Chiqim formasi; marketing chiqimiga ixtiyoriy **Manba** (CPL/ROI uchun)
+- Kirim / Chiqim formasi; marketing chiqimiga ixtiyoriy **Manba** (CPL/ROI uchun). "Kutilmoqda" to'lov kelajakdagi sana bilan
+  kiritiladi; "To'landi" deb belgilanganda to'lov sanasi bugun bo'ladi
 - **Qarzdorliklar va kutilayotgan to'lovlar**: qarzi kattasidan saralangan ro'yxat, qatordan "To'lov qabul qilish"
   (summa oldindan to'ldiriladi); "Kutilmoqda" to'lovlarni bir bosishda "To'landi" deb belgilash
 - To'lov turlari va xarajatlar tarkibi bo'yicha taqsimot
@@ -64,7 +68,8 @@ bilan sinxron.
 
 **Tahlil va hisobotlar**
 
-- O'rtacha chek (AOV), to'langan kirim, marketing chiqimi, konversiya
+- O'rtacha chek (AOV), to'langan kirim, marketing chiqimi (umumiy CPL bilan), konversiya
+- Sotuv voronkasi (davr lidlari hozir qaysi bosqichda) va kurslar bo'yicha tushum
 - Manbalar samaradorligi: lidlar, "To'lov qildi", konversiya, marketing chiqimi, CPL, ROI (Jami qatori bilan)
 - CSV va Excel eksport: mijozlar, tranzaksiyalar, qarzdorlar, manbalar hisoboti (CSV injection himoyasi bilan)
 
@@ -88,17 +93,17 @@ bilan sinxron.
 
 ## Hisob qoidalari va formulalar
 
-Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `src/utils/debts.ts`, `src/utils/courses.ts`.
+Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `src/utils/debts.ts`, `src/utils/courses.ts`, `src/utils/search.ts`.
 
 | Ko'rsatkich | Formula |
 | --- | --- |
 | Kassa balansi | barcha vaqtdagi "To'langan" kirim − "To'langan" chiqim |
 | Jami tushum | davrdagi "To'langan" kirimlar |
-| Faol mijozlar | "To'lov qildi" bosqichidagi mijozlar (davr oxiri holati, qo'shilgan sana bo'yicha) |
+| Faol mijozlar | "To'lov qildi" bosqichidagi mijozlar, davr oxiri holati — shu bosqichga o'tgan sana (`paidAt`) bo'yicha |
 | Yangi lidlar | davrda qo'shilgan mijozlar (istalgan bosqichda) |
 | Konversiya | davrda kelgan lidlardan "To'lov qildi" bosqichidagilar ulushi; trend — foiz bandida |
 | O'rtacha chek (AOV) | davrdagi "To'langan" kirimlar summasi / ular soni |
-| CPL | manba bo'yicha "To'langan" marketing chiqimi / davrda shu manbadan kelgan lidlar |
+| CPL | manba bo'yicha "To'langan" marketing chiqimi / davrda shu manbadan kelgan lidlar (umumiy CPL — barcha marketing chiqimi / barcha lidlar) |
 | ROI | (shu manbadan kelgan mijozlarning davrdagi kirimi − chiqim) / chiqim × 100 |
 | Kurs: kutilayotgan tushum | "To'lov qildi" talabalar soni × oylik narx |
 
@@ -109,6 +114,7 @@ qayta hisoblanadi.
 
 1. Faqat **"To'lov qildi"** bosqichidagi mijozlar hisoblanadi.
 2. Kutilgan summa = mijoz kursining **oylik narxi**. Kurs topilmasa yoki narxi 0 bo'lsa, mijoz hisobga olinmaydi; arxivdagi kurs hisoblanadi.
+   Kurs davomiyligi tugagan bo'lsa qarz yo'q: "To'lov qildi" ga o'tgan oy 1-oy, joriy oy davomiylikdan keyin bo'lsa — kurs tugagan.
 3. To'langan = shu mijozning joriy oydagi **"To'langan"** kirimlari. "Kutilmoqda" va "Bekor qilingan" kirmaydi.
 4. Qarz = max(0, kutilgan − to'langan); ortiqcha to'lov keyingi oyga o'tkazilmaydi.
 5. Ro'yxat qarzi kattasidan saralanadi; "Kutilmoqda" to'lovlar alohida ro'yxatda.
@@ -196,7 +202,7 @@ Backend yo'q — barcha ma'lumot **foydalanuvchi brauzerining `localStorage`'ida
 | Kalit                                                | Tarkibi                                          |
 | ---------------------------------------------------- | ------------------------------------------------ |
 | `apex:customers`, `apex:transactions`, `apex:courses`, `apex:settings` | Asosiy ma'lumotlar             |
-| `apex:version`                                       | Sxema versiyasi (hozir 8; migratsiyalar uchun)   |
+| `apex:version`                                       | Sxema versiyasi (hozir 9; migratsiyalar uchun)   |
 | `apex:seeded`, `apex:demo`                           | Birinchi tanlov qilingan / demo rejim            |
 | `apex:auth`                                          | Login, tuz va parol xeshi (PBKDF2-SHA256, `algo` va `iterations` bilan) |
 | `apex:login-lock`                                    | Noto'g'ri urinishlar hisoblagichi, blok muddati va oxirgi urinish vaqti |
@@ -221,6 +227,7 @@ ham joriy sxemaga ko'chiriladi, buzuq yozuvlar tashlab yuboriladi va soni ko'rsa
 | v6 | Kurslar alohida entity (`apex:courses`) | `settings.courses` va mijozlardagi nomlar → kurs (narx 0, 1 oy, 0 guruh, faol) |
 | v7 | To'lov turi, status, marketing manbasi | `payme, click → card`, `bank → transfer`, `cash → cash`; status → `paid` |
 | v8 | Logotip rasmi `settings.logoImage` | `''` (harfli logo) |
+| v9 | "To'lov qildi" sanasi `customer.paidAt` | birinchi to'langan kirim sanasi, bo'lmasa qo'shilgan sana |
 
 Birinchi ochilishda hech narsa yozilmaydi — foydalanuvchi bo'sh yoki demo ma'lumotni tanlaydi. Boshqa brauzer yoki qurilmada ma'lumotlar ko'rinmaydi — ko'chirish uchun
 **Sozlamalar → Ma'lumotlar → JSON zaxira** dan foydalaning. Brauzer tarixini tozalash ma'lumotlarni ham o'chiradi, shuning uchun
@@ -286,10 +293,11 @@ operatsion tizim hisobiga parol qo'ying.
   (aniq limit brauzerga bog'liq, band joy ko'rsatkichi taxminiy). Xotira to'lsa, yangi o'zgarishlar faqat ochiq tabda qoladi —
   ogohlantirish chiqqanda darhol JSON zaxira oling.
 - Valyutani USD ga o'zgartirish faqat belgini almashtiradi — summalar konvertatsiya qilinmaydi.
-- Bosqich o'zgarishlari tarixi saqlanmaydi: "Faol mijozlar" trendi va konversiya joriy bosqich va qo'shilgan sana bo'yicha
-  hisoblanadi (lid qachon "To'lov qildi" ga o'tganini bilib bo'lmaydi).
+- To'liq bosqich tarixi saqlanmaydi — faqat "To'lov qildi" ga o'tgan sana (`paidAt`). Bosqichdan chiqqan mijoz oldingi
+  davrlar "Faol mijozlar" sonidan ham tushib qoladi; konversiya lidning joriy bosqichi bo'yicha.
 - Qarz faqat joriy oy uchun va "oylik narx" modelida: o'tgan oylardan qolgan qarz, chegirmalar va bir martalik to'lovlar
-  hisobga olinmaydi. Mijoz kursga nom orqali bog'langan.
+  hisobga olinmaydi. Mijoz bosqichdan chiqib qaytsa, kurs muddati yangidan sanaladi. Mijoz kursga nom orqali bog'langan.
+- Sana maydonlari brauzerning tili/hududiga qarab ko'rinadi (masalan, `mm/dd/yyyy` yoki `dd.mm.yyyy`).
 - Logotip `localStorage`'da data URL sifatida saqlanadi (200 KB gacha) — band joyni oshiradi.
 - CSV'da `=`, `+`, `-`, `@` bilan boshlangan matnlar (masalan, `+998...` telefonlar) Excel formula sifatida bajarilmasligi uchun
   `'` belgisi bilan boshlanadi. Telefonlar toza ko'rinishi kerak bo'lsa, Excel (.xls) eksportidan foydalaning.
