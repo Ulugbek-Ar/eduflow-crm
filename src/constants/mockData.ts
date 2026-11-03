@@ -21,6 +21,8 @@ export const DEFAULT_SETTINGS: Settings = {
   dateFormat: 'dd.mm.yyyy',
   csvDelimiter: ';',
   adminLogin: 'admin',
+  profileName: '',
+  profileRole: 'Administrator',
   courses: [...COURSES],
 }
 

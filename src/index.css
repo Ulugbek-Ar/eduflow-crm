@@ -57,6 +57,7 @@
   --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
   --shadow-lg: 0 20px 40px rgb(15 23 42 / 0.18);
   --sidebar-width: 256px;
+  --sidebar-collapsed-width: 72px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -306,6 +307,11 @@ body.scroll-locked {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 200ms var(--ease);
+}
+
+.app.is-collapsed {
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }
 
 .content {
@@ -413,30 +419,6 @@ body.scroll-locked {
   color: var(--sidebar-negative);
 }
 
-.sidebar-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 8px 0;
-  border-top: 1px solid var(--sidebar-card);
-}
-
-.sidebar-profile > div {
-  flex: 1;
-  min-width: 0;
-}
-
-.sidebar-profile strong {
-  display: block;
-  overflow: hidden;
-  color: var(--sidebar-strong);
-  text-overflow: ellipsis;
-}
-
-.sidebar-profile small {
-  color: var(--sidebar-muted);
-}
-
 .avatar {
   display: grid;
   place-items: center;
@@ -450,17 +432,147 @@ body.scroll-locked {
   font-weight: 600;
 }
 
-.logout-btn {
+.sidebar-backdrop {
+  display: none;
+}
+
+.sidebar-logo-text {
+  min-width: 0;
+}
+
+.sidebar-logo-text strong,
+.sidebar-logo-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-collapse {
   color: var(--sidebar-muted);
 }
 
-.logout-btn:hover {
-  background: var(--sidebar-hover);
-  color: var(--sidebar-strong);
+/* Ixcham sidebar: faqat ikonkalar, nom tooltip'da (faqat planshet va kompyuterda) */
+@media (min-width: 769px) {
+  .sidebar.is-collapsed {
+    align-items: center;
+    padding: 20px 12px;
+    overflow: visible;
+  }
+
+  .sidebar.is-collapsed .sidebar-logo {
+    padding: 0;
+  }
+
+  .sidebar.is-collapsed .sidebar-logo-text,
+  .sidebar.is-collapsed .sidebar-balance {
+    display: none;
+  }
+
+  .sidebar.is-collapsed .sidebar-collapse {
+    margin-top: auto;
+  }
+
+  .sidebar.is-collapsed .nav-item {
+    position: relative;
+    justify-content: center;
+    width: 44px;
+    padding: 10px;
+  }
+
+  /* Nom ekran o'quvchilar uchun qoladi, ko'rinmaydi */
+  .sidebar.is-collapsed .nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .sidebar.is-collapsed .nav-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 10px);
+    z-index: 50;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: opacity 120ms var(--ease);
+  }
+
+  .sidebar.is-collapsed .nav-item:hover::after,
+  .sidebar.is-collapsed .nav-item:focus-visible::after {
+    opacity: 1;
+  }
 }
 
-.sidebar-backdrop {
-  display: none;
+/* ===== Profil menyusi ===== */
+.profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 8px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.profile-btn:hover {
+  background: var(--surface-sunken);
+}
+
+.profile-btn-text {
+  display: grid;
+  line-height: 1.2;
+}
+
+.profile-btn-text strong {
+  max-width: 140px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-btn-text small {
+  font-size: 0.72rem;
+}
+
+.avatar.avatar-sm {
+  width: 30px;
+  height: 30px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 0.72rem;
+}
+
+.profile-menu-head {
+  display: grid;
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-menu-head small {
+  color: var(--text-muted);
+}
+
+.settings-subtitle {
+  margin: 20px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.95rem;
 }
 
 /* ===== Header ===== */
@@ -2414,8 +2526,13 @@ body.scroll-locked {
 }
 
 @media (max-width: 768px) {
-  .app {
+  .app,
+  .app.is-collapsed {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar-collapse {
+    display: none;
   }
 
   /* Sidebar: overlay bilan chiqadigan panel */

@@ -12,7 +12,7 @@ const customers = [
 describe('Mijozlar jadvali', () => {
   it('holat va qidiruv filtrlari natijani toraytiradi', async () => {
     const { user } = await renderSignedIn({ customers })
-    await user.click(screen.getByRole('button', { name: 'Mijozlar' }))
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
     const section = await screen.findByRole('region', { name: 'Mijozlar bazasi' })
     expect(within(section).getByText('3 ta natija (jami 3)')).toBeTruthy()
 
@@ -32,13 +32,13 @@ describe('Mijozlar jadvali', () => {
       customers,
       transactions: [makeTransaction({ id: 't1', amount: 500_000 }), makeTransaction({ id: 't2', amount: 300_000 })],
     })
-    await user.click(screen.getByRole('button', { name: 'Mijozlar' }))
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
     await user.click(await screen.findByRole('button', { name: 'Aziza Karimovani o\'chirish' }))
     const confirm = await screen.findByRole('alertdialog', { name: 'Mijozni o\'chirish' })
     expect(plain(confirm.textContent)).toContain('2 ta to\'lov (jami 800 000 so\'m)')
     await user.click(within(confirm).getByRole('button', { name: 'O\'chirish' }))
 
-    await user.click(screen.getByRole('button', { name: 'Moliya' }))
+    await user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
     const journal = await screen.findByRole('region', { name: 'Tranzaksiyalar jurnali' })
     expect(within(journal).getAllByText('Aziza Karimova (o\'chirilgan)')).toHaveLength(2)
   })

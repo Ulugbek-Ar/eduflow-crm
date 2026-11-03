@@ -1,6 +1,6 @@
 import type { TransactionType } from './finance.types'
 
-export type Section = 'overview' | 'customers' | 'finance' | 'settings'
+export type Section = 'overview' | 'customers' | 'finance' | 'courses' | 'analytics' | 'settings'
 
 export type DateRange = 'today' | '7d' | 'month' | 'year'
 
@@ -34,5 +34,8 @@ export interface Settings {
   dateFormat: DateFormat
   csvDelimiter: CsvDelimiter
   adminLogin: string
+  // Header'dagi profil menyusi: to'liq ism (bo'sh bo'lsa login ko'rsatiladi) va lavozim
+  profileName: string
+  profileRole: string
   courses: string[]
 }

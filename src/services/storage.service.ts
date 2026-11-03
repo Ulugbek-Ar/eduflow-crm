@@ -18,8 +18,9 @@ export const STORAGE_KEYS = {
 type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 
 // v1 — MVP; v2 — category, ixtiyoriy mijoz maydonlari, kengaytirilgan sozlamalar;
-// v3 — tranzaksiyada mijoz nomi snapshot'i (customerName)
-export const SCHEMA_VERSION = 3
+// v3 — tranzaksiyada mijoz nomi snapshot'i (customerName);
+// v4 — sozlamalarda profil (profileName, profileRole)
+export const SCHEMA_VERSION = 4
 
 export interface StoredData {
   customers: Customer[]

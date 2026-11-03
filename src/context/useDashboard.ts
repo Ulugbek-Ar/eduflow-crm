@@ -14,6 +14,8 @@ export interface DashboardContextValue {
   activeSection: Section
   modal: ModalState
   sidebarOpen: boolean
+  // Kompyuterda ixcham (faqat ikonka) sidebar; holat localStorage'da saqlanadi
+  sidebarCollapsed: boolean
   balance: number
   // Demo ma'lumot bilan ishlanmoqda
   isDemo: boolean
@@ -27,6 +29,7 @@ export interface DashboardContextValue {
   openModal: (modal: NonNullable<ModalState>) => void
   closeModal: () => void
   toggleSidebar: () => void
+  toggleSidebarCollapsed: () => void
   setCustomerFilters: (filters: CustomerFilters) => void
   setCustomerSort: (sort: SortState<CustomerSortKey>) => void
   setTransactionFilters: (filters: TransactionFilters) => void

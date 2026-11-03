@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { STATUS_LABELS } from '../constants/navigation'
 import { useConfirm } from '../hooks/useConfirm'
+import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
 import { useToast } from '../hooks/useToast'
 import { combineResults, isDemoMode, loadData, readStored, resetToMock, saveAll, saveErrorMessage, setDemoMode, setItem, STORAGE_KEYS } from '../services/storage.service'
 import type { SaveResult, StoredData } from '../services/storage.service'
@@ -35,6 +36,8 @@ function cleanCustomer<T extends Partial<CustomerInput>>(data: T): T {
   return result
 }
 
+export const SIDEBAR_COLLAPSED_KEY = 'apex:sidebar-collapsed'
+
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -52,6 +55,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [activeSection, setSection] = useState<Section>('overview')
   const [modal, setModal] = useState<ModalState>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = usePersistentState(SIDEBAR_COLLAPSED_KEY, false, isBoolean)
   const [customerFilters, setCustomerFilters] = useState<CustomerFilters>(EMPTY_CUSTOMER_FILTERS)
   const [customerSort, setCustomerSort] = useState<SortState<CustomerSortKey>>({ key: 'createdAt', direction: 'desc' })
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>(EMPTY_TRANSACTION_FILTERS)
@@ -144,6 +148,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     activeSection,
     modal,
     sidebarOpen,
+    sidebarCollapsed,
     balance,
     isDemo,
     customerFilters,
@@ -175,6 +180,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     openModal: (next) => setModal(next),
     closeModal: () => setModal(null),
     toggleSidebar: () => setSidebarOpen((open) => !open),
+    toggleSidebarCollapsed: () => setSidebarCollapsed(!sidebarCollapsed),
     setCustomerFilters,
     setCustomerSort,
     setTransactionFilters,

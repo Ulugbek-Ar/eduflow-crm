@@ -24,9 +24,11 @@ interface DropdownProps {
   trigger: (props: { onClick: () => void; 'aria-expanded': boolean; 'aria-haspopup': 'menu'; 'aria-controls': string }) => ReactNode
   sections: DropdownSection[]
   align?: 'left' | 'right'
+  // Menyu tepasidagi ma'lumot bloki (masalan, profil ismi) — fokuslanmaydi
+  header?: ReactNode
 }
 
-export function Dropdown({ label, trigger, sections, align = 'right' }: DropdownProps) {
+export function Dropdown({ label, trigger, sections, align = 'right', header }: DropdownProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -90,6 +92,7 @@ export function Dropdown({ label, trigger, sections, align = 'right' }: Dropdown
           className={cx('dropdown-menu', align === 'left' && 'align-left')}
           onKeyDown={handleKeyDown}
         >
+          {header}
           {sections.map((section) => (
             <div key={section.label} role="group" aria-label={section.label} className="dropdown-section">
               <div className="dropdown-heading" aria-hidden="true">

@@ -1,17 +1,12 @@
 import { useEffect, useRef } from 'react'
+import { APP_NAME } from '../../constants/app'
 import { Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
-import { useAuth } from '../../hooks/useAuth'
-import { useToast } from '../../hooks/useToast'
 import { cx } from '../../utils/cx'
-import { IconButton } from '../ui/Button'
-import { APP_NAME } from '../../constants/app'
 
 export function Sidebar() {
-  const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar } = useDashboard()
-  const { session, logout } = useAuth()
-  const toast = useToast()
-  const login = session?.login ?? settings.adminLogin
+  const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } =
+    useDashboard()
   const navRef = useRef<HTMLElement>(null)
 
   // Mobil menyu ochilganda fokus birinchi bo'limga o'tadi, Esc yopadi
@@ -27,12 +22,12 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className={cx('sidebar', sidebarOpen && 'is-open')} aria-label="Asosiy menyu">
+      <aside className={cx('sidebar', sidebarOpen && 'is-open', sidebarCollapsed && 'is-collapsed')} aria-label="Asosiy menyu">
         <div className="sidebar-logo">
           <span className="logo-mark" aria-hidden="true">
             {settings.logoText ? <span className="logo-text">{settings.logoText}</span> : <Icon name="logo" size={20} />}
           </span>
-          <div>
+          <div className="sidebar-logo-text">
             <strong>{settings.orgName}</strong>
             <small>{APP_NAME}</small>
           </div>
@@ -45,10 +40,11 @@ export function Sidebar() {
               type="button"
               className={cx('nav-item', activeSection === item.id && 'is-active')}
               aria-current={activeSection === item.id ? 'page' : undefined}
+              data-tooltip={item.label}
               onClick={() => setActiveSection(item.id)}
             >
               <Icon name={item.icon} />
-              <span>{item.label}</span>
+              <span className="nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -58,24 +54,17 @@ export function Sidebar() {
           <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
         </div>
 
-        <div className="sidebar-profile">
-          <span className="avatar" aria-hidden="true">
-            {login.slice(0, 2).toUpperCase()}
-          </span>
-          <div>
-            <strong>{login}</strong>
-            <small>Administrator</small>
-          </div>
-          <IconButton
-            icon="logout"
-            label="Chiqish"
-            className="logout-btn"
-            onClick={() => {
-              logout()
-              toast.info('Tizimdan chiqdingiz')
-            }}
-          />
-        </div>
+        {/* Ixcham holat faqat planshet va kompyuterda; mobilda menyu chiqib keladigan panel */}
+        <button
+          type="button"
+          className="nav-item sidebar-collapse"
+          aria-pressed={sidebarCollapsed}
+          data-tooltip={sidebarCollapsed ? 'Menyuni kengaytirish' : 'Menyuni yig\'ish'}
+          onClick={toggleSidebarCollapsed}
+        >
+          <Icon name={sidebarCollapsed ? 'chevronRight' : 'chevronLeft'} />
+          <span className="nav-label">{sidebarCollapsed ? 'Menyuni kengaytirish' : 'Menyuni yig\'ish'}</span>
+        </button>
       </aside>
       {sidebarOpen && <div className="sidebar-backdrop" onClick={toggleSidebar} aria-hidden="true" />}
     </>

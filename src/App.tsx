@@ -7,6 +7,7 @@ import { RecentActivity } from './components/overview/RecentActivity'
 import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
+import { EmptyState } from './components/ui/EmptyState'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
@@ -21,6 +22,8 @@ import { useDashboard } from './context/useDashboard'
 import { useAuth } from './hooks/useAuth'
 import { isFirstRun } from './services/storage.service'
 import { pageTitle } from './constants/app'
+import { cx } from './utils/cx'
+import { scrollToId } from './utils/scroll'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
@@ -48,9 +51,22 @@ function ActiveSection() {
           <TransactionTable />
         </div>
       )
+    case 'courses':
+    case 'analytics':
+      return <SectionPlaceholder section={activeSection} />
     case 'settings':
       return <SettingsPanel />
   }
+}
+
+// Yangi bo'limlar to'liq tayyor bo'lgunga qadar vaqtinchalik ekran
+function SectionPlaceholder({ section }: { section: 'courses' | 'analytics' }) {
+  const label = NAV_ITEMS.find((item) => item.id === section)?.label ?? ''
+  return (
+    <section className="card">
+      <EmptyState title={label} description="Bu bo'lim tayyorlanmoqda." />
+    </section>
+  )
 }
 
 // Og'irroq bo'limlar va modallar alohida chunk'larda: birinchi ochilishda yuklanadigan JS kamayadi
@@ -91,7 +107,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function Shell() {
-  const { modal, activeSection, setActiveSection, openModal } = useDashboard()
+  const { modal, activeSection, setActiveSection, openModal, sidebarCollapsed } = useDashboard()
   const { usingDefaultPassword } = useAuth()
   const [promptDismissed, setPromptDismissed] = useState(false)
 
@@ -129,11 +145,11 @@ function Shell() {
   const goToSecurity = () => {
     setPromptDismissed(true)
     setActiveSection('settings')
-    window.requestAnimationFrame(() => document.getElementById('security')?.scrollIntoView({ block: 'start' }))
+    scrollToId('profile')
   }
 
   return (
-    <div className="app">
+    <div className={cx('app', sidebarCollapsed && 'is-collapsed')}>
       <a href="#main-content" className="skip-link">
         Asosiy kontentga o'tish
       </a>

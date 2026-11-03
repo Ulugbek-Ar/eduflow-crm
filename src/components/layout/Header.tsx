@@ -12,6 +12,7 @@ import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
 import { NotificationBell } from './NotificationBell'
+import { ProfileMenu } from './ProfileMenu'
 import { ThemeToggle } from './ThemeToggle'
 import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
@@ -153,6 +154,7 @@ export function Header() {
             },
           ]}
         />
+        <ProfileMenu />
       </div>
     </header>
   )

@@ -82,6 +82,23 @@ export const ICONS = {
   book: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
   clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
   activity: ['M22 12h-4l-3 9L9 3l-3 9H2'],
+  // Lucide uslubidagi qo'shimcha ikonlar (24x24, stroke 2)
+  dollar: ['M12 2v20', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
+  filter: ['M22 3H2l8 9.46V19l4 2v-8.54L22 3z'],
+  bookOpen: ['M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z', 'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'],
+  barChart: ['M3 3v18h18', 'M18 17V9', 'M13 17V5', 'M8 17v-3'],
+  kanban: ['M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 7v7', 'M12 7v4', 'M16 7v9'],
+  list: ['M8 6h13', 'M8 12h13', 'M8 18h13', 'M3 6h.01', 'M3 12h.01', 'M3 18h.01'],
+  panelLeft: ['M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M9 3v18'],
+  user: ['M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  calendar: ['M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  archive: ['M21 8v13H3V8', 'M1 3h22v5H1z', 'M10 12h4'],
+  image: [
+    'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+    'M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+    'm21 15-5-5L5 21',
+  ],
+  move: ['M5 9l-3 3 3 3', 'M9 5l3-3 3 3', 'M15 19l-3 3-3-3', 'M19 9l3 3-3 3', 'M2 12h20', 'M12 2v20'],
 } as const
 
 export type IconName = keyof typeof ICONS
@@ -119,8 +136,10 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: 'Umumiy ko\'rinish', icon: 'overview' },
-  { id: 'customers', label: 'Mijozlar', icon: 'customers' },
-  { id: 'finance', label: 'Moliya', icon: 'finance' },
+  { id: 'customers', label: 'Mijozlar va lidlar', icon: 'customers' },
+  { id: 'finance', label: 'Moliya va kassa', icon: 'dollar' },
+  { id: 'courses', label: 'Kurslar va xizmatlar', icon: 'bookOpen' },
+  { id: 'analytics', label: 'Tahlil va hisobotlar', icon: 'barChart' },
   { id: 'settings', label: 'Sozlamalar', icon: 'settings' },
 ]
 

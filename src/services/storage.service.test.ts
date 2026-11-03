@@ -328,13 +328,12 @@ describe('birinchi ishga tushish va demo rejim', () => {
 describe('v2 -> v3: mijoz nomi snapshot\'i', () => {
   const v2Income = { ...v1Income, category: 'course_fee' }
 
-  it('mavjud mijozlar nomi tranzaksiyalarga ko\'chiriladi va versiya 3 bo\'ladi', () => {
+  it('mavjud mijozlar nomi tranzaksiyalarga ko\'chiriladi va versiya yangilanadi', () => {
     seedV1([validCustomer], [v2Income, { ...v2Income, id: 't9', customerId: 'yoq' }, v1Expense])
     localStorage.setItem(STORAGE_KEYS.version, '2')
     const { data } = loadData()
-    expect(SCHEMA_VERSION).toBe(3)
     expect(data.transactions.map((t) => t.customerName)).toEqual(['Aziza Karimova', undefined, undefined])
-    expect(readJson(STORAGE_KEYS.version)).toBe(3)
+    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
     const stored = readJson(STORAGE_KEYS.transactions) as Array<{ customerName?: string }>
     expect(stored[0].customerName).toBe('Aziza Karimova')
   })
@@ -352,5 +351,17 @@ describe('v2 -> v3: mijoz nomi snapshot\'i', () => {
   it('v2 zaxirasi ham migratsiya qilinadi', () => {
     const result = parseBackup(JSON.stringify({ version: 2, settings: {}, customers: [validCustomer], transactions: [v2Income] }))
     expect(result.ok && result.data.transactions[0].customerName).toBe('Aziza Karimova')
+  })
+})
+
+describe('v3 -> v4: profil maydonlari', () => {
+  it('eski sozlamalarga standart profil qo\'shiladi, mavjud qiymat saqlanadi', () => {
+    expect(sanitizeSettings({ orgName: 'Markaz' })).toMatchObject({ profileName: '', profileRole: 'Administrator' })
+    expect(sanitizeSettings({ profileName: '  Dilshod Karimov ', profileRole: 'Direktor' })).toMatchObject({
+      profileName: 'Dilshod Karimov',
+      profileRole: 'Direktor',
+    })
+    expect(isSettings(sanitizeSettings({}))).toBe(true)
+    expect(isSettings({ ...sanitizeSettings({}), profileRole: 5 })).toBe(false)
   })
 })

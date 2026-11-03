@@ -16,7 +16,7 @@ async function addCustomer(user: Awaited<ReturnType<typeof renderSignedIn>>['use
 describe('Saqlash xatosi toast\'i', () => {
   it('xotira to\'lsa aniq xabar chiqadi va takrorlanmaydi', async () => {
     const { user } = await renderSignedIn({ customers: [makeCustomer()] })
-    await user.click(screen.getByRole('button', { name: 'Mijozlar' }))
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
 
     const realSetItem = Storage.prototype.setItem
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {

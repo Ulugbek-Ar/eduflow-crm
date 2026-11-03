@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { makeCustomer, renderSignedIn } from '../../test/helpers'
 
 async function openForm(user: Awaited<ReturnType<typeof renderSignedIn>>['user']) {
-  await user.click(screen.getByRole('button', { name: 'Mijozlar' }))
+  await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
   await user.click(await screen.findByRole('button', { name: 'Yangi mijoz' }))
   return screen.findByRole('dialog', { name: 'Yangi mijoz' })
 }

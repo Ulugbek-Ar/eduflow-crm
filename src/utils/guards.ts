@@ -88,6 +88,8 @@ export function isSettings(value: unknown): value is Settings {
     oneOf(DATE_FORMATS, value.dateFormat) &&
     oneOf(DELIMITERS, value.csvDelimiter) &&
     isText(value.adminLogin) &&
+    typeof value.profileName === 'string' &&
+    typeof value.profileRole === 'string' &&
     Array.isArray(value.courses) &&
     value.courses.every(isText)
   )
@@ -106,6 +108,9 @@ export function sanitizeSettings(value: unknown, fallbackCourses: readonly strin
     dateFormat: oneOf(DATE_FORMATS, raw.dateFormat) ? raw.dateFormat : DEFAULT_SETTINGS.dateFormat,
     csvDelimiter: oneOf(DELIMITERS, raw.csvDelimiter) ? raw.csvDelimiter : DEFAULT_SETTINGS.csvDelimiter,
     adminLogin: isText(raw.adminLogin) ? raw.adminLogin : DEFAULT_SETTINGS.adminLogin,
+    // v4: profil maydonlari (eski sozlamalarda yo'q — standart qiymat)
+    profileName: typeof raw.profileName === 'string' ? raw.profileName.trim().slice(0, 60) : DEFAULT_SETTINGS.profileName,
+    profileRole: isText(raw.profileRole) ? raw.profileRole.trim().slice(0, 40) : DEFAULT_SETTINGS.profileRole,
     courses: Array.from(new Set(courses)),
   }
 }

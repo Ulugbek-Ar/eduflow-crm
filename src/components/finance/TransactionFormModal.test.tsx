@@ -6,7 +6,7 @@ import { makeCustomer, plain, renderSignedIn } from '../../test/helpers'
 describe('To\'lov qo\'shish', () => {
   it('summa formatlanadi, to\'lov jurnalga mijoz nomi bilan yoziladi', async () => {
     const { user } = await renderSignedIn({ customers: [makeCustomer()] })
-    await user.click(screen.getByRole('button', { name: 'Moliya' }))
+    await user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
     await user.click(await screen.findByRole('button', { name: 'To\'lov qabul qilish' }))
     const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
 
@@ -29,7 +29,7 @@ describe('To\'lov qo\'shish', () => {
 
   it('summasiz saqlab bo\'lmaydi', async () => {
     const { user } = await renderSignedIn()
-    await user.click(screen.getByRole('button', { name: 'Moliya' }))
+    await user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
     await user.click(await screen.findByRole('button', { name: 'To\'lov qabul qilish' }))
     const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
     await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
