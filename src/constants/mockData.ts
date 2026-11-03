@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: Settings = {
   orgName: 'EduFlow Academy',
   // Tashkilot nomining bosh harflari (Sidebar'dagi logo)
   logoText: 'EA',
+  logoImage: '',
   phone: '+998 71 200 00 00',
   address: 'Toshkent sh., Chilonzor tumani',
   currency: 'UZS',

@@ -51,6 +51,8 @@ export interface DashboardContextValue {
   getCourse: (id?: string) => Course | undefined
   updateSettings: (settings: Settings, options?: { silent?: boolean }) => void
   resetData: () => void
+  // Reset: mijozlar, tranzaksiyalar va kurslar o'chadi; sozlamalar va login qoladi
+  clearAllData: () => void
   // Demo mijoz va tranzaksiyalarni o'chiradi (sozlamalar qoladi), demo rejimdan chiqadi
   clearDemoData: () => void
   replaceData: (data: StoredData) => void

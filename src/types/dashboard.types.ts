@@ -29,6 +29,8 @@ export type CsvDelimiter = ';' | ','
 export interface Settings {
   orgName: string
   logoText: string
+  // Logotip rasmi (data URL, 200 KB gacha); '' — harfli logo ko'rsatiladi
+  logoImage: string
   phone: string
   address: string
   currency: Currency

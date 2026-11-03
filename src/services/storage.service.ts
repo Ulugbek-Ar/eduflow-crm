@@ -24,8 +24,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v4 — sozlamalarda profil (profileName, profileRole);
 // v5 — mijoz holatlari sotuv voronkasi bosqichlariga (LEGACY_STATUS_MAP);
 // v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi;
-// v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi
-export const SCHEMA_VERSION = 7
+// v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi;
+// v8 — sozlamalarda logotip rasmi (settings.logoImage)
+export const SCHEMA_VERSION = 8
 
 export interface StoredData {
   customers: Customer[]

@@ -4,7 +4,7 @@ import { STATUS_LABELS } from '../constants/navigation'
 import { useConfirm } from '../hooks/useConfirm'
 import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
 import { useToast } from '../hooks/useToast'
-import { combineResults, isDemoMode, loadData, readStored, resetToMock, saveAll, saveErrorMessage, setDemoMode, setItem, STORAGE_KEYS } from '../services/storage.service'
+import { combineResults, createEmptyData, isDemoMode, loadData, readStored, resetToMock, saveAll, saveErrorMessage, setDemoMode, setItem, STORAGE_KEYS } from '../services/storage.service'
 import type { SaveResult, StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
@@ -270,6 +270,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setIsDemo(true)
       reportSave('all', saved)
       if (saved.ok) toast.success('Demo ma\'lumotlar tiklandi')
+    },
+    clearAllData: () => {
+      const empty = createEmptyData()
+      setCustomers(empty.customers)
+      setTransactions(empty.transactions)
+      setCourses(empty.courses)
+      setSearch('')
+      setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
+      setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+      setIsDemo(false)
+      reportSave(STORAGE_KEYS.demo, setDemoMode(false))
+      toast.success('Barcha ma\'lumot tozalandi')
     },
     clearDemoData: () => {
       setCustomers([])

@@ -25,7 +25,13 @@ export function Sidebar() {
       <aside className={cx('sidebar', sidebarOpen && 'is-open', sidebarCollapsed && 'is-collapsed')} aria-label="Asosiy menyu">
         <div className="sidebar-logo">
           <span className="logo-mark" aria-hidden="true">
-            {settings.logoText ? <span className="logo-text">{settings.logoText}</span> : <Icon name="logo" size={20} />}
+            {settings.logoImage ? (
+              <img src={settings.logoImage} alt="" className="logo-image" />
+            ) : settings.logoText ? (
+              <span className="logo-text">{settings.logoText}</span>
+            ) : (
+              <Icon name="logo" size={20} />
+            )}
           </span>
           <div className="sidebar-logo-text">
             <strong>{settings.orgName}</strong>

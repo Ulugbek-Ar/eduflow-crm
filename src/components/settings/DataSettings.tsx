@@ -24,7 +24,7 @@ const USAGE_WARNING_PERCENT = 80
 const LIMIT_MB = STORAGE_LIMIT_BYTES / 1024 / 1024
 
 export function DataSettings() {
-  const { customers, transactions, courses, settings, resetData, replaceData, formatDate } = useDashboard()
+  const { customers, transactions, courses, settings, resetData, clearAllData, replaceData, formatDate } = useDashboard()
   const storageUsage = useStorageUsage()
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -62,6 +62,17 @@ export function DataSettings() {
     })
     if (!ok) return
     replaceData(preview.data)
+    setPreview(null)
+  }
+
+  const handleClearAll = async () => {
+    const ok = await confirm({
+      title: 'Barcha ma\'lumotni tozalash',
+      message: `${customers.length} ta mijoz, ${transactions.length} ta tranzaksiya va ${courses.length} ta kurs/xizmat butunlay o'chiriladi. Sozlamalar, login va parol saqlanib qoladi. Avval JSON zaxira olishni tavsiya qilamiz. Bu amalni ortga qaytarib bo'lmaydi.`,
+      confirmLabel: 'Hammasini o\'chirish',
+    })
+    if (!ok) return
+    clearAllData()
     setPreview(null)
   }
 
@@ -168,6 +179,16 @@ export function DataSettings() {
         </div>
         <Button variant="danger" icon="refresh" onClick={handleReset}>
           Tiklash
+        </Button>
+      </div>
+
+      <div className="setting-row">
+        <div>
+          <strong>Barcha ma'lumotni tozalash (Reset)</strong>
+          <p className="muted">Mijozlar, tranzaksiyalar va kurslar o'chadi; sozlamalar va login qoladi</p>
+        </div>
+        <Button variant="danger" icon="trash" onClick={handleClearAll}>
+          Tozalash
         </Button>
       </div>
     </div>

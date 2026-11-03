@@ -83,11 +83,22 @@ export function isTransaction(value: unknown): value is Transaction {
   )
 }
 
+// Logotip: 200 KB gacha rasm, base64 data URL ko'rinishida (base64 hajmni ~4/3 ga oshiradi)
+export const LOGO_MAX_BYTES = 200 * 1024
+const LOGO_MAX_LENGTH = Math.ceil((LOGO_MAX_BYTES * 4) / 3) + 64
+const LOGO_PATTERN = /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/]+=*$/
+
+export function isLogoDataUrl(value: string): boolean {
+  return value.length <= LOGO_MAX_LENGTH && LOGO_PATTERN.test(value)
+}
+
 export function isSettings(value: unknown): value is Settings {
   return (
     isRecord(value) &&
     isText(value.orgName) &&
     typeof value.logoText === 'string' &&
+    typeof value.logoImage === 'string' &&
+    (value.logoImage === '' || isLogoDataUrl(value.logoImage)) &&
     typeof value.phone === 'string' &&
     typeof value.address === 'string' &&
     oneOf(CURRENCIES, value.currency) &&
@@ -127,6 +138,8 @@ export function sanitizeSettings(value: unknown): Settings {
   return {
     orgName: isText(raw.orgName) ? raw.orgName : DEFAULT_SETTINGS.orgName,
     logoText: typeof raw.logoText === 'string' ? raw.logoText.slice(0, 3) : DEFAULT_SETTINGS.logoText,
+    // v8: logotip rasmi; noto'g'ri yoki juda katta bo'lsa olib tashlanadi (harfli logo qoladi)
+    logoImage: typeof raw.logoImage === 'string' && isLogoDataUrl(raw.logoImage) ? raw.logoImage : '',
     phone: typeof raw.phone === 'string' ? raw.phone : DEFAULT_SETTINGS.phone,
     address: typeof raw.address === 'string' ? raw.address : DEFAULT_SETTINGS.address,
     currency: oneOf(CURRENCIES, raw.currency) ? raw.currency : DEFAULT_SETTINGS.currency,

@@ -457,3 +457,23 @@ describe('v6 -> v7: to\'lov turi va status', () => {
     expect(new Set(transactions.filter((t) => t.source).map((t) => t.source))).toEqual(new Set(['instagram', 'telegram']))
   })
 })
+
+describe('v7 -> v8: logotip rasmi', () => {
+  const png = 'data:image/png;base64,iVBORw0KGgo='
+
+  it('to\'g\'ri data URL saqlanadi; boshqa, buzuq yoki 200 KB dan katta qiymat olib tashlanadi', () => {
+    expect(sanitizeSettings({}).logoImage).toBe('')
+    expect(sanitizeSettings({ logoImage: png }).logoImage).toBe(png)
+    expect(sanitizeSettings({ logoImage: 'https://misol.uz/logo.png' }).logoImage).toBe('')
+    expect(sanitizeSettings({ logoImage: 'data:text/html;base64,PHNjcmlwdD4=' }).logoImage).toBe('')
+    expect(sanitizeSettings({ logoImage: `data:image/png;base64,${'A'.repeat(300_000)}` }).logoImage).toBe('')
+    expect(isSettings({ ...sanitizeSettings({}), logoImage: 'javascript:alert(1)' })).toBe(false)
+  })
+
+  it('logotip JSON zaxiraga kiradi va qayta tiklanadi', () => {
+    const data = createMockData()
+    const backup = createBackup({ ...data, settings: { ...data.settings, logoImage: png } })
+    const restored = parseBackup(JSON.stringify(backup))
+    expect(restored.ok && restored.data.settings.logoImage).toBe(png)
+  })
+})

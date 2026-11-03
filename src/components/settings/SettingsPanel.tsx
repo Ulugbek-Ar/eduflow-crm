@@ -12,6 +12,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { DataSettings } from './DataSettings'
+import { LogoUpload } from './LogoUpload'
 import { SecuritySettings } from './SecuritySettings'
 
 const CURRENCIES: Record<Currency, string> = {
@@ -127,6 +128,7 @@ export function SettingsPanel() {
         <form id="settings-form" className="stack" onSubmit={handleSubmit} noValidate>
           <SettingsCard id="organization" title="Tashkilot" description="Sidebar va hisobotlarda ko'rinadigan ma'lumotlar">
             <div className="form">
+              <LogoUpload value={form.logoImage} logoText={form.logoText} onChange={(value) => update('logoImage', value)} />
               <div className="form-row">
                 <Input
                   ref={orgNameRef}
@@ -142,7 +144,7 @@ export function SettingsPanel() {
                   maxLength={3}
                   value={form.logoText}
                   error={errors.logoText}
-                  hint="1–3 belgi, bo'sh bo'lsa ikon ko'rinadi"
+                  hint="1–3 belgi; logotip rasmi bo'lmasa ko'rinadi"
                   onChange={(e) => update('logoText', e.target.value.toUpperCase())}
                 />
               </div>
@@ -165,7 +167,7 @@ export function SettingsPanel() {
             <div className="form">
               <div className="form-row">
                 <Select
-                  label="Valyuta"
+                  label="Asosiy valyuta"
                   value={form.currency}
                   onChange={(e) => update('currency', e.target.value as Currency)}
                   options={(Object.keys(CURRENCIES) as Currency[]).map((c) => ({ value: c, label: CURRENCIES[c] }))}
