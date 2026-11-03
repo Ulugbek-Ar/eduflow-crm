@@ -159,6 +159,41 @@ export function payingCustomers(transactions: readonly Transaction[]): number {
   return new Set(transactions.filter((t) => t.type === 'income' && isPaid(t) && t.customerId).map((t) => t.customerId)).size
 }
 
+// Davr oxirida "To'lov qildi" bosqichidagi mijozlar (qo'shilgan sana bo'yicha). Bosqich tarixi saqlanmaydi,
+// shuning uchun oldingi davr uchun joriy bosqich va qo'shilgan sana asosida taxmin qilinadi
+export function activeCustomersAt(customers: readonly Customer[], end: Date): number {
+  return customers.filter((c) => c.status === 'paid' && new Date(c.createdAt).getTime() <= end.getTime()).length
+}
+
+export interface OverviewKpis {
+  // Jami tushum: davrdagi "To'langan" kirimlar
+  revenue: { value: number; change: number | null }
+  // Faol mijozlar: "To'lov qildi" bosqichida (davr oxiri holati)
+  active: { value: number; change: number | null }
+  // Yangi lidlar: davrda qo'shilgan mijozlar (istalgan bosqichda)
+  newLeads: { value: number; change: number | null }
+  // Konversiya: davrda kelgan lidlardan "To'lov qildi" ga o'tganlar ulushi; o'zgarish — foiz bandida
+  conversion: { value: number | null; change: number | null }
+}
+
+export function overviewKpis(customers: readonly Customer[], transactions: readonly Transaction[], range: DateRange, now = new Date()): OverviewKpis {
+  const current = getPeriod(range, now)
+  const previous = getPreviousPeriod(range, now)
+  const txNow = filterByPeriod(transactions, (t) => t.date, current)
+  const txPrev = filterByPeriod(transactions, (t) => t.date, previous)
+  const leadsNow = filterByPeriod(customers, (c) => c.createdAt, current)
+  const leadsPrev = filterByPeriod(customers, (c) => c.createdAt, previous)
+  const revenue = sumIncome(txNow)
+  const active = activeCustomersAt(customers, current.end)
+  const conversionNow = conversion(leadsNow)
+  return {
+    revenue: { value: revenue, change: trend(revenue, sumIncome(txPrev)) },
+    active: { value: active, change: trend(active, activeCustomersAt(customers, previous.end)) },
+    newLeads: { value: leadsNow.length, change: trend(leadsNow.length, leadsPrev.length) },
+    conversion: { value: conversionNow, change: pointChange(conversionNow, conversion(leadsPrev)) },
+  }
+}
+
 // ===== Grafik uchun guruhlash =====
 
 export const MONTHS_SHORT = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']

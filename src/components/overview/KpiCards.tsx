@@ -1,16 +1,7 @@
 import { DATE_RANGE_LABELS, Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
-import {
-  conversion,
-  filterByPeriod,
-  getPeriod,
-  getPreviousPeriod,
-  payingCustomers,
-  pointChange,
-  sumIncome,
-  trend,
-} from '../../utils/analytics'
+import { overviewKpis } from '../../utils/analytics'
 import { cx } from '../../utils/cx'
 import { formatNumber, formatPercent } from '../../utils/format'
 
@@ -47,58 +38,46 @@ function TrendBadge({ change, unit }: { change: number | null; unit: Kpi['unit']
 
 export function KpiCards() {
   const { customers, transactions, dateRange, money } = useDashboard()
-  const current = getPeriod(dateRange)
-  const previous = getPreviousPeriod(dateRange)
-
-  const txNow = filterByPeriod(transactions, (t) => t.date, current)
-  const txPrev = filterByPeriod(transactions, (t) => t.date, previous)
-  const newNow = filterByPeriod(customers, (c) => c.createdAt, current)
-  const newPrev = filterByPeriod(customers, (c) => c.createdAt, previous)
-
-  const revenueNow = sumIncome(txNow)
-  const payingNow = payingCustomers(txNow)
-  const conversionNow = conversion(newNow)
-  const activeCount = customers.filter((c) => c.status === 'paid').length
+  const k = overviewKpis(customers, transactions, dateRange)
 
   const kpis: Kpi[] = [
     {
-      label: 'Tushum',
-      value: money(revenueNow),
-      change: trend(revenueNow, sumIncome(txPrev)),
+      label: 'Jami tushum',
+      value: money(k.revenue.value),
+      change: k.revenue.change,
       unit: '%',
-      hint: 'oldingi davrga nisbatan',
+      hint: 'faqat to\'langan · oldingi davrga nisbatan',
       icon: 'trendUp',
       tone: 'success',
     },
     {
-      label: 'Yangi mijozlar',
-      value: formatNumber(newNow.length),
-      change: trend(newNow.length, newPrev.length),
+      label: 'Faol mijozlar',
+      value: formatNumber(k.active.value),
+      change: k.active.change,
       unit: '%',
-      hint: 'oldingi davrga nisbatan',
-      icon: 'userPlus',
-      tone: 'primary',
-    },
-    {
-      label: 'To\'lov qilgan mijozlar',
-      value: formatNumber(payingNow),
-      change: trend(payingNow, payingCustomers(txPrev)),
-      unit: '%',
-      hint: `jami faol: ${activeCount} ta`,
+      hint: '"To\'lov qildi" bosqichida',
       icon: 'userCheck',
       tone: 'primary',
     },
     {
+      label: 'Yangi lidlar',
+      value: formatNumber(k.newLeads.value),
+      change: k.newLeads.change,
+      unit: '%',
+      hint: 'davrda kelgan · oldingi davrga nisbatan',
+      icon: 'userPlus',
+      tone: 'primary',
+    },
+    {
       label: 'Konversiya',
-      value: conversionNow === null ? '—' : `${Math.round(conversionNow)}%`,
-      change: pointChange(conversionNow, conversion(newPrev)),
+      value: k.conversion.value === null ? '—' : `${Math.round(k.conversion.value)}%`,
+      change: k.conversion.change,
       unit: 'p.b.',
-      hint: 'lid → to\'lov qildi',
+      hint: 'davr lidlaridan → to\'lov qildi',
       icon: 'percent',
       tone: 'success',
     },
   ]
-
   return (
     <section className="kpi-grid" aria-label={`Asosiy ko'rsatkichlar: ${DATE_RANGE_LABELS[dateRange].toLowerCase()}`}>
       {kpis.map((kpi) => (

@@ -14,14 +14,14 @@ export function SourceDistribution() {
     <section className="card" aria-labelledby="sources-title">
       <div className="card-head">
         <div>
-          <h2 id="sources-title">Mijozlar manbasi</h2>
+          <h2 id="sources-title">Manbalar taqsimoti</h2>
           <span className="muted">
-            {DATE_RANGE_LABELS[dateRange]} · {inPeriod.length} ta yangi mijoz
+            {DATE_RANGE_LABELS[dateRange]} · {inPeriod.length} ta yangi lid
           </span>
         </div>
       </div>
       {inPeriod.length === 0 ? (
-        <p className="muted">Bu davrda yangi mijoz qo'shilmagan.</p>
+        <p className="muted">Bu davrda yangi lid kelmagan.</p>
       ) : (
         <ul className="progress-list">
           {rows.map((row) => (

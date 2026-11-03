@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import {
+  activeCustomersAt,
   breakdown,
   cashBalance,
   conversion,
@@ -15,6 +16,7 @@ import {
   isPaid,
   niceScale,
   overlaps,
+  overviewKpis,
   paidOnly,
   payingCustomers,
   pointChange,
@@ -255,5 +257,48 @@ describe('faqat "To\'langan" hisoblanadi', () => {
     expect(payingCustomers(list)).toBe(1)
     const october = groupByMonth(list, 1, NOW)[0]
     expect(october).toMatchObject({ income: 1000, expense: 300 })
+  })
+})
+
+describe('overviewKpis', () => {
+  // NOW = 2026-10-28; 'month' davri: 1–28-oktabr, oldingi: 1–28-sentabr
+  const people = [
+    customer({ id: 'a', status: 'paid', createdAt: at(2026, 9, 3) }),
+    customer({ id: 'b', status: 'new', createdAt: at(2026, 9, 10) }),
+    customer({ id: 'c', status: 'contacted', createdAt: at(2026, 9, 12) }),
+    customer({ id: 'd', status: 'paid', createdAt: at(2026, 9, 20) }),
+    customer({ id: 'e', status: 'paid', createdAt: at(2026, 8, 5) }),
+    customer({ id: 'f', status: 'cancelled', createdAt: at(2026, 8, 6) }),
+  ]
+  const money = [
+    tx({ type: 'income', amount: 2000, date: at(2026, 9, 5) }),
+    tx({ type: 'income', amount: 9999, date: at(2026, 9, 6), status: 'pending' }),
+    tx({ type: 'income', amount: 1000, date: at(2026, 8, 5) }),
+  ]
+
+  it('Jami tushum — faqat to\'langan, trend oldingi davrga nisbatan', () => {
+    expect(overviewKpis(people, money, 'month', NOW).revenue).toEqual({ value: 2000, change: 100 })
+  })
+
+  it('Faol mijozlar — "To\'lov qildi", davr oxiri holati', () => {
+    // hozir: a, d, e = 3; oldingi davr oxiri (28-sentabr): faqat e = 1
+    expect(overviewKpis(people, money, 'month', NOW).active).toEqual({ value: 3, change: 200 })
+  })
+
+  it('Yangi lidlar — davrda qo\'shilganlar; konversiya — ulardan "To\'lov qildi" (foiz bandida o\'zgarish)', () => {
+    const k = overviewKpis(people, money, 'month', NOW)
+    expect(k.newLeads).toEqual({ value: 4, change: 100 })
+    // oktabr: 4 liddan 2 tasi to'lov qildi = 50%; sentabr: 2 dan 1 = 50%
+    expect(k.conversion).toEqual({ value: 50, change: 0 })
+    expect(activeCustomersAt(people, new Date(2026, 8, 1))).toBe(0)
+  })
+
+  it('ma\'lumot bo\'lmasa trend va konversiya "—" (null)', () => {
+    expect(overviewKpis([], [], 'today', NOW)).toEqual({
+      revenue: { value: 0, change: null },
+      active: { value: 0, change: null },
+      newLeads: { value: 0, change: null },
+      conversion: { value: null, change: null },
+    })
   })
 })

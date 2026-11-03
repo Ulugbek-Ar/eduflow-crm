@@ -1,4 +1,4 @@
-import { Icon, STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
+import { Icon, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { recentActivity } from '../../utils/analytics'
 import { cx } from '../../utils/cx'
@@ -11,7 +11,7 @@ export function RecentActivity() {
   return (
     <section className="card" aria-labelledby="activity-title">
       <div className="card-head">
-        <h2 id="activity-title">So'nggi faoliyat</h2>
+        <h2 id="activity-title">So'nggi amallar</h2>
       </div>
       {items.length === 0 ? (
         <p className="muted">Hali faoliyat yo'q.</p>
@@ -29,7 +29,7 @@ export function RecentActivity() {
                     <Icon name="userPlus" size={16} />
                   </span>
                   <span className="activity-text">
-                    <strong>Yangi mijoz: {item.customer.name}</strong>
+                    <strong>Yangi lid: {item.customer.name}</strong>
                     <small className="muted">
                       {item.customer.course} · {formatDate(item.date)}
                     </small>
@@ -56,7 +56,15 @@ export function RecentActivity() {
                       {formatDate(item.date)}
                     </small>
                   </span>
-                  <span className={cx('activity-amount', item.transaction.type === 'income' ? 'text-success' : 'text-danger')}>
+                  {item.transaction.status !== 'paid' && (
+                    <Badge tone={item.transaction.status === 'pending' ? 'warning' : 'neutral'}>{TX_STATUS_LABELS[item.transaction.status]}</Badge>
+                  )}
+                  <span
+                    className={cx(
+                      'activity-amount',
+                      item.transaction.status !== 'paid' ? 'muted' : item.transaction.type === 'income' ? 'text-success' : 'text-danger',
+                    )}
+                  >
                     {item.transaction.type === 'income' ? '+' : '−'}
                     {money(item.transaction.amount)}
                   </span>

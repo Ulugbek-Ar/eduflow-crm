@@ -52,9 +52,9 @@ export function RevenueChart() {
     <section className="card" aria-labelledby="revenue-title">
       <div className="card-head">
         <div>
-          <h2 id="revenue-title">Kirim va chiqim</h2>
+          <h2 id="revenue-title">Oylik tushum va xarajatlar</h2>
           <span className="muted">
-            {mode === 'month' ? 'Oxirgi 6 oy' : 'Oxirgi 8 hafta'} · kirim <strong className="text-success">{money(totalIncome)}</strong>, chiqim{' '}
+            {mode === 'month' ? 'Oxirgi 6 oy' : 'Oxirgi 8 hafta'} · faqat to'langan · kirim <strong className="text-success">{money(totalIncome)}</strong>, chiqim{' '}
             <strong className="text-danger">{money(totalExpense)}</strong>
           </span>
         </div>
@@ -77,8 +77,8 @@ export function RevenueChart() {
       </div>
 
       <div className="chart-legend" aria-hidden="true">
-        <span className="legend-item legend-income">Kirim</span>
-        <span className="legend-item legend-expense">Chiqim</span>
+        <span className="legend-item legend-income">Tushum</span>
+        <span className="legend-item legend-expense">Xarajat</span>
         <span className="legend-note">Tanlangan davr ajratib ko'rsatilgan</span>
       </div>
 
