@@ -5,65 +5,113 @@
 **Ta'lim markazlari va kichik biznes uchun CRM boshqaruv paneli.** Mijozlar bazasi, to'lovlar, kassa balansi, hisobotlar va
 analitika — bitta brauzer ilovasida. Interfeys to'liq o'zbek tilida (lotin), mobil qurilmalar va qorong'i mavzu qo'llab-quvvatlanadi.
 
-![Umumiy ko'rinish — yorug' mavzu](docs/overview-light.jpg)
+| Yorug' mavzu                                              | Qorong'i mavzu                                         |
+| --------------------------------------------------------- | ------------------------------------------------------ |
+| ![Umumiy ko'rinish](docs/overview-light.jpg)              | ![Umumiy ko'rinish — qorong'i](docs/overview-dark.jpg)  |
+| ![Sotuv voronkasi — Kanban](docs/customers.jpg)           | ![Kanban — qorong'i](docs/kanban-dark.jpg)              |
+| ![Qarzdorliklar](docs/finance-light.jpg)                  | ![Moliya va kassa — qorong'i](docs/finance-dark.jpg)    |
+| ![Kurslar va xizmatlar](docs/courses-light.jpg)           | ![Tahlil va hisobotlar — qorong'i](docs/analytics-dark.jpg) |
+| ![Mobil (390 px)](docs/mobile.jpg)                        | ![Mobil Kanban — qorong'i](docs/mobile-dark.jpg)        |
 
-| Qorong'i mavzu                                   | Mobil (390 px)                         |
-| ------------------------------------------------ | -------------------------------------- |
-| ![Qorong'i mavzu](docs/overview-dark.jpg)         | ![Mobil ko'rinish](docs/mobile.jpg)    |
-
-> Skrinshotlar `docs/` papkasida. O'z brendingiz bilan yangilash uchun ularni almashtiring.
+> Skrinshotlar `docs/` papkasida, demo ma'lumot bilan production build'dan (`npm run preview`) olingan.
 
 ---
 
 ## Imkoniyatlar
 
+Bo'limlar (sidebar tartibida): **Umumiy ko'rinish · Mijozlar va lidlar · Moliya va kassa · Kurslar va xizmatlar ·
+Tahlil va hisobotlar · Sozlamalar**. Barcha hisob-kitoblar Header'dagi umumiy davr tanlovi (Bugun / 7 kun / Shu oy / Shu yil)
+bilan sinxron.
+
+**Layout**
+
+- Sidebar yig'iladi: to'liq (ikonka + nom) va ixcham (faqat ikonka, nom tooltip'da) — holat saqlanadi; mobilda chiqib keladigan menyu
+- Header: global qidiruv (`Ctrl/Cmd + K`), bildirishnomalar, bitta tugmali yorug'/qorong'i mavzu, profil menyusi (ism, rol, Profil, Chiqish)
+
 **Umumiy ko'rinish**
 
-- 4 ta KPI: tushum, yangi mijozlar, to'lov qilgan mijozlar, konversiya — oldingi teng davrga nisbatan trend bilan
-- Kirim va chiqim grafigi: oylik / haftalik, tooltip, klaviatura bilan navigatsiya
-- Mijozlar manbasi (soni, ulushi, konversiyasi), so'nggi faoliyat, tezkor amallar
-- Barcha ko'rsatkichlar yuqoridagi davr tanlovi (Bugun / 7 kun / Shu oy / Shu yil) bilan sinxron
+- 4 ta KPI: Jami tushum, Faol mijozlar ("To'lov qildi"), Yangi lidlar (davrda kelganlar), Konversiya — oldingi teng davrga nisbatan trend
+- Oylik tushum va xarajatlar grafigi (qo'lda yozilgan SVG, oylik / haftalik, klaviatura bilan), manbalar taqsimoti,
+  so'nggi amallar lentasi (bosqich va to'lov statusi bilan), tezkor amallar
 
-**Mijozlar**
+**Mijozlar va lidlar — sotuv voronkasi**
 
-- Qidiruv (ism, telefon, kurs, email), holat / kurs / manba filtrlari, saralash, sahifalash (10 / 20 / 50)
-- Qo'shish va tahrirlash: `+998 XX XXX XX XX` maskasi, email tekshiruvi, takroriy telefon taqiqlanadi
-- Holatni jadvalning o'zida almashtirish, mijoz kartasi (to'lovlar tarixi, jami to'lov)
+- Bosqichlar: **Yangi → Bog'lanildi → O'ylayapti → To'lov qildi → Bekor qilindi**
+- Ikki ko'rinish (tanlov saqlanadi): **Jadval** (saralash, sahifalash, bosqichni jadvalning o'zida almashtirish) va
+  **Kanban** (ustun sarlavhasida mijozlar soni; kartani sichqoncha bilan sudrab o'tkazish; klaviaturada — kartadagi
+  bosqich menyusi yoki `Alt + ←/→`, `Enter` — kartani ochish). Mobilda Kanban faqat o'z ichida gorizontal aylanadi
+- Yangi mijoz: Ism, Telefon (`+998 XX XXX XX XX` maskasi, takroriy raqam taqiqlanadi), Manba, Kurs/Xizmat, Izoh
+- Qidiruv va filtrlar: bosqich, manba, kurs, qo'shilgan sana oralig'i
+- Mijoz kartasi: to'lovlar tarixi (statuslari bilan), jami to'langan, joriy oy qarzi; tahrirlash, tasdiqlash bilan o'chirish
+  (to'lovlar jurnalda "Ism (o'chirilgan)" ko'rinishida qoladi)
 
-**Moliya**
+**Moliya va kassa**
 
-- Kirim / chiqim jurnali: tur, usul, kategoriya, sana oralig'i filtrlari, saralash, tahrirlash
-- To'lov formasi: qidiruvli mijoz tanlash, minglik ajratgichli summa, Kirim / Chiqim kategoriyalari
-- To'lov usullari va xarajatlar tarkibi bo'yicha taqsimot, kassa balansi
+- Yuqorida: umumiy balans (kassa), jami kirim, jami chiqim (tanlangan davr)
+- To'lovlar jadvali: Sana, Mijoz, Summa, To'lov turi (Naqd / Karta / O'tkazma), Status (To'langan / Kutilmoqda /
+  Bekor qilingan — jadvalning o'zida almashtiriladi). **Balans va barcha KPI faqat "To'langan" bo'yicha hisoblanadi**
+- Kirim / Chiqim formasi; marketing chiqimiga ixtiyoriy **Manba** (CPL/ROI uchun)
+- **Qarzdorliklar va kutilayotgan to'lovlar**: qarzi kattasidan saralangan ro'yxat, qatordan "To'lov qabul qilish"
+  (summa oldindan to'ldiriladi); "Kutilmoqda" to'lovlarni bir bosishda "To'landi" deb belgilash
+- To'lov turlari va xarajatlar tarkibi bo'yicha taqsimot
 
-**Hisobotlar va ma'lumotlar**
+**Kurslar va xizmatlar**
 
-- CSV (UTF-8 BOM, `;` yoki `,`) va Excel (.xls) eksport — joriy filtrlangan ro'yxatdan
-- To'liq JSON zaxira va zaxiradan tiklash (oldindan ko'rish va tasdiqlash bilan)
-- Sxema versiyasi va migratsiyalar, buzuq yozuvlarni avtomatik tashlab yuborish
-- Bir nechta tab ochiq bo'lsa ma'lumotlar sinxronlanadi
-- Brauzer xotirasi to'lsa yoki saqlash bloklansa — aniq ogohlantirish (bir xil xato uchun bir marta) va sahifadan
-  chiqishda tasdiqlash; Sozlamalar → Ma'lumotlar'da taxminiy band joy (KB va ~5 MB ga nisbatan %)
-- Mijoz o'chirilsa, uning to'lovlari jurnalda "Ism (o'chirilgan)" ko'rinishida qoladi (tranzaksiyada ism snapshot'i)
+- Nom, turi (kurs / xizmat), davomiyligi (oy), oylik narxi, faol guruhlar soni, holati (faol / arxiv)
+- Har bir kursda talabalar soni ("To'lov qildi"), jami lidlar, oylik kutilayotgan tushum (talabalar × narx)
+- Qo'shish, tahrirlash (nom o'zgarsa mijozlardagi kurs nomi ham yangilanadi), arxivlash/qaytarish; mijozi bor kurs
+  o'chirilmaydi — arxivlanadi
 
-**Birinchi ishga tushish**
+**Tahlil va hisobotlar**
 
-- Kirgandan keyin tanlov: **Bo'sh boshlash** yoki **Demo ma'lumot bilan tanishish** — hech narsa avtomatik yozilmaydi
-- Demo rejimda Header'da "Demo ma'lumot" belgisi va tasdiqlash bilan **Demo ma'lumotni tozalash** tugmasi
+- O'rtacha chek (AOV), to'langan kirim, marketing chiqimi, konversiya
+- Manbalar samaradorligi: lidlar, "To'lov qildi", konversiya, marketing chiqimi, CPL, ROI (Jami qatori bilan)
+- CSV va Excel eksport: mijozlar, tranzaksiyalar, qarzdorlar, manbalar hisoboti (CSV injection himoyasi bilan)
 
-**Sozlamalar va xavfsizlik**
+**Sozlamalar**
 
-- Tashkilot (nom, logo harflari, telefon, manzil), mintaqa (valyuta, sana formati, CSV ajratgich), kurslar ro'yxati
-- Login va parolni almashtirish, saqlanmagan o'zgarishlar haqida ogohlantirish
-- Parol PBKDF2-HMAC-SHA256 (210 000 iteratsiya) bilan xeshlanadi; noto'g'ri urinishlarda o'sib boruvchi blok
-- Bildirishnomalar: javobsiz leadlar, oylik chiqim kirimdan oshishi, manfiy balans
+- Tashkilot: nom, logotip (rasm, 200 KB gacha; yo'q bo'lsa harfli logo), telefon, manzil
+- Mintaqa va ko'rinish: asosiy valyuta (UZS / USD), sana formati, CSV ajratgich, mavzu (yorug' / qorong'i / tizim)
+- Profil va xavfsizlik: to'liq ism, rol/lavozim, login va parolni almashtirish
+- Ma'lumotlar: JSON zaxira, zaxiradan tiklash, demo ma'lumot, tasdiqlash bilan **barcha ma'lumotni tozalash (Reset)**,
+  taxminiy band joy (KB va ~5 MB ga nisbatan %)
 
-**UI/UX**
+**Umumiy**
 
-- Yorug' / qorong'i / tizim mavzusi, WCAG AA kontrast
-- Responsiv: 1440 / 1024 / 768 / 390 px; mobilda jadvallar kartalarga aylanadi
+- Birinchi kirishda tanlov: **Bo'sh boshlash** yoki **Demo ma'lumot bilan tanishish**; demo rejimda Header'da belgi va tozalash
+- Saqlash xatosi (xotira to'lgan) haqida aniq ogohlantirish; bir nechta tab orasida sinxronlash
+- Bildirishnomalar: bog'lanilmagan yangi lidlar, joriy oy qarzdorlari, chiqim kirimdan oshishi, manfiy balans
+- Parol PBKDF2-HMAC-SHA256 (210 000 iteratsiya); noto'g'ri urinishlarda o'sib boruvchi blok
+- Yorug' / qorong'i / tizim mavzusi, ranglar faqat CSS o'zgaruvchilaridan, WCAG AA kontrast (ikkala mavzuda tekshirilgan)
+- Responsiv: 1440 / 1024 / 768 / 390 px; mobilda jadvallar kartalarga aylanadi, sahifada gorizontal scroll yo'q
 - Klaviatura: `Ctrl/Cmd + K` — qidiruv, `N` — yangi mijoz, fokus tuzog'i, skip link
-- Toast xabarlari, animatsiyalar (`prefers-reduced-motion` hurmat qilinadi)
+
+## Hisob qoidalari va formulalar
+
+Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `src/utils/debts.ts`, `src/utils/courses.ts`.
+
+| Ko'rsatkich | Formula |
+| --- | --- |
+| Kassa balansi | barcha vaqtdagi "To'langan" kirim − "To'langan" chiqim |
+| Jami tushum | davrdagi "To'langan" kirimlar |
+| Faol mijozlar | "To'lov qildi" bosqichidagi mijozlar (davr oxiri holati, qo'shilgan sana bo'yicha) |
+| Yangi lidlar | davrda qo'shilgan mijozlar (istalgan bosqichda) |
+| Konversiya | davrda kelgan lidlardan "To'lov qildi" bosqichidagilar ulushi; trend — foiz bandida |
+| O'rtacha chek (AOV) | davrdagi "To'langan" kirimlar summasi / ular soni |
+| CPL | manba bo'yicha "To'langan" marketing chiqimi / davrda shu manbadan kelgan lidlar |
+| ROI | (shu manbadan kelgan mijozlarning davrdagi kirimi − chiqim) / chiqim × 100 |
+| Kurs: kutilayotgan tushum | "To'lov qildi" talabalar soni × oylik narx |
+
+Chiqim (yoki lid) 0 bo'lsa CPL va ROI **"—"** ko'rsatiladi — nolga bo'linmaydi. "Jami" qatori o'rtachalardan emas, yig'indilardan
+qayta hisoblanadi.
+
+**Qarzdorlik (joriy kalendar oyi):**
+
+1. Faqat **"To'lov qildi"** bosqichidagi mijozlar hisoblanadi.
+2. Kutilgan summa = mijoz kursining **oylik narxi**. Kurs topilmasa yoki narxi 0 bo'lsa, mijoz hisobga olinmaydi; arxivdagi kurs hisoblanadi.
+3. To'langan = shu mijozning joriy oydagi **"To'langan"** kirimlari. "Kutilmoqda" va "Bekor qilingan" kirmaydi.
+4. Qarz = max(0, kutilgan − to'langan); ortiqcha to'lov keyingi oyga o'tkazilmaydi.
+5. Ro'yxat qarzi kattasidan saralanadi; "Kutilmoqda" to'lovlar alohida ro'yxatda.
 
 ## Texnologiyalar
 
@@ -87,7 +135,7 @@ Brauzerda `http://localhost:5173` ni oching.
 | ------- | ---------- |
 | `admin` | `admin123` |
 
-Birinchi kirishda parolni almashtirish taklif qilinadi (Sozlamalar → Xavfsizlik). Yangi parol kamida 8 ta belgi.
+Birinchi kirishda parolni almashtirish taklif qilinadi (Sozlamalar → Profil va xavfsizlik). Yangi parol kamida 8 ta belgi.
 
 Ketma-ket 5 ta noto'g'ri urinishdan keyin kirish bloklanadi: 30 s → 60 s → 120 s → … (eng ko'pi 15 daqiqa).
 Blok `localStorage`'da saqlanadi — sahifani yangilash uni bekor qilmaydi. To'g'ri kirish hisoblagichni tozalaydi.
@@ -112,10 +160,12 @@ nolga tushadi: keyingi blok yana 30 soniyadan boshlanadi.
 ```
 src/
 ├── components/
+│   ├── analytics/     Tahlil va hisobotlar (AOV, manbalar samaradorligi, eksport)
 │   ├── auth/          Kirish ekrani, parol almashtirish taklifi
-│   ├── customers/     Mijozlar jadvali, forma, mijoz kartasi
-│   ├── finance/       Tranzaksiyalar jurnali, forma, taqsimotlar
-│   ├── layout/        Sidebar, Header, bildirishnomalar, mavzu, demo belgisi
+│   ├── courses/       Kurslar va xizmatlar ro'yxati, kurs formasi
+│   ├── customers/     Mijozlar jadvali, Kanban (voronka), forma, mijoz kartasi
+│   ├── finance/       To'lovlar jurnali, qarzdorlar, forma, taqsimotlar
+│   ├── layout/        Sidebar (yig'iladigan), Header, profil menyusi, bildirishnomalar, mavzu
 │   ├── onboarding/    Birinchi ishga tushishdagi tanlov ekrani
 │   ├── overview/      KPI, grafik, manbalar, faoliyat, tezkor amallar
 │   ├── settings/      Sozlamalar bo'limlari
@@ -123,12 +173,12 @@ src/
 │                      ConfirmDialog, Dropdown, Combobox, Toast, Pagination ...
 ├── constants/         Ilova nomi (app.ts), navigatsiya, ikonlar (inline SVG), yorliqlar, demo ma'lumot
 ├── context/           Dashboard, Auth va Theme provayderlari
-├── hooks/             useAuth, useToast, useConfirm, useTheme, useNotifications, useStorageUsage
+├── hooks/             useAuth, useToast, useConfirm, useTheme, useNotifications, useStorageUsage, usePersistentState
 ├── services/          storage (versiya, migratsiya, saqlash xatolari), export (CSV/XLS), auth (PBKDF2),
 │                      loginLock (kirish bloki)
 ├── test/              Komponent testlari uchun yordamchilar (ma'lumot va sessiyani tayyorlash)
-├── types/             Customer, Transaction, Settings va boshqa turlar
-├── utils/             analytics, format, guards, phone, list, reports ...
+├── types/             Customer, Course, Transaction, Settings va boshqa turlar
+├── utils/             analytics, debts, courses, customers, format, guards, phone, list, reports ...
 └── index.css          Dizayn tokenlari (yorug'/qorong'i) va barcha stillar
 ```
 
@@ -145,17 +195,32 @@ Backend yo'q — barcha ma'lumot **foydalanuvchi brauzerining `localStorage`'ida
 
 | Kalit                                                | Tarkibi                                          |
 | ---------------------------------------------------- | ------------------------------------------------ |
-| `apex:customers`, `apex:transactions`, `apex:settings` | Asosiy ma'lumotlar                             |
-| `apex:version`                                       | Sxema versiyasi (hozir 3; migratsiyalar uchun)   |
+| `apex:customers`, `apex:transactions`, `apex:courses`, `apex:settings` | Asosiy ma'lumotlar             |
+| `apex:version`                                       | Sxema versiyasi (hozir 8; migratsiyalar uchun)   |
 | `apex:seeded`, `apex:demo`                           | Birinchi tanlov qilingan / demo rejim            |
 | `apex:auth`                                          | Login, tuz va parol xeshi (PBKDF2-SHA256, `algo` va `iterations` bilan) |
 | `apex:login-lock`                                    | Noto'g'ri urinishlar hisoblagichi, blok muddati va oxirgi urinish vaqti |
 | `apex:theme`, `apex:notifications`                   | Mavzu va o'qilgan eslatmalar                     |
+| `apex:sidebar-collapsed`, `apex:customers-view`      | Sidebar holati, mijozlar ko'rinishi (Jadval / Kanban) |
 | `apex:session` (sessionStorage)                      | Joriy sessiya — tab yopilganda tugaydi           |
 
 Kalitlar `apex:` prefiksi bilan qoldirilgan — avvalgi versiyadagi ma'lumotlar yo'qolmasligi uchun. Eski SHA-256 parol
-xeshi to'g'ri parol bilan birinchi kirishda avtomatik PBKDF2 ga yangilanadi; v2 ma'lumotlarida tranzaksiyalarga mijoz ismi
-ko'chiriladi (v3).
+xeshi to'g'ri parol bilan birinchi kirishda avtomatik PBKDF2 ga yangilanadi.
+
+### Sxema versiyalari va migratsiyalar
+
+Migratsiyalar yozuv shakliga qarab ishlaydi (`normalizeData`): istalgan eski versiyadagi `localStorage` ham, eski JSON zaxira
+ham joriy sxemaga ko'chiriladi, buzuq yozuvlar tashlab yuboriladi va soni ko'rsatiladi. Yangiroq versiyadagi zaxira rad etiladi.
+
+| Versiya | O'zgarish | Eski → yangi |
+| --- | --- | --- |
+| v2 | Tranzaksiya kategoriyasi | izoh va turiga qarab taxmin |
+| v3 | Tranzaksiyada mijoz ismi snapshot'i | mavjud mijozlar ismi ko'chiriladi |
+| v4 | Profil: `profileName`, `profileRole` | `''`, `Administrator` |
+| v5 | Mijoz holati → voronka bosqichi | `lead → new`, `active → paid`, `paused → thinking`, `left → cancelled` |
+| v6 | Kurslar alohida entity (`apex:courses`) | `settings.courses` va mijozlardagi nomlar → kurs (narx 0, 1 oy, 0 guruh, faol) |
+| v7 | To'lov turi, status, marketing manbasi | `payme, click → card`, `bank → transfer`, `cash → cash`; status → `paid` |
+| v8 | Logotip rasmi `settings.logoImage` | `''` (harfli logo) |
 
 Birinchi ochilishda hech narsa yozilmaydi — foydalanuvchi bo'sh yoki demo ma'lumotni tanlaydi. Boshqa brauzer yoki qurilmada ma'lumotlar ko'rinmaydi — ko'chirish uchun
 **Sozlamalar → Ma'lumotlar → JSON zaxira** dan foydalaning. Brauzer tarixini tozalash ma'lumotlarni ham o'chiradi, shuning uchun
@@ -221,6 +286,11 @@ operatsion tizim hisobiga parol qo'ying.
   (aniq limit brauzerga bog'liq, band joy ko'rsatkichi taxminiy). Xotira to'lsa, yangi o'zgarishlar faqat ochiq tabda qoladi —
   ogohlantirish chiqqanda darhol JSON zaxira oling.
 - Valyutani USD ga o'zgartirish faqat belgini almashtiradi — summalar konvertatsiya qilinmaydi.
+- Bosqich o'zgarishlari tarixi saqlanmaydi: "Faol mijozlar" trendi va konversiya joriy bosqich va qo'shilgan sana bo'yicha
+  hisoblanadi (lid qachon "To'lov qildi" ga o'tganini bilib bo'lmaydi).
+- Qarz faqat joriy oy uchun va "oylik narx" modelida: o'tgan oylardan qolgan qarz, chegirmalar va bir martalik to'lovlar
+  hisobga olinmaydi. Mijoz kursga nom orqali bog'langan.
+- Logotip `localStorage`'da data URL sifatida saqlanadi (200 KB gacha) — band joyni oshiradi.
 - CSV'da `=`, `+`, `-`, `@` bilan boshlangan matnlar (masalan, `+998...` telefonlar) Excel formula sifatida bajarilmasligi uchun
   `'` belgisi bilan boshlanadi. Telefonlar toza ko'rinishi kerak bo'lsa, Excel (.xls) eksportidan foydalaning.
 

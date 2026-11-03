@@ -115,11 +115,13 @@ export function CoursesPanel() {
               <thead>
                 <tr>
                   <th scope="col">Nomi</th>
-                  <th scope="col">Davomiyligi</th>
+                  <th scope="col" className="col-optional">
+                    Davomiyligi
+                  </th>
                   <th scope="col" className="align-right">
                     Oylik narx
                   </th>
-                  <th scope="col" className="align-right">
+                  <th scope="col" className="align-right col-optional">
                     Guruhlar
                   </th>
                   <th scope="col" className="align-right">
@@ -147,15 +149,21 @@ export function CoursesPanel() {
                         <button type="button" className="link-btn" onClick={() => openModal({ type: 'course', payload: { id: course.id } })}>
                           {course.name}
                         </button>
-                        <small className="cell-sub">{COURSE_TYPE_LABELS[course.type]}</small>
+                        <small className="cell-sub">
+                          {COURSE_TYPE_LABELS[course.type]}
+                          <span className="show-compact">
+                            {' '}
+                            · {course.durationMonths} oy · {course.activeGroups} guruh
+                          </span>
+                        </small>
                       </td>
-                      <td data-label="Davomiyligi" className="nowrap">
+                      <td data-label="Davomiyligi" className="nowrap col-optional">
                         {course.durationMonths} oy
                       </td>
                       <td data-label="Oylik narx" className="align-right nowrap">
                         {course.monthlyPrice > 0 ? money(course.monthlyPrice) : <span className="text-warning">Kiritilmagan</span>}
                       </td>
-                      <td data-label="Guruhlar" className="align-right">
+                      <td data-label="Guruhlar" className="align-right col-optional">
                         {course.activeGroups}
                       </td>
                       <td data-label="Talabalar" className="align-right strong">

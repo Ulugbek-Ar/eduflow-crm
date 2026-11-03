@@ -69,7 +69,8 @@ export function DebtsCard() {
                       aria-label={`${row.customer.name}: to'lov qabul qilish`}
                       onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: row.customer.id, amount: row.debt } })}
                     >
-                      To'lov qabul qilish
+                      <span className="hide-mobile">To'lov qabul qilish</span>
+                      <span className="show-mobile">To'lov</span>
                     </Button>
                   </td>
                 </tr>

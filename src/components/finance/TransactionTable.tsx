@@ -223,7 +223,7 @@ export function TransactionTable() {
                       <td data-label="Sana" className="nowrap">
                         {formatDate(t.date)}
                       </td>
-                      <td data-label="Mijoz">
+                      <td data-label="Mijoz" className="cell-wide">
                         {t.customerId && !getCustomer(t.customerId) ? (
                           <span className="muted">{getCustomerName(t.customerId)}</span>
                         ) : t.customerId ? (

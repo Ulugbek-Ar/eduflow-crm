@@ -1502,6 +1502,41 @@ body.scroll-locked {
   color: var(--text);
 }
 
+/* Planshetda ikkinchi darajali ustunlar yashiriladi — qiymati asosiy ustun ostida ko'rinadi */
+.show-compact {
+  display: none;
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .table .col-optional {
+    display: none;
+  }
+
+  .show-compact {
+    display: inline;
+  }
+
+  .cell-sub.show-compact {
+    display: block;
+  }
+
+  .row-actions {
+    gap: 0;
+  }
+
+  .table td.cell-actions {
+    padding-left: 4px;
+    padding-right: 8px;
+  }
+}
+
+/* Asosiy matnli ustun torayib ketmasligi uchun (planshet va kompyuter) */
+@media (min-width: 769px) {
+  .table td.cell-wide {
+    min-width: 150px;
+  }
+}
+
 /* ===== Kanban (sotuv voronkasi) ===== */
 .kanban {
   /* Ichidagi absolute elementlar (sr-only) ham scroll konteyneri bilan kesilishi uchun */
@@ -2765,6 +2800,15 @@ body.scroll-locked {
 
 /* ===== Responsiv: 1200 / 1024 / 768 / 390 ===== */
 @media (max-width: 1200px) {
+  .table th,
+  .table td {
+    padding: 10px 12px;
+  }
+
+  .table th {
+    white-space: normal;
+  }
+
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

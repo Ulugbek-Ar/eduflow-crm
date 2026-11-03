@@ -194,7 +194,9 @@ export function CustomerTable() {
                   <th scope="col">Telefon</th>
                   <SortHeader label="Kurs" sortKey="course" sort={sort} onSort={setCustomerSort} />
                   <SortHeader label="Holat" sortKey="status" sort={sort} onSort={setCustomerSort} />
-                  <th scope="col">Manba</th>
+                  <th scope="col" className="col-optional">
+                    Manba
+                  </th>
                   <SortHeader label="Qo'shilgan" sortKey="createdAt" sort={sort} onSort={setCustomerSort} />
                   <th scope="col">
                     <span className="sr-only">Amallar</span>
@@ -212,6 +214,7 @@ export function CustomerTable() {
                       >
                         {c.name}
                       </button>
+                      <small className="cell-sub show-compact">{SOURCE_LABELS[c.source]}</small>
                       {c.email && <small className="cell-sub">{c.email}</small>}
                     </td>
                     <td data-label="Telefon" className="nowrap">
@@ -232,7 +235,9 @@ export function CustomerTable() {
                         ))}
                       </select>
                     </td>
-                    <td data-label="Manba">{SOURCE_LABELS[c.source]}</td>
+                    <td data-label="Manba" className="col-optional">
+                      {SOURCE_LABELS[c.source]}
+                    </td>
                     <td data-label="Qo'shilgan" className="nowrap">
                       {formatDate(c.createdAt)}
                     </td>
