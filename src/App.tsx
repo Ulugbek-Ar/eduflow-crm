@@ -1,4 +1,5 @@
 import { CustomerTable } from './components/customers/CustomerTable'
+import { DemoBar } from './components/layout/DemoBar'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { KpiCards } from './components/overview/KpiCards'
@@ -11,7 +12,8 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
 import { FirstRunScreen } from './components/onboarding/FirstRunScreen'
-import { PasswordPrompt } from './components/auth/PasswordPrompt'
+import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
+import { SetupAdminScreen } from './components/auth/SetupAdminScreen'
 import { ToastProvider } from './components/ui/Toast'
 import { NAV_ITEMS } from './constants/navigation'
 import { AuthProvider } from './context/AuthContext'
@@ -22,12 +24,15 @@ import { useAuth } from './hooks/useAuth'
 import { isFirstRun } from './services/storage.service'
 import { pageTitle } from './constants/app'
 import { cx } from './utils/cx'
-import { scrollToId } from './utils/scroll'
+import { canOpenSection } from './auth/permissions'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
+  const { user } = useAuth()
+  // Ruxsat yo'q bo'lim (masalan, rol o'zgargan) — bosh sahifa ko'rsatiladi
+  const section = canOpenSection(user?.role, activeSection) ? activeSection : 'overview'
 
-  switch (activeSection) {
+  switch (section) {
     case 'overview':
       return (
         <div className="stack">
@@ -54,6 +59,8 @@ function ActiveSection() {
       return <CoursesPanel />
     case 'analytics':
       return <AnalyticsPanel />
+    case 'admin':
+      return <AdminPanel />
     case 'settings':
       return <SettingsPanel />
   }
@@ -69,6 +76,7 @@ const loadTransactionForm = () => import('./components/finance/TransactionFormMo
 const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
 const loadAnalyticsPanel = () => import('./components/analytics/AnalyticsPanel')
 const loadCourseForm = () => import('./components/courses/CourseFormModal')
+const loadAdminPanel = () => import('./components/admin/AdminPanel')
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
@@ -78,6 +86,7 @@ const TransactionFormModal = lazy(() => loadTransactionForm().then((m) => ({ def
 const CoursesPanel = lazy(() => loadCoursesPanel().then((m) => ({ default: m.CoursesPanel })))
 const AnalyticsPanel = lazy(() => loadAnalyticsPanel().then((m) => ({ default: m.AnalyticsPanel })))
 const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.CourseFormModal })))
+const AdminPanel = lazy(() => loadAdminPanel().then((m) => ({ default: m.AdminPanel })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
@@ -104,9 +113,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function Shell() {
-  const { modal, activeSection, setActiveSection, openModal, sidebarCollapsed, isDemo } = useDashboard()
-  const { usingDefaultPassword } = useAuth()
-  const [promptDismissed, setPromptDismissed] = useState(false)
+  const { modal, activeSection, openModal, sidebarCollapsed } = useDashboard()
+  const { can } = useAuth()
 
   useEffect(() => {
     const timer = window.setTimeout(prefetchChunks, 1200)
@@ -130,20 +138,22 @@ function Shell() {
         return
       }
       const modalOpen = document.querySelector('.modal-overlay') !== null
-      if (event.key.toLowerCase() === 'n' && !event.ctrlKey && !event.metaKey && !event.altKey && !modalOpen && !isTypingTarget(event.target)) {
+      if (
+        event.key.toLowerCase() === 'n' &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !modalOpen &&
+        !isTypingTarget(event.target) &&
+        can('customers.edit')
+      ) {
         event.preventDefault()
         openModal({ type: 'customer' })
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openModal])
-
-  const goToSecurity = () => {
-    setPromptDismissed(true)
-    setActiveSection('settings')
-    scrollToId('profile')
-  }
+  }, [openModal, can])
 
   return (
     <div className={cx('app', sidebarCollapsed && 'is-collapsed')}>
@@ -152,6 +162,7 @@ function Shell() {
       </a>
       <Sidebar />
       <div className="content">
+        <DemoBar />
         <Header />
         <main className="main" id="main-content" tabIndex={-1}>
           <ErrorBoundary key={activeSection} compact>
@@ -161,10 +172,6 @@ function Shell() {
           </ErrorBoundary>
         </main>
       </div>
-      {/* Demo ma'lumot bilan tanishayotgan foydalanuvchini parol oynasi bilan to'xtatmaymiz */}
-      {usingDefaultPassword && !isDemo && !promptDismissed && !modal && (
-        <PasswordPrompt onChangeNow={goToSecurity} onLater={() => setPromptDismissed(true)} />
-      )}
       <Suspense fallback={null}>
         {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
         {modal?.type === 'course' && <CourseFormModal key={modal.payload?.id ?? 'new'} courseId={modal.payload?.id} />}
@@ -184,13 +191,16 @@ function Shell() {
 }
 
 function AuthGate() {
-  const { session } = useAuth()
-  const [firstRun, setFirstRun] = useState(isFirstRun)
-  if (!session) return <LoginScreen />
+  const { user, needsSetup, mode } = useAuth()
+  const [firstRunDone, setFirstRunDone] = useState(false)
+  if (!user) return needsSetup ? <SetupAdminScreen /> : <LoginScreen />
+  // Vaqtinchalik parol bilan kirilgan — avval yangi parol
+  if (user.mustChange) return <ForcePasswordChange />
   // Ma'lumot avtomatik yozilmaydi: avval "bo'sh" yoki "demo" tanlanadi
-  if (firstRun) return <FirstRunScreen onDone={() => setFirstRun(false)} />
+  if (!firstRunDone && isFirstRun()) return <FirstRunScreen onDone={() => setFirstRunDone(true)} />
+  // Rejim yoki xodim almashsa, panel holati (bo'lim, filtrlar) noldan boshlanadi
   return (
-    <DashboardProvider>
+    <DashboardProvider key={`${mode}:${user.id}`}>
       <Shell />
     </DashboardProvider>
   )

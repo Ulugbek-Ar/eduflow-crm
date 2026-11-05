@@ -1,6 +1,7 @@
 import { FUNNEL_STAGES, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
 import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
 import { customerDebt, studyMonthNumber } from '../../utils/debts'
@@ -10,6 +11,7 @@ import { Modal } from '../ui/Modal'
 export function CustomerDetail({ customerId }: { customerId: string }) {
   const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
   const customer = getCustomer(customerId)
 
   if (!customer) {
@@ -50,18 +52,24 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
       variant="drawer"
       footer={
         <>
-          <Button variant="danger" icon="trash" onClick={handleDelete}>
-            O'chirish
-          </Button>
-          <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
-            Tahrirlash
-          </Button>
-          <Button
-            icon="plus"
-            onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, amount: debt?.debt || undefined } })}
-          >
-            To'lov
-          </Button>
+          {can('customers.delete') && (
+            <Button variant="danger" icon="trash" onClick={handleDelete}>
+              O'chirish
+            </Button>
+          )}
+          {can('customers.edit') && (
+            <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
+              Tahrirlash
+            </Button>
+          )}
+          {can('payments.create') && (
+            <Button
+              icon="plus"
+              onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, amount: debt?.debt || undefined } })}
+            >
+              To'lov
+            </Button>
+          )}
         </>
       }
     >
@@ -75,6 +83,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
             className={`status-select badge-${customer.status}`}
             value={customer.status}
             aria-label="Bosqichni o'zgartirish"
+            disabled={!can('customers.edit')}
             onChange={(e) => updateCustomer(customer.id, { status: e.target.value as CustomerStatus })}
           >
             {FUNNEL_STAGES.map((stage) => (

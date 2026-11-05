@@ -1,11 +1,13 @@
 import { METHOD_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { computeDebts, pendingPayments, totalDebt } from '../../utils/debts'
 import { Button } from '../ui/Button'
 
 // Qarzdorliklar (joriy oy) va "Kutilmoqda" statusidagi to'lovlar. Hisob qoidasi: src/utils/debts.ts
 export function DebtsCard() {
   const { customers, courses, transactions, money, formatDate, openModal, updateTransaction, getCustomerName } = useDashboard()
+  const can = useCan()
   const debts = computeDebts(customers, courses, transactions)
   const pending = pendingPayments(transactions)
 
@@ -63,6 +65,7 @@ export function DebtsCard() {
                     {money(row.debt)}
                   </td>
                   <td className="cell-actions">
+                    {can('payments.create') && (
                     <Button
                       size="sm"
                       icon="plus"
@@ -72,6 +75,7 @@ export function DebtsCard() {
                       <span className="hide-mobile">To'lov qabul qilish</span>
                       <span className="show-mobile">To'lov</span>
                     </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -95,9 +99,11 @@ export function DebtsCard() {
                 </small>
               </div>
               <strong className="nowrap">{money(t.amount)}</strong>
-              <Button size="sm" variant="ghost" icon="check" onClick={() => updateTransaction(t.id, { status: 'paid', date: new Date().toISOString() })}>
-                To'landi
-              </Button>
+              {can('payments.manage') && (
+                <Button size="sm" variant="ghost" icon="check" onClick={() => updateTransaction(t.id, { status: 'paid', date: new Date().toISOString() })}>
+                  To'landi
+                </Button>
+              )}
             </li>
           ))}
         </ul>

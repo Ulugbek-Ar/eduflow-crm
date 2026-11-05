@@ -1,6 +1,6 @@
 import type { TransactionType } from './finance.types'
 
-export type Section = 'overview' | 'customers' | 'finance' | 'courses' | 'analytics' | 'settings'
+export type Section = 'overview' | 'customers' | 'finance' | 'courses' | 'analytics' | 'admin' | 'settings'
 
 export type DateRange = 'today' | '7d' | 'month' | 'year'
 

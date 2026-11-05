@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import type { Course, CourseStatus } from '../../types/course.types'
 import { COURSE_STATUS_LABELS, COURSE_TYPE_LABELS, courseStats, coursesNeedingSetup, durationLabel, usedByCustomers } from '../../utils/courses'
@@ -20,6 +21,7 @@ const FILTERS: Array<{ id: StatusFilter; label: string }> = [
 export function CoursesPanel() {
   const { courses, customers, search, money, openModal, updateCourse, removeCourse } = useDashboard()
   const confirm = useConfirm()
+  const canEdit = useCan()('courses.edit')
   const [filter, setFilter] = useState<StatusFilter>('active')
 
   const query = search.trim().toLowerCase()
@@ -87,13 +89,15 @@ export function CoursesPanel() {
                 </button>
               ))}
             </div>
-            <Button icon="plus" onClick={() => openModal({ type: 'course' })}>
-              Yangi kurs
-            </Button>
+            {canEdit && (
+              <Button icon="plus" onClick={() => openModal({ type: 'course' })}>
+                Yangi kurs
+              </Button>
+            )}
           </div>
         </div>
 
-        {incomplete.length > 0 && (
+        {canEdit && incomplete.length > 0 && (
           <div className="notice notice-warning setup-notice" role="status">
             <strong>
               {incomplete.length} ta kursda narx yoki muddat kiritilmagan — qarzdorlar va kutilayotgan tushum to'g'ri hisoblanishi uchun
@@ -119,7 +123,8 @@ export function CoursesPanel() {
                 : 'Holat filtrini yoki qidiruvni o\'zgartirib ko\'ring.'
             }
             action={
-              courses.length === 0 && (
+              courses.length === 0 &&
+              canEdit && (
                 <Button icon="plus" onClick={() => openModal({ type: 'course' })}>
                   Kurs qo'shish
                 </Button>
@@ -163,9 +168,13 @@ export function CoursesPanel() {
                   return (
                     <tr key={course.id} className={cx(course.status === 'archived' && 'is-muted')}>
                       <td data-label="Nomi">
-                        <button type="button" className="link-btn" onClick={() => openModal({ type: 'course', payload: { id: course.id } })}>
-                          {course.name}
-                        </button>
+                        {canEdit ? (
+                          <button type="button" className="link-btn" onClick={() => openModal({ type: 'course', payload: { id: course.id } })}>
+                            {course.name}
+                          </button>
+                        ) : (
+                          <strong>{course.name}</strong>
+                        )}
                         <small className="cell-sub">
                           {COURSE_TYPE_LABELS[course.type]}
                           <span className="show-compact">
@@ -196,6 +205,7 @@ export function CoursesPanel() {
                         <Badge tone={course.status === 'active' ? 'paid' : 'neutral'}>{COURSE_STATUS_LABELS[course.status]}</Badge>
                       </td>
                       <td className="cell-actions">
+                        {canEdit && (
                         <div className="row-actions">
                           <IconButton icon="edit" label={`${course.name}ni tahrirlash`} onClick={() => openModal({ type: 'course', payload: { id: course.id } })} />
                           {course.status === 'active' ? (
@@ -206,6 +216,7 @@ export function CoursesPanel() {
                           {/* Mijozi bor kurs o'chirilmaydi — faqat arxivlanadi */}
                           {!used && <IconButton icon="trash" tone="danger" label={`${course.name}ni o'chirish`} onClick={() => handleDelete(course)} />}
                         </div>
+                        )}
                       </td>
                     </tr>
                   )

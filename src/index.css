@@ -2618,6 +2618,301 @@ body.scroll-locked {
   color: var(--text);
 }
 
+/* Kirish, ro'yxatdan o'tish va yangi parol ekranlari */
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.login-card-wide {
+  width: min(520px, 100%);
+}
+
+.auth-demo {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-help {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.auth-help summary {
+  width: fit-content;
+  margin: 0 auto;
+  color: var(--primary-text);
+  cursor: pointer;
+}
+
+.auth-help p {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ===== Demo tasmasi ===== */
+.demo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: 0.85rem;
+}
+
+.demo-bar p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.demo-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input.input-sm {
+  width: auto;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+}
+
+/* ===== Boshqaruv (xodimlar, seanslar, rollar) ===== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.is-active {
+  border-bottom-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.staff-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.role-picker legend {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.role-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.role-option.is-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.role-option input {
+  margin-top: 3px;
+  accent-color: var(--primary);
+}
+
+.role-option strong,
+.role-option small {
+  display: block;
+}
+
+.role-option small {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.role-picker:disabled .role-option {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.copy-field {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.copy-field .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.session-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.session-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.session-info {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.session-info strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.small-note {
+  margin-top: 12px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.role-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.role-card ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.role-card li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.role-card li svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--success-text);
+}
+
+.profile-role-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .demo-bar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 16px;
+  }
+
+  .demo-bar p {
+    flex: 1 1 auto;
+  }
+
+  .session-item {
+    flex-wrap: wrap;
+  }
+}
+
 /* ===== Birinchi ishga tushish ===== */
 .first-run {
   width: min(460px, 100%);

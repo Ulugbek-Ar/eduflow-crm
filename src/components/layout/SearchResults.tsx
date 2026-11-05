@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import { Icon, STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { COURSE_TYPE_LABELS } from '../../utils/courses'
 import type { SearchResults as Results } from '../../utils/search'
 
@@ -19,6 +20,7 @@ function moveFocus(container: HTMLElement | null, step: 1 | -1) {
 
 export function SearchResults({ id, results, onClose }: SearchResultsProps) {
   const { openModal, setActiveSection, money, formatDate, getCustomerName } = useDashboard()
+  const can = useCan()
 
   const choose = (action: () => void) => {
     action()
@@ -61,7 +63,7 @@ export function SearchResults({ id, results, onClose }: SearchResultsProps) {
             <div className="search-group">
               <span className="dropdown-heading">Kurslar va xizmatlar</span>
               {results.courses.map((c) => (
-                <button key={c.id} type="button" className="search-result" onClick={() => choose(() => openModal({ type: 'course', payload: { id: c.id } }))}>
+                <button key={c.id} type="button" className="search-result" onClick={() => choose(() => (can('courses.edit') ? openModal({ type: 'course', payload: { id: c.id } }) : setActiveSection('courses')))}>
                   <Icon name="bookOpen" size={16} />
                   <span>
                     {c.name}
@@ -77,7 +79,7 @@ export function SearchResults({ id, results, onClose }: SearchResultsProps) {
             <div className="search-group">
               <span className="dropdown-heading">Tranzaksiyalar</span>
               {results.transactions.map((t) => (
-                <button key={t.id} type="button" className="search-result" onClick={() => choose(() => openModal({ type: 'transaction', payload: { id: t.id } }))}>
+                <button key={t.id} type="button" className="search-result" onClick={() => choose(() => (can('payments.manage') ? openModal({ type: 'transaction', payload: { id: t.id } }) : setActiveSection('finance')))}>
                   <Icon name={t.type === 'income' ? 'card' : 'receipt'} size={16} />
                   <span>
                     {t.note || TYPE_LABELS[t.type]}

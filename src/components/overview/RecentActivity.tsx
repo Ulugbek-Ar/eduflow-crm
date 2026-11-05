@@ -1,11 +1,13 @@
 import { Icon, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { recentActivity } from '../../utils/analytics'
 import { cx } from '../../utils/cx'
 import { Badge } from '../ui/Badge'
 
 export function RecentActivity() {
-  const { customers, transactions, money, getCustomerName, openModal, formatDate } = useDashboard()
+  const { customers, transactions, money, getCustomerName, openModal, formatDate, setActiveSection } = useDashboard()
+  const can = useCan()
   const items = recentActivity(customers, transactions, 5)
 
   return (
@@ -42,7 +44,7 @@ export function RecentActivity() {
                 <button
                   type="button"
                   className="activity-item"
-                  onClick={() => openModal({ type: 'transaction', payload: { id: item.id } })}
+                  onClick={() => (can('payments.manage') ? openModal({ type: 'transaction', payload: { id: item.id } }) : setActiveSection('finance'))}
                 >
                   <span className={cx('activity-icon', item.transaction.type === 'income' ? 'tone-success' : 'tone-danger')}>
                     <Icon name={item.transaction.type === 'income' ? 'card' : 'receipt'} size={16} />

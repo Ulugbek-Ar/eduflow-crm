@@ -1,13 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { APP_NAME } from '../../constants/app'
 import { Icon, NAV_ITEMS } from '../../constants/navigation'
+import { canOpenSection } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuth } from '../../hooks/useAuth'
 import { cx } from '../../utils/cx'
 
 export function Sidebar() {
   const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } =
     useDashboard()
   const navRef = useRef<HTMLElement>(null)
+  const { user } = useAuth()
+  const items = NAV_ITEMS.filter((item) => canOpenSection(user?.role, item.id))
 
   // Mobil menyu ochilganda fokus birinchi bo'limga o'tadi, Esc yopadi
   useEffect(() => {
@@ -40,7 +44,7 @@ export function Sidebar() {
         </div>
 
         <nav ref={navRef} className="sidebar-nav" aria-label="Bo'limlar">
-          {NAV_ITEMS.map((item) => (
+          {items.map((item) => (
             <button
               key={item.id}
               type="button"

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import { usePersistentState } from '../../hooks/usePersistentState'
 import type { Customer, CustomerFilters, CustomerSortKey, CustomerStatus, CustomerView } from '../../types/customer.types'
@@ -8,6 +9,7 @@ import type { SortDirection } from '../../types/dashboard.types'
 import { cx, toOptions } from '../../utils/cx'
 import { deleteCustomerMessage, EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
 import { paginate } from '../../utils/list'
+import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { DateInput } from '../ui/DateInput'
@@ -54,6 +56,9 @@ export function CustomerTable() {
     settings,
   } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  const canEdit = can('customers.edit')
+  const canDelete = can('customers.delete')
   const [page, setPage] = useState(1)
   const [dateResetKey, setDateResetKey] = useState(0)
   const [pageSize, setPageSize] = useState(10)
@@ -111,9 +116,11 @@ export function CustomerTable() {
               </button>
             ))}
           </div>
-          <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
-            Yangi mijoz
-          </Button>
+          {canEdit && (
+            <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
+              Yangi mijoz
+            </Button>
+          )}
         </div>
       </div>
 
@@ -171,9 +178,11 @@ export function CustomerTable() {
             title="Hali mijoz yo'q"
             description="Birinchi mijozingizni qo'shing — u shu yerda paydo bo'ladi."
             action={
-              <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
-                Mijoz qo'shish
-              </Button>
+              canEdit && (
+                <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
+                  Mijoz qo'shish
+                </Button>
+              )
             }
           />
         ) : (
@@ -226,18 +235,22 @@ export function CustomerTable() {
                     </td>
                     <td data-label="Kurs">{c.course}</td>
                     <td data-label="Holat">
-                      <select
-                        className={`status-select badge-${c.status}`}
-                        value={c.status}
-                        aria-label={`${c.name} holati`}
-                        onChange={(e) => updateCustomer(c.id, { status: e.target.value as CustomerStatus })}
-                      >
-                        {STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                      {canEdit ? (
+                        <select
+                          className={`status-select badge-${c.status}`}
+                          value={c.status}
+                          aria-label={`${c.name} holati`}
+                          onChange={(e) => updateCustomer(c.id, { status: e.target.value as CustomerStatus })}
+                        >
+                          {STATUS_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Badge tone={c.status}>{STATUS_LABELS[c.status]}</Badge>
+                      )}
                     </td>
                     <td data-label="Manba" className="col-optional">
                       {SOURCE_LABELS[c.source]}
@@ -252,12 +265,14 @@ export function CustomerTable() {
                           label={`${c.name} kartasi`}
                           onClick={() => openModal({ type: 'customerDetail', payload: { id: c.id } })}
                         />
-                        <IconButton
-                          icon="edit"
-                          label={`${c.name}ni tahrirlash`}
-                          onClick={() => openModal({ type: 'customer', payload: { id: c.id } })}
-                        />
-                        <IconButton icon="trash" tone="danger" label={`${c.name}ni o'chirish`} onClick={() => handleDelete(c)} />
+                        {canEdit && (
+                          <IconButton
+                            icon="edit"
+                            label={`${c.name}ni tahrirlash`}
+                            onClick={() => openModal({ type: 'customer', payload: { id: c.id } })}
+                          />
+                        )}
+                        {canDelete && <IconButton icon="trash" tone="danger" label={`${c.name}ni o'chirish`} onClick={() => handleDelete(c)} />}
                       </div>
                     </td>
                   </tr>

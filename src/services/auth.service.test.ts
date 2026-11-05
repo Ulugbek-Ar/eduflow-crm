@@ -1,21 +1,20 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  changeCredentials,
-  getCredentials,
+  checkPassword,
+  createHash,
+  generateTempPassword,
   hashPassword,
   hashPasswordLegacy,
   isCredentials,
+  needsRehash,
   PBKDF2_ITERATIONS,
+  readLegacyCredentials,
   timingSafeEqual,
-  verifyLogin,
+  validatePassword,
 } from './auth.service'
 
 const AUTH_KEY = 'apex:auth'
-
-function storedAuth(): Record<string, unknown> {
-  return JSON.parse(localStorage.getItem(AUTH_KEY) ?? 'null') as Record<string, unknown>
-}
 
 // 1–8-bosqichdagi format: algo/iterations maydonlarisiz, SHA-256
 async function seedLegacy(login: string, password: string, salt = '00ff') {
@@ -68,49 +67,47 @@ describe('isCredentials', () => {
   })
 })
 
-describe('auth.service', () => {
-  it('standart admin / admin123 PBKDF2 bilan yaratiladi, parol ochiq saqlanmaydi', async () => {
-    const credentials = await getCredentials()
-    expect(credentials).toMatchObject({ login: 'admin', mustChange: true, algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS })
-    expect(localStorage.getItem(AUTH_KEY)).not.toContain('admin123')
-    expect(await verifyLogin('ADMIN', 'admin123')).toBe(true)
-    expect(await verifyLogin('admin', 'xato')).toBe(false)
-    expect(await verifyLogin('boshqa', 'admin123')).toBe(false)
+describe('parol tekshiruvi', () => {
+  it('qisqa, mashhur va login bilan bir xil parollar rad etiladi', () => {
+    expect(validatePassword('qisqa1')).toMatch(/kamida 8/)
+    expect(validatePassword('admin123')).toMatch(/taxmin/)
+    expect(validatePassword('12345678')).toMatch(/taxmin/)
+    expect(validatePassword('aaaaaaaa')).toMatch(/bir xil belgi/)
+    expect(validatePassword('direktor', 'Direktor')).toMatch(/login/)
+    expect(validatePassword('x'.repeat(129))).toMatch(/128/)
+    expect(validatePassword('Toshkent2026!')).toBeNull()
   })
 
-  it('parolni almashtirish: tekshiruvlar va muvaffaqiyat', async () => {
-    expect(await changeCredentials('xato', 'admin', 'yangiParol1')).toMatchObject({ ok: false, field: 'current' })
-    expect(await changeCredentials('admin123', 'admin', 'qisqa')).toMatchObject({ ok: false, field: 'password' })
-    expect(await changeCredentials('admin123', 'a b', 'yangiParol1')).toMatchObject({ ok: false, field: 'login' })
-    const result = await changeCredentials('admin123', 'direktor', 'yangiParol1')
-    expect(result).toMatchObject({ ok: true, credentials: { login: 'direktor', mustChange: false, algo: 'pbkdf2-sha256' } })
-    expect(await verifyLogin('direktor', 'yangiParol1')).toBe(true)
-    expect(await verifyLogin('admin', 'admin123')).toBe(false)
+  it('vaqtinchalik parol: 10 belgi, chalkash belgilarsiz, har safar boshqa', () => {
+    const passwords = Array.from({ length: 50 }, () => generateTempPassword())
+    for (const password of passwords) {
+      expect(password).toHaveLength(10)
+      expect(password).not.toMatch(/[0O1lI]/)
+      expect(validatePassword(password)).toBeNull()
+    }
+    expect(new Set(passwords).size).toBe(passwords.length)
   })
 })
 
-describe('SHA-256 -> PBKDF2 migratsiyasi', () => {
-  it('to\'g\'ri parol bilan kirilganda xesh PBKDF2 ga yangilanadi', async () => {
-    const legacyHash = await seedLegacy('direktor', 'eskiParol1')
-    expect(await verifyLogin('direktor', 'eskiParol1')).toBe(true)
-    const stored = storedAuth()
-    expect(stored).toMatchObject({ login: 'direktor', algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS, mustChange: false })
-    expect(stored.passwordHash).not.toBe(legacyHash)
-    expect(stored.salt).not.toBe('00ff')
-    // Yangilangan yozuv bilan ham kirish ishlaydi
-    expect(await verifyLogin('direktor', 'eskiParol1')).toBe(true)
+describe('eski yagona login', () => {
+  it('apex:auth o\'qiladi; eski SHA-256 formati algo bilan to\'ldiriladi', async () => {
+    const passwordHash = await seedLegacy('direktor', 'eskiParol1')
+    expect(readLegacyCredentials()).toMatchObject({ login: 'direktor', passwordHash, algo: 'sha256', iterations: 1 })
+    expect(await checkPassword(readLegacyCredentials()!, 'eskiParol1')).toBe(true)
+    expect(await checkPassword(readLegacyCredentials()!, 'xato')).toBe(false)
   })
 
-  it('noto\'g\'ri parolda eski yozuv o\'zgarmaydi', async () => {
-    const legacyHash = await seedLegacy('direktor', 'eskiParol1')
-    expect(await verifyLogin('direktor', 'xato')).toBe(false)
-    expect(storedAuth()).toEqual({ login: 'direktor', salt: '00ff', passwordHash: legacyHash, mustChange: false })
+  it('buzuq yozuv null', () => {
+    localStorage.setItem(AUTH_KEY, '{"login":1}')
+    expect(readLegacyCredentials()).toBeNull()
   })
 
-  it('faqat login o\'zgartirilganda ham eski xesh yangilanadi', async () => {
-    await seedLegacy('direktor', 'eskiParol1')
-    const result = await changeCredentials('eskiParol1', 'rahbar', '')
-    expect(result).toMatchObject({ ok: true, credentials: { login: 'rahbar', algo: 'pbkdf2-sha256' } })
-    expect(await verifyLogin('rahbar', 'eskiParol1')).toBe(true)
+  it('PBKDF2 xesh: yangi tuz, kerakli iteratsiya; eski formatga qayta xeshlash kerak', async () => {
+    const hash = await createHash('yangiParol1')
+    expect(hash).toMatchObject({ algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS })
+    expect(hash.salt).toMatch(/^[0-9a-f]{32}$/)
+    expect(needsRehash(hash)).toBe(false)
+    expect(needsRehash({ ...hash, algo: 'sha256', iterations: 1 })).toBe(true)
+    expect(needsRehash({ ...hash, iterations: 1000 })).toBe(true)
   })
 })

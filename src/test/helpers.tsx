@@ -9,6 +9,7 @@ import { saveAll, setDemoMode } from '../services/storage.service'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
+import type { Role, StaffUser } from '../types/user.types'
 
 afterEach(() => {
   cleanup()
@@ -18,19 +19,73 @@ afterEach(() => {
 
 export const TEST_LOGIN = 'direktor'
 export const TEST_PASSWORD = 'maxfiyParol1'
+export const TEST_USER_ID = 'u-test'
+export const TEST_SESSION_ID = 's-test'
 
-// Standart parol emas (mustChange: false) — "parolni almashtiring" oynasi testlarga xalaqit bermaydi
-export async function seedCredentials(login = TEST_LOGIN, password = TEST_PASSWORD) {
+export interface SeedUser {
+  id?: string
+  login?: string
+  password?: string
+  fullName?: string
+  title?: string
+  role?: Role
+  status?: StaffUser['status']
+  mustChange?: boolean
+}
+
+// Xesh bir marta hisoblanadi (PBKDF2 sekin) — bir xil parolli foydalanuvchilar uchun keshlanadi
+const hashCache = new Map<string, Promise<string>>()
+function cachedHash(password: string): Promise<string> {
+  let hash = hashCache.get(password)
+  if (!hash) {
+    hash = hashPassword(password, 'test-salt')
+    hashCache.set(password, hash)
+  }
+  return hash
+}
+
+export async function buildUser(seed: SeedUser = {}): Promise<StaffUser> {
+  return {
+    id: seed.id ?? TEST_USER_ID,
+    login: seed.login ?? TEST_LOGIN,
+    fullName: seed.fullName ?? 'Dilshod Karimov',
+    title: seed.title ?? 'Direktor',
+    role: seed.role ?? 'admin',
+    status: seed.status ?? 'active',
+    salt: 'test-salt',
+    passwordHash: await cachedHash(seed.password ?? TEST_PASSWORD),
+    algo: 'pbkdf2-sha256',
+    iterations: PBKDF2_ITERATIONS,
+    mustChange: seed.mustChange ?? false,
+    createdAt: '2026-09-01T09:00:00.000Z',
+  }
+}
+
+// Xodimlar ro'yxati (standart: bitta administrator, vaqtinchalik parolsiz)
+export async function seedUsers(seeds: SeedUser[] = [{}]): Promise<StaffUser[]> {
+  const users = await Promise.all(seeds.map(buildUser))
+  localStorage.setItem('apex:users', JSON.stringify(users))
+  return users
+}
+
+export async function seedCredentials(login = TEST_LOGIN, password = TEST_PASSWORD, seed: SeedUser = {}) {
+  await seedUsers([{ ...seed, login, password }])
+}
+
+// 1–27-bosqichdagi yagona login formati (apex:auth) — migratsiya testlari uchun
+export async function seedLegacyCredentials(login = TEST_LOGIN, password = TEST_PASSWORD, mustChange = false) {
   const salt = 'test-salt'
   const passwordHash = await hashPassword(password, salt)
   localStorage.setItem(
     'apex:auth',
-    JSON.stringify({ login, salt, passwordHash, algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS, mustChange: false }),
+    JSON.stringify({ login, salt, passwordHash, algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS, mustChange }),
   )
 }
 
-export function seedSession(login = TEST_LOGIN) {
-  sessionStorage.setItem('apex:session', JSON.stringify({ login, startedAt: new Date().toISOString() }))
+export function seedSession(userId = TEST_USER_ID, sessionId = TEST_SESSION_ID) {
+  const now = new Date().toISOString()
+  localStorage.setItem('apex:sessions', JSON.stringify([{ id: sessionId, userId, startedAt: now, lastSeenAt: now, device: 'Chrome · Windows' }]))
+  sessionStorage.setItem('apex:session', JSON.stringify({ id: sessionId, userId, startedAt: now }))
 }
 
 export function seedData({
@@ -42,10 +97,10 @@ export function seedData({
   setDemoMode(false)
 }
 
-// Kirgan foydalanuvchi va tayyor ma'lumot bilan
-export async function renderSignedIn(data?: Parameters<typeof seedData>[0]) {
-  await seedCredentials()
-  seedSession()
+// Kirgan foydalanuvchi va tayyor ma'lumot bilan. role — kirgan xodimning roli (standart: administrator)
+export async function renderSignedIn(data?: Parameters<typeof seedData>[0], seed: SeedUser = {}) {
+  await seedUsers([seed])
+  seedSession(seed.id ?? TEST_USER_ID)
   seedData(data)
   return renderApp()
 }

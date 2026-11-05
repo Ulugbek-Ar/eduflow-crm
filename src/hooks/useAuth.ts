@@ -1,13 +1,39 @@
 import { createContext, useContext } from 'react'
-import type { ChangeResult, Session } from '../services/auth.service'
+import type { Permission } from '../auth/permissions'
+import type { StorageNamespace } from '../services/storage.service'
+import type { NewUserInput, UserField, UserPatch } from '../services/users.service'
+import type { PublicUser, Role, SessionRecord } from '../types/user.types'
+
+export type ActionResult = { ok: true } | { ok: false; field?: UserField; error: string }
+
+export type LoginResult = { ok: true } | { ok: false; reason: 'invalid' | 'blocked' }
 
 export interface AuthContextValue {
-  session: Session | null
-  // Standart parol hali ishlatilmoqda
-  usingDefaultPassword: boolean
-  login: (login: string, password: string) => Promise<boolean>
+  // Kirgan xodim (bo'lmasa null). Parol xeshi bu yerga chiqmaydi
+  user: PublicUser | null
+  sessionId: string | null
+  // 'demo' — namunaviy markaz (alohida ma'lumot), 'main' — haqiqiy
+  mode: StorageNamespace
+  // Hali birorta xodim yo'q — administrator hisobini yaratish ekrani
+  needsSetup: boolean
+  can: (permission: Permission) => boolean
+  login: (login: string, password: string) => Promise<LoginResult>
   logout: () => void
-  changeCredentials: (currentPassword: string, newLogin: string, newPassword: string) => Promise<ChangeResult>
+  setupAdmin: (input: Omit<NewUserInput, 'role'>) => Promise<ActionResult>
+  completePasswordChange: (newPassword: string) => Promise<ActionResult>
+  changeOwnCredentials: (currentPassword: string, newLogin: string, newPassword: string) => Promise<ActionResult>
+  updateOwnProfile: (fullName: string, title: string) => ActionResult
+  users: PublicUser[]
+  addUser: (input: NewUserInput) => Promise<ActionResult>
+  updateUser: (id: string, patch: UserPatch) => ActionResult
+  // Natijada yangi vaqtinchalik parol (faqat bir marta ko'rsatiladi)
+  resetPassword: (id: string) => Promise<{ ok: true; password: string } | { ok: false; error: string }>
+  sessions: SessionRecord[]
+  revokeSession: (id: string) => void
+  revokeOtherSessions: () => void
+  enterDemo: (role?: Role) => void
+  exitDemo: () => void
+  switchDemoRole: (role: Role) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
@@ -16,4 +42,10 @@ export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth AuthProvider ichida ishlatilishi kerak')
   return context
+}
+
+// Ruxsat tekshiruvi: AuthProvider bo'lmasa (alohida komponent testlari) — hamma narsa ochiq
+export function useCan(): (permission: Permission) => boolean {
+  const context = useContext(AuthContext)
+  return context ? context.can : () => true
 }

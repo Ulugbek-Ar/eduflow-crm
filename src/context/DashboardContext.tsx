@@ -1,13 +1,29 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { SECTION_PERMISSION } from '../auth/permissions'
+import type { Permission } from '../auth/permissions'
 import { STATUS_LABELS, TX_STATUS_LABELS } from '../constants/navigation'
+import { useCan } from '../hooks/useAuth'
 import { useConfirm } from '../hooks/useConfirm'
 import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
 import { useToast } from '../hooks/useToast'
-import { combineResults, createEmptyData, isDemoMode, loadData, readStored, resetToMock, saveAll, saveErrorMessage, setDemoMode, setItem, STORAGE_KEYS } from '../services/storage.service'
+import {
+  combineResults,
+  createEmptyData,
+  isDemoMode,
+  loadData,
+  physicalKey,
+  readStored,
+  resetToMock,
+  saveAll,
+  saveErrorMessage,
+  setDemoMode,
+  setItem,
+  STORAGE_KEYS,
+} from '../services/storage.service'
 import type { SaveResult, StoredData } from '../services/storage.service'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
-import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
+import type { DateRange, ModalState, ModalType, Section, SortState } from '../types/dashboard.types'
 import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 import type { Course } from '../types/course.types'
 import { cashBalance } from '../utils/analytics'
@@ -51,9 +67,24 @@ function withPaidAt(before: Customer, after: Customer, now: string): Customer {
 
 export const SIDEBAR_COLLAPSED_KEY = 'apex:sidebar-collapsed'
 
+export const DENIED_MESSAGE = 'Bu amal uchun ruxsatingiz yo\'q. Administratorga murojaat qiling.'
+
+// Oyna ochish uchun kerakli ruxsat
+function modalPermission(modal: NonNullable<ModalState>): Permission {
+  const byType: Record<ModalType, Permission> = {
+    customer: 'customers.edit',
+    customerDetail: 'customers.view',
+    course: 'courses.edit',
+    transaction: 'payments.create',
+  }
+  if (modal.type === 'transaction' && (modal.payload?.id || modal.payload?.kind === 'expense')) return 'payments.manage'
+  return byType[modal.type]
+}
+
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const toast = useToast()
   const confirm = useConfirm()
+  const can = useCan()
   const [initial] = useState(loadData)
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref
   const unsavedRef = useRef(false)
@@ -114,14 +145,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.storageArea !== localStorage) return
-      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.courses, STORAGE_KEYS.demo]
-      if (!watched.includes(event.key)) return
-      if (event.key === null || event.key === STORAGE_KEYS.demo) setIsDemo(isDemoMode())
+      // Demo rejimda kalitlar boshqa nom maydonida (eduflow-demo:*)
+      const is = (key: string) => event.key === null || event.key === physicalKey(key)
+      const watched = [STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.courses, STORAGE_KEYS.demo]
+      if (!watched.some(is)) return
+      if (is(STORAGE_KEYS.demo)) setIsDemo(isDemoMode())
       const { data } = readStored()
-      if (event.key === null || event.key === STORAGE_KEYS.customers) setCustomers(data.customers)
-      if (event.key === null || event.key === STORAGE_KEYS.transactions) setTransactions(data.transactions)
-      if (event.key === null || event.key === STORAGE_KEYS.settings) setSettings(data.settings)
-      if (event.key === null || event.key === STORAGE_KEYS.courses) setCourses(data.courses)
+      if (is(STORAGE_KEYS.customers)) setCustomers(data.customers)
+      if (is(STORAGE_KEYS.transactions)) setTransactions(data.transactions)
+      if (is(STORAGE_KEYS.settings)) setSettings(data.settings)
+      if (is(STORAGE_KEYS.courses)) setCourses(data.courses)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -142,6 +175,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const snapshotNames = new Map<string, string>()
   for (const t of transactions) if (t.customerId && t.customerName) snapshotNames.set(t.customerId, t.customerName)
   const money = (amount: number) => formatMoney(amount, settings.currency)
+
+  // Ruxsat bo'lmasa amal bajarilmaydi (tugmalar ham yashiriladi — bu ikkinchi himoya qatlami)
+  const allowed = (permission: Permission): boolean => {
+    if (can(permission)) return true
+    toast.error(DENIED_MESSAGE)
+    return false
+  }
 
   const applyData = (data: StoredData) => {
     setCustomers(data.customers)
@@ -173,6 +213,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setSearch,
     setDateRange,
     setActiveSection: async (section) => {
+      const required = SECTION_PERMISSION[section]
+      if (required && !allowed(required)) return
       if (section === activeSection) {
         setSidebarOpen(false)
         return
@@ -192,7 +234,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setUnsavedChanges: (dirty) => {
       unsavedRef.current = dirty
     },
-    openModal: (next) => setModal(next),
+    openModal: (next) => {
+      if (allowed(modalPermission(next))) setModal(next)
+    },
     closeModal: () => setModal(null),
     toggleSidebar: () => setSidebarOpen((open) => !open),
     toggleSidebarCollapsed: () => setSidebarCollapsed(!sidebarCollapsed),
@@ -203,12 +247,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     getCustomer,
     getTransaction: (id) => (id ? transactions.find((t) => t.id === id) : undefined),
     addCustomer: (data) => {
+      if (!allowed('customers.edit')) return
       const createdAt = new Date().toISOString()
       const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt, ...(data.status === 'paid' ? { paidAt: createdAt } : {}) }
       setCustomers((list) => [customer, ...list])
       toast.success(`"${customer.name}" mijozlar bazasiga qo'shildi`)
     },
     updateCustomer: (id, patch) => {
+      if (!allowed('customers.edit')) return
       const updatedAt = new Date().toISOString()
       setCustomers((list) => list.map((c) => (c.id === id ? withPaidAt(c, { ...c, ...cleanCustomer(patch), updatedAt }, updatedAt) : c)))
       const name = getCustomer(id)?.name ?? 'Mijoz'
@@ -217,6 +263,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       else toast.success(`${name} ma'lumotlari saqlandi`)
     },
     deleteCustomer: (id) => {
+      if (!allowed('customers.delete')) return
       const name = getCustomer(id)?.name ?? 'Mijoz'
       setCustomers((list) => list.filter((c) => c.id !== id))
       // Bog'liq to'lovlar jurnalda qoladi — ism snapshot'i o'chirish paytidagi holatga yangilanadi
@@ -224,10 +271,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       toast.success(`"${name}" o'chirildi`)
     },
     addTransaction: (data) => {
+      if (!allowed(data.type === 'income' ? 'payments.create' : 'payments.manage')) return
       setTransactions((list) => [{ ...withCustomerName(cleanTransaction(data)), id: createId('t') }, ...list])
       toast.success(`${data.type === 'income' ? 'To\'lov' : 'Xarajat'} qayd etildi: ${money(data.amount)}`)
     },
     updateTransaction: (id, patch) => {
+      if (!allowed('payments.manage')) return
       const updatedAt = new Date().toISOString()
       const clean = withCustomerName(cleanTransaction(patch))
       setTransactions((list) =>
@@ -244,16 +293,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       else toast.success('Tranzaksiya yangilandi')
     },
     deleteTransaction: (id) => {
+      if (!allowed('payments.manage')) return
       setTransactions((list) => list.filter((t) => t.id !== id))
       toast.success('Tranzaksiya o\'chirildi')
     },
     getCourse: (id) => (id ? courses.find((c) => c.id === id) : undefined),
     addCourse: (data) => {
+      if (!allowed('courses.edit')) return
       const course: Course = { ...data, name: normalizeCourseName(data.name), id: createId('k'), createdAt: new Date().toISOString() }
       setCourses((list) => [...list, course])
       toast.success(`"${course.name}" qo'shildi`)
     },
     updateCourse: (id, patch) => {
+      if (!allowed('courses.edit')) return
       const before = courses.find((c) => c.id === id)
       if (!before) return
       const name = patch.name === undefined ? before.name : normalizeCourseName(patch.name)
@@ -269,6 +321,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
     },
     removeCourse: (id) => {
+      if (!allowed('courses.edit')) return
       const course = courses.find((c) => c.id === id)
       if (!course) return
       if (usedByCustomers(course, customers) > 0) {
@@ -280,10 +333,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       toast.success(`"${course.name}" o'chirildi`)
     },
     updateSettings: (next, options) => {
+      if (!allowed('settings.manage')) return
       setSettings(next)
       if (!options?.silent) toast.success('Sozlamalar saqlandi')
     },
     resetData: () => {
+      if (!allowed('data.manage')) return
       const { data, saved } = resetToMock()
       applyData(data)
       setIsDemo(true)
@@ -291,6 +346,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       if (saved.ok) toast.success('Demo ma\'lumotlar tiklandi')
     },
     clearAllData: () => {
+      if (!allowed('data.manage')) return
       const empty = createEmptyData()
       setCustomers(empty.customers)
       setTransactions(empty.transactions)
@@ -303,6 +359,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       toast.success('Barcha ma\'lumot tozalandi')
     },
     clearDemoData: () => {
+      if (!allowed('data.manage')) return
       setCustomers([])
       setTransactions([])
       setSearch('')
@@ -313,6 +370,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       toast.success('Demo ma\'lumot tozalandi — endi o\'z ma\'lumotlaringizni kiritishingiz mumkin')
     },
     replaceData: (data) => {
+      if (!allowed('data.manage')) return
       // Zaxiradan tiklangan ma'lumot foydalanuvchiniki hisoblanadi
       const saved = saveAll(data)
       applyData(data)

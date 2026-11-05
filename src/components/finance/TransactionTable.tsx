@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import type { SortDirection } from '../../types/dashboard.types'
 import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey, TransactionStatus } from '../../types/finance.types'
@@ -14,6 +15,8 @@ import {
   sortTransactions,
   transactionPeriod,
 } from '../../utils/transactions'
+import { Badge } from '../ui/Badge'
+import type { BadgeTone } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { DateInput } from '../ui/DateInput'
@@ -55,6 +58,9 @@ export function TransactionTable() {
     settings,
   } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  const canCreate = can('payments.create')
+  const canManage = can('payments.manage')
   const [page, setPage] = useState(1)
   const [dateResetKey, setDateResetKey] = useState(0)
   const [pageSize, setPageSize] = useState(10)
@@ -116,12 +122,16 @@ export function TransactionTable() {
             </span>
           </div>
           <div className="toolbar">
-            <Button variant="ghost" icon="minus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'expense' } })}>
-              Xarajat
-            </Button>
-            <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
-              To'lov qabul qilish
-            </Button>
+            {canManage && (
+              <Button variant="ghost" icon="minus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'expense' } })}>
+                Xarajat
+              </Button>
+            )}
+            {canCreate && (
+              <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
+                To'lov qabul qilish
+              </Button>
+            )}
           </div>
         </div>
 
@@ -187,9 +197,11 @@ export function TransactionTable() {
             }
             action={
               transactions.length === 0 ? (
+                canCreate && (
                 <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
                   To'lov qo'shish
                 </Button>
+                )
               ) : (
                 filtersActive && (
                   <Button variant="ghost" icon="close" onClick={clearFilters}>
@@ -247,6 +259,7 @@ export function TransactionTable() {
                       </td>
                       <td data-label="To'lov turi">{METHOD_LABELS[t.method]}</td>
                       <td data-label="Status">
+                        {canManage ? (
                         <select
                           className={`status-select badge-${STATUS_TONE[t.status]}`}
                           value={t.status}
@@ -259,8 +272,12 @@ export function TransactionTable() {
                             </option>
                           ))}
                         </select>
+                        ) : (
+                          <Badge tone={STATUS_TONE[t.status] as BadgeTone}>{TX_STATUS_LABELS[t.status]}</Badge>
+                        )}
                       </td>
                       <td className="cell-actions">
+                        {canManage && (
                         <div className="row-actions">
                           <IconButton
                             icon="edit"
@@ -269,6 +286,7 @@ export function TransactionTable() {
                           />
                           <IconButton icon="trash" tone="danger" label="Tranzaksiyani o'chirish" onClick={() => handleDelete(t)} />
                         </div>
+                        )}
                       </td>
                     </tr>
                   ))}

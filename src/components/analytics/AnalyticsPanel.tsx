@@ -1,5 +1,6 @@
 import { DATE_RANGE_LABELS, FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
 import type { CustomerSource } from '../../types/customer.types'
@@ -31,6 +32,7 @@ interface ReportDef {
 
 export function AnalyticsPanel() {
   const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings } = useDashboard()
+  const canExport = useCan()('reports.export')
   const period = getPeriod(dateRange)
   const periodLabel = DATE_RANGE_LABELS[dateRange]
   const txInPeriod = filterByPeriod(transactions, (t) => t.date, period)
@@ -310,6 +312,7 @@ export function AnalyticsPanel() {
         </p>
       </section>
 
+      {canExport && (
       <section className="card" aria-labelledby="reports-title">
         <div className="card-head">
           <div>
@@ -336,6 +339,7 @@ export function AnalyticsPanel() {
           ))}
         </ul>
       </section>
+      )}
     </div>
   )
 }

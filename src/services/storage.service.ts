@@ -45,11 +45,67 @@ export interface LoadResult {
   saveError?: SaveFailure
 }
 
+// ===== Nom maydoni: haqiqiy ma'lumot va demo =====
+// Demo rejimda barcha apex:* kalitlari eduflow-demo:* ga yoziladi — "Demo'ni ko'rish" haqiqiy markaz
+// ma'lumotiga hech qachon tegmaydi. Interfeys afzalliklari (mavzu, sidebar, til) ikkalasida umumiy
+
+export type StorageNamespace = 'main' | 'demo'
+
+export const DEMO_PREFIX = 'eduflow-demo:'
+// Tab qaysi rejimda ochilgani (sessionStorage: tab yopilganda demo tugaydi)
+export const MODE_KEY = 'eduflow:mode'
+const SHARED_KEYS: ReadonlySet<string> = new Set(['apex:theme', 'apex:sidebar-collapsed', 'apex:customers-view', 'apex:lang'])
+
+let namespace: StorageNamespace = 'main'
+
+export function getStorageNamespace(): StorageNamespace {
+  return namespace
+}
+
+export function setStorageNamespace(next: StorageNamespace): void {
+  namespace = next
+  try {
+    if (next === 'demo') sessionStorage.setItem(MODE_KEY, 'demo')
+    else sessionStorage.removeItem(MODE_KEY)
+  } catch {
+    // sessionStorage bloklangan — rejim faqat shu sahifa davomida
+  }
+}
+
+// Ilova ishga tushganda: tab avval demo rejimda bo'lgan bo'lsa, shu rejimda davom etadi
+export function initStorageNamespace(): StorageNamespace {
+  try {
+    namespace = sessionStorage.getItem(MODE_KEY) === 'demo' ? 'demo' : 'main'
+  } catch {
+    namespace = 'main'
+  }
+  return namespace
+}
+
+export function physicalKey(key: string): string {
+  if (namespace !== 'demo' || !key.startsWith('apex:') || SHARED_KEYS.has(key)) return key
+  return `${DEMO_PREFIX}${key.slice('apex:'.length)}`
+}
+
+// Demo'dan chiqishda yoki qayta boshlashda — demo kalitlari butunlay o'chiriladi
+export function clearDemoStorage(): void {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith(DEMO_PREFIX)) keys.push(key)
+    }
+    for (const key of keys) localStorage.removeItem(key)
+  } catch {
+    // e'tiborsiz
+  }
+}
+
 // ===== Past darajadagi o'qish/yozish =====
 
 export function readJson(key: string): unknown {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = localStorage.getItem(physicalKey(key))
     return raw === null ? undefined : (JSON.parse(raw) as unknown)
   } catch {
     return undefined
@@ -76,15 +132,25 @@ export function isQuotaError(error: unknown): boolean {
 export function setItem<T>(key: string, value: T): SaveResult {
   try {
     const serialized = JSON.stringify(value)
+    const target = physicalKey(key)
     // Bir xil qiymatni qayta yozmaslik boshqa tablar bilan cheksiz sinxron aylanishining oldini oladi
-    if (localStorage.getItem(key) !== serialized) {
-      localStorage.setItem(key, serialized)
+    if (localStorage.getItem(target) !== serialized) {
+      localStorage.setItem(target, serialized)
       notifyStorageChanged()
     }
     return SAVED
   } catch (error) {
     // Ilova xotiradagi holat bilan ishlashda davom etadi, lekin chaqiruvchi foydalanuvchini ogohlantirishi kerak
     return { ok: false, reason: isQuotaError(error) ? 'quota' : 'unavailable' }
+  }
+}
+
+export function removeItem(key: string): void {
+  try {
+    localStorage.removeItem(physicalKey(key))
+    notifyStorageChanged()
+  } catch {
+    // e'tiborsiz
   }
 }
 
@@ -345,10 +411,18 @@ export function setDemoMode(demo: boolean): SaveResult {
 
 // Tanlov ekranidan: 'empty' — bo'sh baza, 'demo' — namunaviy ma'lumot.
 // Boshqa tabda allaqachon tanlangan bo'lsa, mavjud ma'lumot ustidan yozilmaydi.
+// Administrator ro'yxatdan o'tishda kiritgan sozlamalar (markaz nomi) saqlanib qoladi.
 export function startFresh(mode: 'empty' | 'demo'): SaveResult {
   if (!isFirstRun()) return { ok: true }
-  const saved = saveAll(mode === 'demo' ? createMockData() : createEmptyData())
+  const data = mode === 'demo' ? createMockData() : createEmptyData()
+  const stored = readJson(STORAGE_KEYS.settings)
+  const saved = saveAll(stored === undefined ? data : { ...data, settings: sanitizeSettings(stored) })
   return combineResults([saved, setDemoMode(mode === 'demo')])
+}
+
+// Ma'lumotlar paneli hali ochilmagan paytda (ro'yxatdan o'tish ekrani) sozlamani yozish
+export function updateStoredSettings(patch: Partial<Settings>): SaveResult {
+  return setItem(STORAGE_KEYS.settings, { ...sanitizeSettings(readJson(STORAGE_KEYS.settings)), ...patch })
 }
 
 // Eski versiya bo'lsa migratsiya qilinib qayta saqlanadi. Birinchi ishga tushishda hech narsa yozilmaydi —

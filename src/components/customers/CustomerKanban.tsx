@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { DragEvent, KeyboardEvent } from 'react'
 import { FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import type { Customer, CustomerStatus } from '../../types/customer.types'
 import { groupByStage, neighbourStage } from '../../utils/customers'
 import { cx } from '../../utils/cx'
@@ -11,6 +12,8 @@ const DRAG_TYPE = 'text/plain'
 
 export function CustomerKanban({ customers }: { customers: Customer[] }) {
   const { updateCustomer, openModal, formatDate } = useDashboard()
+  // Kuzatuvchi va kassir bosqichni o'zgartira olmaydi: sudrash va ko'chirish menyusi o'chadi
+  const canEdit = useCan()('customers.edit')
   const groups = groupByStage(customers, FUNNEL_STAGES)
   const [dragId, setDragId] = useState<string | null>(null)
   const [overStage, setOverStage] = useState<CustomerStatus | null>(null)
@@ -26,7 +29,7 @@ export function CustomerKanban({ customers }: { customers: Customer[] }) {
   })
 
   const move = (customer: Customer, stage: CustomerStatus) => {
-    if (customer.status === stage) return
+    if (customer.status === stage || !canEdit) return
     focusAfterMove.current = customer.id
     updateCustomer(customer.id, { status: stage })
   }
@@ -35,7 +38,7 @@ export function CustomerKanban({ customers }: { customers: Customer[] }) {
     event.preventDefault()
     const id = event.dataTransfer.getData(DRAG_TYPE) || dragId
     const customer = customers.find((c) => c.id === id)
-    if (customer && customer.status !== stage) updateCustomer(customer.id, { status: stage })
+    if (canEdit && customer && customer.status !== stage) updateCustomer(customer.id, { status: stage })
     setDragId(null)
     setOverStage(null)
   }
@@ -89,7 +92,7 @@ export function CustomerKanban({ customers }: { customers: Customer[] }) {
                     className={cx('kanban-card', dragId === c.id && 'is-dragging')}
                     data-card-id={c.id}
                     tabIndex={0}
-                    draggable
+                    draggable={canEdit}
                     aria-label={`${c.name}, ${STATUS_LABELS[c.status]}. Enter — kartani ochish, Alt + strelka — bosqichni o'zgartirish`}
                     aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
                     onDragStart={(e) => {
@@ -112,26 +115,28 @@ export function CustomerKanban({ customers }: { customers: Customer[] }) {
                       >
                         {c.name}
                       </button>
-                      <Dropdown
-                        label={`${c.name}: bosqichni tanlash`}
-                        strategy="fixed"
-                        trigger={(props) => (
-                          <button type="button" className="icon-btn kanban-move" aria-label={`${c.name}: bosqichni o'zgartirish`} title="Bosqichni o'zgartirish" {...props}>
-                            <Icon name="move" size={14} />
-                          </button>
-                        )}
-                        sections={[
-                          {
-                            label: 'Bosqich',
-                            items: FUNNEL_STAGES.map((s) => ({
-                              id: s,
-                              label: STATUS_LABELS[s],
-                              checked: c.status === s,
-                              onSelect: () => move(c, s),
-                            })),
-                          },
-                        ]}
-                      />
+                      {canEdit && (
+                        <Dropdown
+                          label={`${c.name}: bosqichni tanlash`}
+                          strategy="fixed"
+                          trigger={(props) => (
+                            <button type="button" className="icon-btn kanban-move" aria-label={`${c.name}: bosqichni o'zgartirish`} title="Bosqichni o'zgartirish" {...props}>
+                              <Icon name="move" size={14} />
+                            </button>
+                          )}
+                          sections={[
+                            {
+                              label: 'Bosqich',
+                              items: FUNNEL_STAGES.map((s) => ({
+                                id: s,
+                                label: STATUS_LABELS[s],
+                                checked: c.status === s,
+                                onSelect: () => move(c, s),
+                              })),
+                            },
+                          ]}
+                        />
+                      )}
                     </div>
                     <dl className="kanban-meta">
                       <div>

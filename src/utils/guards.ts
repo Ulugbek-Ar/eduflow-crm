@@ -30,19 +30,19 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function oneOf<T extends string>(allowed: Record<T, unknown>, value: unknown): value is T {
+export function oneOf<T extends string>(allowed: Record<T, unknown>, value: unknown): value is T {
   return typeof value === 'string' && Object.hasOwn(allowed, value)
 }
 
-function isText(value: unknown): value is string {
+export function isText(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
-function isOptionalString(value: unknown): boolean {
+export function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string'
 }
 
-function isIsoDate(value: unknown): value is string {
+export function isIsoDate(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(Date.parse(value))
 }
 

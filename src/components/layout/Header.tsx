@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DATE_RANGE_LABELS, Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuth, useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import { createBackup } from '../../services/storage.service'
 import { dateStamp, downloadJson, exportRows } from '../../services/export.service'
@@ -44,6 +45,9 @@ export function Header() {
     clearDemoData,
   } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  // Alohida demo markazda yuqoridagi demo tasmasi bor — bu belgi faqat haqiqiy bazadagi namunaviy ma'lumot uchun
+  const { mode } = useAuth()
   const [resultsOpen, setResultsOpen] = useState(false)
   // Bu bo'limlar ro'yxatni o'zi filtrlaydi; qolganlarida natijalar oynasi chiqadi
   const showResults = resultsOpen && !LIST_SECTIONS.includes(activeSection) && search.trim().length >= 2
@@ -67,6 +71,41 @@ export function Header() {
     downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
   }
 
+  // Faqat ruxsat berilgan hisobotlar: kuzatuvchi va menejer hisobot yuklamaydi, zaxira — faqat administrator
+  const exportSections = [
+    {
+      label: 'Mijozlar',
+      show: can('reports.export') && can('customers.view'),
+      items: [
+        { id: 'customers-csv', label: 'Mijozlar — CSV', icon: 'fileText' as const, onSelect: () => exportCustomers('csv') },
+        { id: 'customers-xls', label: 'Mijozlar — Excel', icon: 'sheet' as const, onSelect: () => exportCustomers('xls') },
+      ],
+    },
+    {
+      label: 'Tranzaksiyalar',
+      show: can('reports.export') && can('payments.view'),
+      items: [
+        { id: 'tx-csv', label: 'Tranzaksiyalar — CSV', icon: 'fileText' as const, onSelect: () => exportTransactions('csv') },
+        { id: 'tx-xls', label: 'Tranzaksiyalar — Excel', icon: 'sheet' as const, onSelect: () => exportTransactions('xls') },
+      ],
+    },
+    {
+      label: 'Zaxira',
+      show: can('data.manage'),
+      items: [
+        {
+          id: 'backup',
+          label: 'To\'liq zaxira — JSON',
+          description: 'Barcha ma\'lumot va sozlamalar',
+          icon: 'database' as const,
+          onSelect: exportBackup,
+        },
+      ],
+    },
+  ]
+    .filter((section) => section.show)
+    .map(({ label, items }) => ({ label, items }))
+
   const handleClearDemo = async () => {
     const ok = await confirm({
       title: 'Demo ma\'lumotni tozalash',
@@ -81,7 +120,7 @@ export function Header() {
       <div className="header-title">
         <IconButton icon="menu" label="Menyuni ochish" className="menu-btn" onClick={toggleSidebar} />
         <h1>{title}</h1>
-        {isDemo && (
+        {isDemo && mode === 'main' && can('data.manage') && (
           <span className="demo-banner">
             <Badge tone="primary">Demo ma'lumot</Badge>
             <Button variant="ghost" size="sm" icon="trash" onClick={handleClearDemo}>
@@ -153,6 +192,7 @@ export function Header() {
           <NotificationBell />
         </div>
 
+        {exportSections.length > 0 && (
         <Dropdown
           label="Hisobot yuklash"
           trigger={(props) => (
@@ -162,35 +202,9 @@ export function Header() {
               <Icon name="chevronDown" size={14} />
             </Button>
           )}
-          sections={[
-            {
-              label: 'Mijozlar',
-              items: [
-                { id: 'customers-csv', label: 'Mijozlar — CSV', icon: 'fileText', onSelect: () => exportCustomers('csv') },
-                { id: 'customers-xls', label: 'Mijozlar — Excel', icon: 'sheet', onSelect: () => exportCustomers('xls') },
-              ],
-            },
-            {
-              label: 'Tranzaksiyalar',
-              items: [
-                { id: 'tx-csv', label: 'Tranzaksiyalar — CSV', icon: 'fileText', onSelect: () => exportTransactions('csv') },
-                { id: 'tx-xls', label: 'Tranzaksiyalar — Excel', icon: 'sheet', onSelect: () => exportTransactions('xls') },
-              ],
-            },
-            {
-              label: 'Zaxira',
-              items: [
-                {
-                  id: 'backup',
-                  label: 'To\'liq zaxira — JSON',
-                  description: 'Barcha ma\'lumot va sozlamalar',
-                  icon: 'database',
-                  onSelect: exportBackup,
-                },
-              ],
-            },
-          ]}
+          sections={exportSections}
         />
+        )}
         <ProfileMenu />
       </div>
     </header>

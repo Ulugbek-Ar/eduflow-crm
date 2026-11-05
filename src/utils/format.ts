@@ -66,6 +66,14 @@ export function formatDateWith(iso: string, format: DateFormat): string {
   }
 }
 
+// "05.11.2026, 14:07" — jurnal va seanslar uchun
+export function formatDateTimeWith(iso: string, format: DateFormat): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  return `${formatDateWith(iso, format)}, ${time}`
+}
+
 // Sana -> <input type="date"> qiymati (mahalliy vaqt bo'yicha 'YYYY-MM-DD')
 export function toInputDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
