@@ -1,40 +1,52 @@
 import type { Currency, DateFormat } from '../types/dashboard.types'
 
-const numberFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 })
-const decimalFormat = new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 1 })
+// Raqamlar brauzer lokaliga bog'liq emas: ba'zi brauzerlarda uz-UZ "2,150,000" beradi, O'zbekistonda esa
+// odatiy yozuv "2 150 000" (bo'linmaydigan bo'shliq bilan) va kasr vergul bilan: "12,5"
+const GROUP = '\u00a0'
+
+function groupDigits(integer: string): string {
+  return integer.replace(/\B(?=(\d{3})+(?!\d))/g, GROUP)
+}
+
+// Butun son, minglik ajratgich bilan: -380000 -> "-380 000"
+export function formatNumber(value: number): string {
+  const rounded = Math.round(value)
+  const sign = rounded < 0 ? '-' : ''
+  return `${sign}${groupDigits(String(Math.abs(rounded)))}`
+}
+
+// Bitta kasr xonasi: 12.345 -> "12,3"; fixed — har doim kasr bilan (150 -> "150,0")
+export function formatDecimal(value: number, fixed = false): string {
+  const rounded = Math.round(value * 10) / 10
+  const sign = rounded < 0 ? '-' : ''
+  const [integer, fraction = '0'] = Math.abs(rounded).toFixed(1).split('.')
+  const grouped = groupDigits(integer)
+  return `${sign}${grouped}${fixed || fraction !== '0' ? `,${fraction}` : ''}`
+}
+
 const usdFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 export function formatMoney(amount: number, currency: Currency): string {
-  return currency === 'USD' ? usdFormat.format(amount) : `${numberFormat.format(amount)} so'm`
+  return currency === 'USD' ? usdFormat.format(amount) : `${formatNumber(amount)} so'm`
 }
-
-export function formatNumber(value: number): string {
-  return numberFormat.format(value)
-}
-
-const percentFormat = new Intl.NumberFormat('uz-UZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
 export function formatPercent(value: number): string {
-  return `${percentFormat.format(value)}%`
+  return `${formatDecimal(value, true)}%`
 }
 
 // Bayt -> "12,4 KB" (band joy ko'rsatkichi uchun)
 export function formatKilobytes(bytes: number): string {
-  return `${percentFormat.format(bytes / 1024)} KB`
+  return `${formatDecimal(bytes / 1024, true)} KB`
 }
 
 // Qisqa ko'rinish: 1 500 000 -> "1,5 mln", 650 000 -> "650 ming"
 export function formatCompact(value: number): string {
   const abs = Math.abs(value)
   const sign = value < 0 ? '−' : ''
-  if (abs >= 1_000_000_000) return `${sign}${trimZero(abs / 1_000_000_000)} mlrd`
-  if (abs >= 1_000_000) return `${sign}${trimZero(abs / 1_000_000)} mln`
+  if (abs >= 1_000_000_000) return `${sign}${formatDecimal(abs / 1_000_000_000)} mlrd`
+  if (abs >= 1_000_000) return `${sign}${formatDecimal(abs / 1_000_000)} mln`
   if (abs >= 1_000) return `${sign}${Math.round(abs / 1_000)} ming`
   return `${sign}${abs}`
-}
-
-function trimZero(value: number): string {
-  return decimalFormat.format(Math.round(value * 10) / 10)
 }
 
 // Sozlamadagi formatga ko'ra, mahalliy vaqt bo'yicha (brauzer lokaliga bog'liq emas)

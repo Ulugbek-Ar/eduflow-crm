@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../constants/mockData'
+import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
+import { computeDebts } from '../utils/debts'
 import type { Transaction } from '../types/finance.types'
 import { isCourse, isCustomer, isSettings, isTransaction, sanitizeSettings } from '../utils/guards'
 import {
@@ -11,6 +13,7 @@ import {
   estimateStorageUsage,
   fillCustomerNames,
   fillPaidAt,
+  fixLegacyCourseDuration,
   getStorageUsage,
   getItem,
   inferCategory,
@@ -398,7 +401,8 @@ describe('v5 -> v6: kurslar entity', () => {
     const { data } = loadData()
     expect(data.courses.map((c) => c.name)).toEqual(['IELTS', 'Python', 'Robototexnika'])
     expect(data.courses.every(isCourse)).toBe(true)
-    expect(data.courses[0]).toMatchObject({ type: 'course', durationMonths: 1, monthlyPrice: 0, activeGroups: 0, status: 'active' })
+    // Davomiylik noma'lum — muddatsiz (0)
+    expect(data.courses[0]).toMatchObject({ type: 'course', durationMonths: 0, monthlyPrice: 0, activeGroups: 0, status: 'active' })
     expect(readJson(STORAGE_KEYS.courses)).toHaveLength(3)
     expect(readJson(STORAGE_KEYS.settings)).not.toHaveProperty('courses')
   })
@@ -503,5 +507,30 @@ describe('v8 -> v9: "To\'lov qildi" sanasi (paidAt)', () => {
     const { customers } = createMockData()
     expect(customers.filter((c) => c.status === 'paid').every((c) => c.paidAt)).toBe(true)
     expect(customers.filter((c) => c.status !== 'paid').some((c) => c.paidAt)).toBe(false)
+  })
+})
+
+describe('v9 -> v10: kurs davomiyligi "muddatsiz"', () => {
+  const legacy = { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 1, monthlyPrice: 0, activeGroups: 0, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }
+
+  it('v6 migratsiyasining "1 oy, narx 0" kurslari muddatsiz bo\'ladi; boshqa kurslar o\'zgarmaydi', () => {
+    seedV1([], [])
+    localStorage.setItem(STORAGE_KEYS.version, '9')
+    localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify([legacy, { ...legacy, id: 'k2', name: 'Python', monthlyPrice: 900000 }, { ...legacy, id: 'k3', name: 'Konsultatsiya', type: 'service' }]))
+    const { data } = loadData()
+    expect(data.courses.map((c) => c.durationMonths)).toEqual([0, 1, 1])
+    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
+  })
+
+  it('v10 va undan yangi ma\'lumotda haqiqiy 1 oylik kursga tegilmaydi', () => {
+    expect(fixLegacyCourseDuration([legacy as Course], 10)[0].durationMonths).toBe(1)
+    expect(fixLegacyCourseDuration([legacy as Course], 9)[0].durationMonths).toBe(0)
+  })
+
+  it('muddatsiz kursda qarzdor yashirinib qolmaydi (kurs tugadi deb hisoblanmaydi)', () => {
+    const paidLongAgo = { ...validCustomer, status: 'paid', paidAt: '2025-01-05T10:00:00.000Z', course: 'IELTS' } as Customer
+    const rows = computeDebts([paidLongAgo], [{ ...(legacy as Course), durationMonths: 0, monthlyPrice: 650000 }], [])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].debt).toBe(650000)
   })
 })

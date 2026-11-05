@@ -9,6 +9,7 @@ import { formatAmountInput, parseAmount, toInputDate, todayInputValue } from '..
 import type { TransactionFormErrors } from '../../utils/transactions'
 import { Button } from '../ui/Button'
 import { Combobox } from '../ui/Combobox'
+import { DateInput } from '../ui/DateInput'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { Select } from '../ui/Select'
@@ -37,7 +38,7 @@ interface TransactionFormModalProps {
 }
 
 export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount }: TransactionFormModalProps) {
-  const { customers, getTransaction, addTransaction, updateTransaction, closeModal } = useDashboard()
+  const { customers, getTransaction, addTransaction, updateTransaction, closeModal, settings } = useDashboard()
   const editing = getTransaction(transactionId)
 
   const [form, setForm] = useState<FormState>(() => {
@@ -151,16 +152,16 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             placeholder="650 000"
             data-autofocus
           />
-          <Input
+          <DateInput
             ref={dateRef}
             label="Sana"
             required
-            type="date"
+            format={settings.dateFormat}
             max={form.status === 'pending' ? undefined : today}
             hint={form.status === 'pending' ? 'Kutilayotgan to\'lov sanasi kelajakda bo\'lishi mumkin' : undefined}
             value={form.date}
             error={errors.date}
-            onChange={(e) => update('date', e.target.value)}
+            onChange={(value) => update('date', value)}
           />
         </div>
 

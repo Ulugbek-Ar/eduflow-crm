@@ -28,7 +28,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const debt = customerDebt(customer, courses, transactions)
   const course = courses.find((c) => c.name === customer.course)
   const studyMonth = customer.status === 'paid' ? studyMonthNumber(customer) : null
-  const finished = course && studyMonth !== null && studyMonth > course.durationMonths
+  const finished = course && course.durationMonths > 0 && studyMonth !== null && studyMonth > course.durationMonths
 
   const handleDelete = async () => {
     const ok = await confirm({
@@ -116,7 +116,13 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
         {course && studyMonth !== null && (
           <div>
             <dt>O'qish</dt>
-            <dd>{finished ? `Tugagan (${course.durationMonths} oy)` : `${studyMonth}-oy / ${course.durationMonths}`}</dd>
+            <dd>
+              {finished
+                ? `Tugagan (${course.durationMonths} oy)`
+                : course.durationMonths > 0
+                  ? `${studyMonth}-oy / ${course.durationMonths}`
+                  : `${studyMonth}-oy (muddatsiz)`}
+            </dd>
           </div>
         )}
         {customer.note && (

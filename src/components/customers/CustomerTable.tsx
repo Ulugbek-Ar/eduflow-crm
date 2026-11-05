@@ -10,7 +10,7 @@ import { deleteCustomerMessage, EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActi
 import { paginate } from '../../utils/list'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
-import { Input } from '../ui/Input'
+import { DateInput } from '../ui/DateInput'
 import { Pagination } from '../ui/Pagination'
 import { Select } from '../ui/Select'
 import { SortHeader } from '../ui/SortHeader'
@@ -51,9 +51,11 @@ export function CustomerTable() {
     formatDate,
     transactions,
     money,
+    settings,
   } = useDashboard()
   const confirm = useConfirm()
   const [page, setPage] = useState(1)
+  const [dateResetKey, setDateResetKey] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [view, setView] = usePersistentState<CustomerView>(CUSTOMER_VIEW_KEY, 'table', isView)
 
@@ -76,6 +78,8 @@ export function CustomerTable() {
   }
 
   const clearFilters = () => {
+    // Chala yozilgan sana matni ham tozalansin — sana maydonlari qayta yaratiladi
+    setDateResetKey((k) => k + 1)
     setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
     setSearch('')
   }
@@ -136,8 +140,8 @@ export function CustomerTable() {
           options={[{ value: 'all', label: 'Barcha manbalar' }, ...toOptions(SOURCE_LABELS)]}
         />
         <div className="date-range" role="group" aria-label="Qo'shilgan sana">
-          <Input label="Dan" type="date" value={filters.from} max={filters.to || undefined} onChange={(e) => setFilter('from', e.target.value)} />
-          <Input label="Gacha" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} />
+          <DateInput key={`from-${dateResetKey}`} label="Dan" format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(value) => setFilter('from', value)} />
+          <DateInput key={`to-${dateResetKey}`} label="Gacha" format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(value) => setFilter('to', value)} />
         </div>
         {view === 'table' && (
           <Select

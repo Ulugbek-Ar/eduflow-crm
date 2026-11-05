@@ -26,8 +26,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi;
 // v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi;
 // v8 — sozlamalarda logotip rasmi (settings.logoImage);
-// v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt)
-export const SCHEMA_VERSION = 9
+// v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt);
+// v10 — kurs davomiyligi noma'lum bo'lsa 0 ("muddatsiz"), v6 migratsiyasidagi "1 oy" tuzatiladi
+export const SCHEMA_VERSION = 10
 
 export interface StoredData {
   customers: Customer[]
@@ -238,12 +239,22 @@ export function migrateCourses(rawSettings: unknown, customers: readonly Custome
     id: `k${index + 1}`,
     name,
     type: 'course',
-    durationMonths: 1,
+    // Davomiylik noma'lum — "muddatsiz" (0): kurs muddati tugadi deb qarzdorlar yashirinib qolmasin
+    durationMonths: 0,
     monthlyPrice: 0,
     activeGroups: 0,
     status: 'active',
     createdAt: now.toISOString(),
   }))
+}
+
+// v9 -> v10: v6 migratsiyasi yaratgan kurslarda (aynan: kurs, 1 oy, narx 0, 0 guruh) davomiylik aslida
+// noma'lum edi — "muddatsiz" qilinadi. Faqat v10 dan eski ma'lumotga qo'llanadi (yangi 1 oylik kurslarga tegmaydi)
+export function fixLegacyCourseDuration(courses: readonly Course[], fromVersion: number): Course[] {
+  if (fromVersion >= 10) return [...courses]
+  return courses.map((c) =>
+    c.type === 'course' && c.durationMonths === 1 && c.monthlyPrice === 0 && c.activeGroups === 0 ? { ...c, durationMonths: 0 } : c,
+  )
 }
 
 // Kurs nomlari takrorlanmasligi kerak (mijoz kursga nom orqali bog'lanadi)
@@ -258,7 +269,11 @@ function uniqueCourseNames(courses: readonly Course[]): Course[] {
 }
 
 // Istalgan (eski yoki buzuq) xom ma'lumotdan joriy sxemaga mos ma'lumot yasaydi
-export function normalizeData(raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown }): LoadResult {
+// fromVersion — ma'lumot qaysi sxema versiyasida yozilgan (versiyaga bog'liq migratsiyalar uchun); noma'lum bo'lsa joriy
+export function normalizeData(
+  raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown },
+  fromVersion: number = SCHEMA_VERSION,
+): LoadResult {
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
   const valid = keepValid(rawTransactions, isTransaction)
@@ -267,7 +282,9 @@ export function normalizeData(raw: { customers: unknown; transactions: unknown; 
   const settings = sanitizeSettings(raw.settings)
   // Kurslar massivi bo'lsa (v6+) — tekshiriladi; bo'lmasa (eski ma'lumot/zaxira) — migratsiya
   const rawCourses = Array.isArray(raw.courses) ? raw.courses : null
-  const courses = rawCourses ? uniqueCourseNames(keepValid(rawCourses, isCourse)) : migrateCourses(raw.settings, customers)
+  const courses = rawCourses
+    ? fixLegacyCourseDuration(uniqueCourseNames(keepValid(rawCourses, isCourse)), fromVersion)
+    : migrateCourses(raw.settings, customers)
   return {
     data: { customers, transactions, courses, settings },
     dropped: rawCustomers.length - customers.length + (rawTransactions.length - valid.length) + (rawCourses ? rawCourses.length - courses.length : 0),
@@ -302,13 +319,13 @@ export function createMockData(): StoredData {
   }
 }
 
-export function readStored(): LoadResult {
+export function readStored(fromVersion: number = SCHEMA_VERSION): LoadResult {
   return normalizeData({
     customers: readJson(STORAGE_KEYS.customers),
     transactions: readJson(STORAGE_KEYS.transactions),
     settings: readJson(STORAGE_KEYS.settings),
     courses: readJson(STORAGE_KEYS.courses),
-  })
+  }, fromVersion)
 }
 
 // ===== Birinchi ishga tushish va demo rejim =====
@@ -338,8 +355,8 @@ export function startFresh(mode: 'empty' | 'demo'): SaveResult {
 // avval foydalanuvchi FirstRunScreen'da tanlov qiladi
 export function loadData(): LoadResult {
   if (isFirstRun()) return { data: createEmptyData(), dropped: 0 }
-  const result = readStored()
   const version = readJson(STORAGE_KEYS.version)
+  const result = readStored(typeof version === 'number' ? version : 1)
   if (version !== SCHEMA_VERSION || result.dropped > 0) {
     const saved = saveAll(result.data)
     if (!saved.ok) return { ...result, saveError: saved.reason }
@@ -379,6 +396,10 @@ export function parseBackup(text: string): BackupParseResult {
   if (typeof json.version === 'number' && json.version > SCHEMA_VERSION) {
     return { ok: false, error: 'Zaxira ilovaning yangiroq versiyasida yaratilgan' }
   }
-  const { data, dropped } = normalizeData({ customers: json.customers, transactions: json.transactions, settings: json.settings, courses: json.courses })
+  const fromVersion = typeof json.version === 'number' ? json.version : 1
+  const { data, dropped } = normalizeData(
+    { customers: json.customers, transactions: json.transactions, settings: json.settings, courses: json.courses },
+    fromVersion,
+  )
   return { ok: true, data, dropped, exportedAt: typeof json.exportedAt === 'string' ? json.exportedAt : undefined }
 }

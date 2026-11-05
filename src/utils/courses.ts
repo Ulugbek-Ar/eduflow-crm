@@ -16,8 +16,8 @@ export function validateCourse(input: CourseInput, existing: readonly Course[], 
   const name = normalizeCourseName(input.name)
   if (name.length < 2) errors.name = 'Nomini kiriting (kamida 2 ta belgi)'
   else if (existing.some((c) => c.id !== editingId && c.name.toLowerCase() === name.toLowerCase())) errors.name = 'Bu nomdagi kurs yoki xizmat bor'
-  if (!Number.isInteger(input.durationMonths) || input.durationMonths < 1 || input.durationMonths > COURSE_LIMITS.maxDuration) {
-    errors.durationMonths = `1 dan ${COURSE_LIMITS.maxDuration} oygacha`
+  if (!Number.isInteger(input.durationMonths) || input.durationMonths < 0 || input.durationMonths > COURSE_LIMITS.maxDuration) {
+    errors.durationMonths = `0 dan ${COURSE_LIMITS.maxDuration} oygacha (0 — muddatsiz)`
   }
   if (!Number.isInteger(input.monthlyPrice) || input.monthlyPrice < 0 || input.monthlyPrice > COURSE_LIMITS.maxPrice) {
     errors.monthlyPrice = 'Narx 0 yoki musbat butun son bo\'lishi kerak'
@@ -51,6 +51,16 @@ export function findCourse(courses: readonly Course[], name: string): Course | u
 export function courseChoices(courses: readonly Course[], current = ''): string[] {
   const names = courses.filter((c) => c.status === 'active').map((c) => c.name)
   return current && !names.includes(current) ? [...names, current] : names
+}
+
+// Davomiylik matni: 0 — muddatsiz
+export function durationLabel(months: number): string {
+  return months > 0 ? `${months} oy` : 'Muddatsiz'
+}
+
+// Qarz va kutilayotgan tushum to'g'ri hisoblanishi uchun to'ldirilishi kerak bo'lgan faol kurslar
+export function coursesNeedingSetup(courses: readonly Course[]): Course[] {
+  return courses.filter((c) => c.status === 'active' && (c.monthlyPrice <= 0 || c.durationMonths <= 0))
 }
 
 export function usedByCustomers(course: Course, customers: readonly Customer[]): number {

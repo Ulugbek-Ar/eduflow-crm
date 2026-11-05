@@ -98,7 +98,8 @@ describe('Kutilayotgan to\'lovlar sanasi', () => {
     d.setDate(d.getDate() + days)
     return d
   }
-  const inputDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  // Sana maydoni sozlamadagi formatda yoziladi (standart: kk.oo.yyyy)
+  const inputDate = (d: Date) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
 
   it('"Kutilmoqda" kelajakdagi sana bilan kiritiladi; "To\'langan" uchun kelajak rad etiladi', async () => {
     const { user } = await openFinance({ customers: [makeCustomer()] })

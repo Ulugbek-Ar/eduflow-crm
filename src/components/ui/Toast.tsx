@@ -50,7 +50,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext value={api}>
       {children}
-      <div className="toast-region" aria-live="polite" aria-label="Bildirishnomalar">
+      <div className="toast-region" role="region" aria-live="polite" aria-label="Bildirishnomalar">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
         ))}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import type { Course, CourseStatus } from '../../types/course.types'
-import { COURSE_STATUS_LABELS, COURSE_TYPE_LABELS, courseStats, usedByCustomers } from '../../utils/courses'
+import { COURSE_STATUS_LABELS, COURSE_TYPE_LABELS, courseStats, coursesNeedingSetup, durationLabel, usedByCustomers } from '../../utils/courses'
 import { cx } from '../../utils/cx'
 import { formatNumber } from '../../utils/format'
 import { Badge } from '../ui/Badge'
@@ -25,6 +25,7 @@ export function CoursesPanel() {
   const query = search.trim().toLowerCase()
   const visible = courses.filter((c) => (filter === 'all' || c.status === filter) && (!query || c.name.toLowerCase().includes(query)))
   const active = courses.filter((c) => c.status === 'active')
+  const incomplete = coursesNeedingSetup(courses)
   const totals = active.reduce(
     (sum, course) => {
       const stats = courseStats(course, customers)
@@ -92,6 +93,22 @@ export function CoursesPanel() {
           </div>
         </div>
 
+        {incomplete.length > 0 && (
+          <div className="notice notice-warning setup-notice" role="status">
+            <strong>
+              {incomplete.length} ta kursda narx yoki muddat kiritilmagan — qarzdorlar va kutilayotgan tushum to'g'ri hisoblanishi uchun
+              to'ldiring:
+            </strong>
+            <div className="toolbar">
+              {incomplete.map((course) => (
+                <Button key={course.id} size="sm" variant="ghost" icon="edit" onClick={() => openModal({ type: 'course', payload: { id: course.id } })}>
+                  {course.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {visible.length === 0 ? (
           <EmptyState
             variant={courses.length === 0 ? 'empty' : 'search'}
@@ -153,12 +170,12 @@ export function CoursesPanel() {
                           {COURSE_TYPE_LABELS[course.type]}
                           <span className="show-compact">
                             {' '}
-                            · {course.durationMonths} oy · {course.activeGroups} guruh
+                            · {durationLabel(course.durationMonths)} · {course.activeGroups} guruh
                           </span>
                         </small>
                       </td>
                       <td data-label="Davomiyligi" className="nowrap col-optional">
-                        {course.durationMonths} oy
+                        {course.durationMonths > 0 ? durationLabel(course.durationMonths) : <span className="text-warning">Muddatsiz</span>}
                       </td>
                       <td data-label="Oylik narx" className="align-right nowrap">
                         {course.monthlyPrice > 0 ? money(course.monthlyPrice) : <span className="text-warning">Kiritilmagan</span>}

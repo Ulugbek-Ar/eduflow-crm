@@ -1468,6 +1468,15 @@ body.scroll-locked {
   height: 38px;
 }
 
+/* Xato yoki izoh matni yorliq ustuniga emas, butun kenglikka */
+.date-range .field > small {
+  grid-column: 1 / -1;
+}
+
+.date-range .date-input {
+  min-width: 0;
+}
+
 /* ===== Jadval ===== */
 .table-wrap {
   position: relative;
@@ -2007,6 +2016,43 @@ body.scroll-locked {
 
 .stage-quick {
   display: inline-block;
+}
+
+.date-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-input .input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-picker-btn {
+  position: absolute;
+  right: 3px;
+}
+
+/* Brauzer tanlagichi uchun yashirin maydon (showPicker orqali ochiladi) */
+.date-picker-native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.setup-notice {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .detail-total.is-debt {
@@ -3074,8 +3120,11 @@ body.scroll-locked {
     width: 100%;
   }
 
+  /* Mobilda yorliq maydon ustida — ikkala sana yonma-yon, teng kenglikda */
   .date-range .field {
     flex: 1 1 140px;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
   }
 
   .date-range .input {

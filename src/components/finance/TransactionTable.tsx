@@ -16,7 +16,7 @@ import {
 } from '../../utils/transactions'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
-import { Input } from '../ui/Input'
+import { DateInput } from '../ui/DateInput'
 import { Pagination } from '../ui/Pagination'
 import { Select } from '../ui/Select'
 import { SortHeader } from '../ui/SortHeader'
@@ -52,9 +52,11 @@ export function TransactionTable() {
     transactionSort: sort,
     setTransactionSort,
     formatDate,
+    settings,
   } = useDashboard()
   const confirm = useConfirm()
   const [page, setPage] = useState(1)
+  const [dateResetKey, setDateResetKey] = useState(0)
   const [pageSize, setPageSize] = useState(10)
 
   const viewKey = JSON.stringify([search, filters, sort, dateRange])
@@ -86,6 +88,8 @@ export function TransactionTable() {
   }
 
   const clearFilters = () => {
+    // Chala yozilgan sana matni ham tozalansin — sana maydonlari qayta yaratiladi
+    setDateResetKey((k) => k + 1)
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
     setSearch('')
   }
@@ -151,14 +155,8 @@ export function TransactionTable() {
             options={[{ value: 'all', label: 'Barcha kategoriyalar' }, ...categoryOptions]}
           />
           <div className="date-range">
-            <Input
-              label="Dan"
-              type="date"
-              value={filters.from}
-              max={filters.to || undefined}
-              onChange={(e) => setFilter('from', e.target.value)}
-            />
-            <Input label="Gacha" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} />
+            <DateInput key={`from-${dateResetKey}`} label="Dan" format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(value) => setFilter('from', value)} />
+            <DateInput key={`to-${dateResetKey}`} label="Gacha" format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(value) => setFilter('to', value)} />
           </div>
           <Select
             label="Saralash"

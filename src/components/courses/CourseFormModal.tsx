@@ -104,8 +104,9 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
             label="Davomiyligi (oy)"
             required
             type="number"
-            min={1}
+            min={0}
             max={60}
+            hint="0 — muddatsiz (tugash sanasi yo'q)"
             inputMode="numeric"
             value={form.durationMonths}
             error={errors.durationMonths}

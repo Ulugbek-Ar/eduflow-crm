@@ -11,7 +11,8 @@ import type { Period } from './analytics'
 //   2. Kutilgan summa = mijoz kursining oylik narxi. Kurs topilmasa yoki narxi 0 bo'lsa — mijoz hisobga
 //      olinmaydi (narx kiritilmagan kursdan qarz chiqarib bo'lmaydi). Arxivdagi kurs ham hisoblanadi.
 //   2a. Kurs davomiyligi tugagan bo'lsa qarz yo'q: "To'lov qildi" ga o'tgan oy (paidAt) 1-oy hisoblanadi,
-//      joriy oy durationMonths-oydan keyin bo'lsa — mijoz kursni tugatgan.
+//      joriy oy durationMonths-oydan keyin bo'lsa — mijoz kursni tugatgan. durationMonths = 0 — muddatsiz:
+//      tugash sanasi yo'q, qarz har oy hisoblanadi.
 //   3. To'langan = shu mijozning joriy oydagi "To'langan" statusli kirimlari yig'indisi
 //      (kategoriyadan qat'i nazar). "Kutilmoqda" va "Bekor qilingan" to'langanga kirmaydi.
 //   4. Qarz = max(0, kutilgan − to'langan). Ortiqcha to'lov keyingi oyga o'tkazilmaydi.
@@ -50,7 +51,7 @@ export function customerDebt(
   const course = courses.find((c) => c.name === customer.course)
   if (!course || course.monthlyPrice <= 0) return null
   const studyMonth = studyMonthNumber(customer, now)
-  if (studyMonth !== null && studyMonth > course.durationMonths) return null
+  if (course.durationMonths > 0 && studyMonth !== null && studyMonth > course.durationMonths) return null
   const month = currentMonth(now)
   const own = transactions.filter((t) => t.type === 'income' && t.customerId === customer.id)
   const paid = sumBy(own, (t) => t.status === 'paid' && inPeriod(t.date, month))

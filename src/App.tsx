@@ -104,7 +104,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function Shell() {
-  const { modal, activeSection, setActiveSection, openModal, sidebarCollapsed } = useDashboard()
+  const { modal, activeSection, setActiveSection, openModal, sidebarCollapsed, isDemo } = useDashboard()
   const { usingDefaultPassword } = useAuth()
   const [promptDismissed, setPromptDismissed] = useState(false)
 
@@ -161,7 +161,8 @@ function Shell() {
           </ErrorBoundary>
         </main>
       </div>
-      {usingDefaultPassword && !promptDismissed && !modal && (
+      {/* Demo ma'lumot bilan tanishayotgan foydalanuvchini parol oynasi bilan to'xtatmaymiz */}
+      {usingDefaultPassword && !isDemo && !promptDismissed && !modal && (
         <PasswordPrompt onChangeNow={goToSecurity} onLater={() => setPromptDismissed(true)} />
       )}
       <Suspense fallback={null}>

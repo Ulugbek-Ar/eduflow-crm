@@ -123,7 +123,8 @@ export function isCourse(value: unknown): value is Course {
     isText(value.id) &&
     isText(value.name) &&
     oneOf(COURSE_TYPES, value.type) &&
-    isWholeNumber(value.durationMonths, 1, COURSE_LIMITS.maxDuration) &&
+    // 0 — muddatsiz (davomiylik noma'lum yoki chegaralanmagan)
+    isWholeNumber(value.durationMonths, 0, COURSE_LIMITS.maxDuration) &&
     isWholeNumber(value.monthlyPrice, 0, COURSE_LIMITS.maxPrice) &&
     isWholeNumber(value.activeGroups, 0, COURSE_LIMITS.maxGroups) &&
     oneOf(COURSE_STATUSES, value.status) &&
