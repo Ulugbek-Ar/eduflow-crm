@@ -3,6 +3,7 @@ import type { Course, CourseInput } from '../types/course.types'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, Section, Settings, SortState } from '../types/dashboard.types'
 import type { StoredData } from '../services/storage.service'
+import type { TrashEntry, TrashKind } from '../services/trash.service'
 import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 
 export interface DashboardContextValue {
@@ -56,6 +57,13 @@ export interface DashboardContextValue {
   // Demo mijoz va tranzaksiyalarni o'chiradi (sozlamalar qoladi), demo rejimdan chiqadi
   clearDemoData: () => void
   replaceData: (data: StoredData) => void
+  // Savatcha: o'chirilgan yozuvlar 30 kun saqlanadi
+  trash: TrashEntry[]
+  restoreFromTrash: (kind: TrashKind, id: string) => void
+  purgeFromTrash: (kind: TrashKind, id: string) => void
+  emptyTrash: () => void
+  // Hisobot yoki zaxira yuklab olinganini jurnalga yozish
+  logExport: (what: string, kind?: 'export' | 'backup') => void
   money: (amount: number) => string
   formatDate: (iso: string) => string
   setUnsavedChanges: (dirty: boolean) => void

@@ -15,13 +15,17 @@ import { cx } from '../../utils/cx'
 import { formatDateTimeWith } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
+import { AuditLog } from './AuditLog'
 import { StaffFormModal } from './StaffFormModal'
+import { TrashBin } from './TrashBin'
 import { TempPasswordModal } from './TempPasswordModal'
 
-type Tab = 'staff' | 'sessions' | 'roles'
+type Tab = 'staff' | 'audit' | 'trash' | 'sessions' | 'roles'
 
 const TABS: Array<{ id: Tab; label: string; icon: IconName }> = [
   { id: 'staff', label: 'Xodimlar', icon: 'customers' },
+  { id: 'audit', label: 'Amallar jurnali', icon: 'activity' },
+  { id: 'trash', label: 'Savatcha', icon: 'trash' },
   { id: 'sessions', label: 'Seanslar', icon: 'monitor' },
   { id: 'roles', label: 'Rollar va ruxsatlar', icon: 'shield' },
 ]
@@ -271,6 +275,7 @@ function RolesTab() {
 
 export function AdminPanel() {
   const [tab, setTab] = useState<Tab>('staff')
+  const { trash } = useDashboard()
 
   return (
     <div className="stack">
@@ -288,11 +293,14 @@ export function AdminPanel() {
           >
             <Icon name={t.icon} size={16} />
             {t.label}
+            {t.id === 'trash' && trash.length > 0 && <span className="tab-count">{trash.length}</span>}
           </button>
         ))}
       </div>
       <div role="tabpanel" id={`admin-panel-${tab}`} aria-labelledby={`admin-tab-${tab}`}>
         {tab === 'staff' && <StaffTab />}
+        {tab === 'audit' && <AuditLog />}
+        {tab === 'trash' && <TrashBin />}
         {tab === 'sessions' && <SessionsTab />}
         {tab === 'roles' && <RolesTab />}
       </div>

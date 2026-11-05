@@ -31,7 +31,7 @@ interface ReportDef {
 }
 
 export function AnalyticsPanel() {
-  const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings } = useDashboard()
+  const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings, logExport } = useDashboard()
   const canExport = useCan()('reports.export')
   const period = getPeriod(dateRange)
   const periodLabel = DATE_RANGE_LABELS[dateRange]
@@ -328,10 +328,28 @@ export function AnalyticsPanel() {
                 <small className="muted">{report.description}</small>
               </div>
               <div className="toolbar">
-                <Button size="sm" variant="ghost" icon="fileText" aria-label={`${report.title} — CSV`} onClick={() => report.download('csv')}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon="fileText"
+                  aria-label={`${report.title} — CSV`}
+                  onClick={() => {
+                    report.download('csv')
+                    logExport(`${report.title} — CSV`)
+                  }}
+                >
                   CSV
                 </Button>
-                <Button size="sm" variant="ghost" icon="sheet" aria-label={`${report.title} — Excel`} onClick={() => report.download('xls')}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon="sheet"
+                  aria-label={`${report.title} — Excel`}
+                  onClick={() => {
+                    report.download('xls')
+                    logExport(`${report.title} — Excel`)
+                  }}
+                >
                   Excel
                 </Button>
               </div>

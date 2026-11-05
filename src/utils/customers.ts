@@ -120,7 +120,7 @@ export function deleteCustomerMessage(customer: Customer, transactions: readonly
     count > 0
       ? `Unga bog'liq ${count} ta to'lov (jami ${money(total)}) jurnalda "${deletedCustomerName(customer.name)}" nomi bilan qoladi.`
       : 'Unga bog\'liq to\'lovlar yo\'q.'
-  return `"${customer.name}" mijozi butunlay o'chiriladi. ${payments} Davom etasizmi?`
+  return `"${customer.name}" savatchaga o'tkaziladi — 30 kun ichida tiklash mumkin. ${payments} Davom etasizmi?`
 }
 
 export function deletedCustomerName(name?: string): string {

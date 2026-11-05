@@ -1,10 +1,12 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import type { ReactNode } from 'react'
-import { can as roleCan } from '../auth/permissions'
+import { can as roleCan, ROLE_LABELS } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import { AuthContext } from '../hooks/useAuth'
 import type { ActionResult, AuthContextValue } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import { logAudit } from '../services/audit.service'
+import type { AuditAction } from '../services/audit.service'
 import { closeDemoWorkspace, openDemoWorkspace } from '../services/demo.service'
 import {
   endSession,
@@ -71,6 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const current = session ? users.find((u) => u.id === session.userId && u.status === 'active') : undefined
   const allowed = (permission: Permission) => roleCan(current?.role, permission)
+  const actorOf = (user: StaffUser) => ({ userId: user.id, userName: staff.displayName(user), role: user.role })
+  const audit = (action: AuditAction, summary: string, entityId?: string, by: StaffUser | undefined = current) =>
+    logAudit(by ? actorOf(by) : null, action, summary, entityId)
+  const nameOf = (id: string) => {
+    const user = users.find((u) => u.id === id)
+    return user ? staff.displayName(user) : 'Xodim'
+  }
 
   const leaveDemo = () => {
     if (session) endSession(session.id)
@@ -136,12 +145,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     can: allowed,
     login: async (login, password) => {
       const result = await staff.authenticate(login, password)
-      if (!result.ok) return result
+      if (!result.ok) {
+        // Kim urinayotgani noma'lum — kiritilgan login yoziladi (parol hech qachon yozilmaydi)
+        logAudit(null, 'auth.failed', `${result.reason === 'blocked' ? 'Bloklangan hisob' : 'Noto\'g\'ri login yoki parol'}: ${login.trim().slice(0, 32)}`)
+        return result
+      }
       begin(result.user, result.users)
+      audit('auth.login', result.user.login, result.user.id, result.user)
       return { ok: true }
     },
     logout: () => {
       if (mode === 'demo') return leaveDemo()
+      if (current) audit('auth.logout', current.login, current.id)
       if (session) endSession(session.id)
       setSession(null)
       setSessions(listSessions())
@@ -150,15 +165,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await staff.createFirstAdmin(input)
       if (!result.ok) return result
       begin(result.user, result.users)
+      audit('staff.create', `Birinchi administrator: ${staff.displayName(result.user)}`, result.user.id, result.user)
       return { ok: true }
     },
     completePasswordChange: async (newPassword) => {
       if (!current) return DENIED
-      return fromResult(await staff.completePasswordChange(current.id, newPassword))
+      const result = await staff.completePasswordChange(current.id, newPassword)
+      if (result.ok) audit('auth.password', 'Vaqtinchalik parol almashtirildi', current.id)
+      return fromResult(result)
     },
     changeOwnCredentials: async (currentPassword, newLogin, newPassword) => {
       if (!current) return DENIED
-      return fromResult(await staff.changeOwnCredentials(current.id, currentPassword, newLogin, newPassword))
+      const result = await staff.changeOwnCredentials(current.id, currentPassword, newLogin, newPassword)
+      if (result.ok) {
+        const changes = [newPassword ? 'parol' : '', result.user.login !== current.login ? `login: ${current.login} → ${result.user.login}` : '']
+        audit('auth.password', changes.filter(Boolean).join(', ') || 'parol xeshi yangilandi', current.id)
+      }
+      return fromResult(result)
     },
     updateOwnProfile: (fullName, title) => {
       if (!current) return DENIED
@@ -167,14 +190,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     users: users.map(staff.toPublicUser),
     addUser: async (input) => {
       if (!allowed('staff.manage')) return DENIED
-      return fromResult(await staff.addUser(input))
+      const result = await staff.addUser(input)
+      if (result.ok) audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
+      return fromResult(result)
     },
     updateUser: (id, patch) => {
       if (!current || !allowed('staff.manage')) return DENIED
+      const before = users.find((u) => u.id === id)
       const result = staff.updateUser(current.id, id, patch)
       if (result.ok && patch.status === 'blocked') {
         revokeUserSessions(id)
         setSessions(listSessions())
+      }
+      if (result.ok && before) {
+        const name = staff.displayName(result.user)
+        if (patch.status && patch.status !== before.status) audit(patch.status === 'blocked' ? 'staff.block' : 'staff.unblock', name, id)
+        else {
+          const roleChange = patch.role && patch.role !== before.role ? `: rol ${ROLE_LABELS[before.role]} → ${ROLE_LABELS[patch.role]}` : ''
+          audit('staff.update', `${name}${roleChange}`, id)
+        }
       }
       return fromResult(result)
     },
@@ -184,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!result.ok) return result
       // Eski parol bilan ochilgan seanslar yopiladi (o'zining joriy seansi qoladi)
       revokeUserSessions(id, id === current.id ? session.id : undefined)
+      audit('staff.password', staff.displayName(result.user), id)
       setUsers(result.users)
       setSessions(listSessions())
       return { ok: true, password: result.password }
@@ -197,15 +232,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSessions(listSessions())
         return
       }
-      const own = sessions.some((s) => s.id === id && s.userId === session.userId)
+      const record = sessions.find((s) => s.id === id)
+      const own = record?.userId === session.userId
       if (!own && !allowed('staff.manage')) return
       revokeSession(id)
+      if (record) audit('session.revoke', `${nameOf(record.userId)} · ${record.device}`, record.userId)
       setSessions(listSessions())
     },
     revokeOtherSessions: () => {
       if (!session) return
+      const count = sessions.filter((s) => s.id !== session.id && (allowed('staff.manage') || s.userId === session.userId)).length
       if (allowed('staff.manage')) revokeOtherSessions(session.id)
       else revokeUserSessions(session.userId, session.id)
+      audit('session.revoke', `Boshqa ${count} ta seans yopildi`)
       setSessions(listSessions())
     },
     enterDemo: (role = 'admin') => {

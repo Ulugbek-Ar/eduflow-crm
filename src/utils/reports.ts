@@ -1,4 +1,7 @@
 import { CATEGORY_LABELS, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
+import { ROLE_LABELS } from '../auth/permissions'
+import { AUDIT_ACTION_LABELS, AUDIT_CATEGORY_LABELS, actionCategory } from '../services/audit.service'
+import type { AuditEntry } from '../services/audit.service'
 import type { ExportColumn } from '../services/export.service'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
@@ -60,5 +63,16 @@ export function sourceColumns(): ExportColumn<SourcePerformance>[] {
     { header: 'CPL', value: (r) => optionalNumber(r.cpl === null ? null : Math.round(r.cpl)), type: 'number', width: 90 },
     { header: 'Kirim', value: (r) => r.revenue, type: 'number', width: 110 },
     { header: 'ROI, %', value: (r) => optionalNumber(r.roi), type: 'number', width: 80 },
+  ]
+}
+
+export function auditColumns(formatDateTime: (iso: string) => string): ExportColumn<AuditEntry>[] {
+  return [
+    { header: 'Vaqt', value: (e) => formatDateTime(e.at), width: 120 },
+    { header: 'Xodim', value: (e) => e.userName, width: 150 },
+    { header: 'Rol', value: (e) => (e.role ? ROLE_LABELS[e.role] : ''), width: 110 },
+    { header: 'Bo\'lim', value: (e) => AUDIT_CATEGORY_LABELS[actionCategory(e.action)], width: 120 },
+    { header: 'Amal', value: (e) => AUDIT_ACTION_LABELS[e.action], width: 170 },
+    { header: 'Tafsilot', value: (e) => e.summary, width: 280 },
   ]
 }

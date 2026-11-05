@@ -39,7 +39,7 @@ export function CoursesPanel() {
   const handleDelete = async (course: Course) => {
     const ok = await confirm({
       title: 'Kursni o\'chirish',
-      message: `"${course.name}" butunlay o'chiriladi. Unga yozilgan mijoz yo'q. Davom etasizmi?`,
+      message: `"${course.name}" savatchaga o'tkaziladi — 30 kun ichida tiklash mumkin. Unga yozilgan mijoz yo'q. Davom etasizmi?`,
       confirmLabel: 'O\'chirish',
     })
     if (ok) removeCourse(course.id)

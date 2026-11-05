@@ -103,7 +103,7 @@ export function TransactionTable() {
   const handleDelete = async (t: Transaction) => {
     const ok = await confirm({
       title: 'Tranzaksiyani o\'chirish',
-      message: `${TYPE_LABELS[t.type]}: ${money(t.amount)} (${formatDate(t.date)}) jurnaldan butunlay o'chiriladi. Davom etasizmi?`,
+      message: `${TYPE_LABELS[t.type]}: ${money(t.amount)} (${formatDate(t.date)}) savatchaga o'tkaziladi — 30 kun ichida tiklash mumkin. Davom etasizmi?`,
       confirmLabel: 'O\'chirish',
     })
     if (ok) deleteTransaction(t.id)

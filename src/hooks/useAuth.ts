@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react'
 import type { Permission } from '../auth/permissions'
+import type { AuditActor } from '../services/audit.service'
 import type { StorageNamespace } from '../services/storage.service'
+import { displayName } from '../services/users.service'
 import type { NewUserInput, UserField, UserPatch } from '../services/users.service'
 import type { PublicUser, Role, SessionRecord } from '../types/user.types'
 
@@ -42,6 +44,12 @@ export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth AuthProvider ichida ishlatilishi kerak')
   return context
+}
+
+// Jurnal uchun: amalni kim bajarayotgani (AuthProvider bo'lmasa — null)
+export function useAuditActor(): AuditActor | null {
+  const user = useContext(AuthContext)?.user
+  return user ? { userId: user.id, userName: displayName(user), role: user.role } : null
 }
 
 // Ruxsat tekshiruvi: AuthProvider bo'lmasa (alohida komponent testlari) — hamma narsa ochiq

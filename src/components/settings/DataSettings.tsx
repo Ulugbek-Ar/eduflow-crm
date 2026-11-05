@@ -24,7 +24,7 @@ const USAGE_WARNING_PERCENT = 80
 const LIMIT_MB = STORAGE_LIMIT_BYTES / 1024 / 1024
 
 export function DataSettings() {
-  const { customers, transactions, courses, settings, resetData, clearAllData, replaceData, formatDate } = useDashboard()
+  const { customers, transactions, courses, settings, resetData, clearAllData, replaceData, formatDate, logExport } = useDashboard()
   const storageUsage = useStorageUsage()
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -33,6 +33,7 @@ export function DataSettings() {
 
   const handleBackup = () => {
     downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
+    logExport('To\'liq zaxira (JSON)', 'backup')
   }
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {

@@ -39,6 +39,7 @@ export function Header() {
     transactionFilters,
     transactionSort,
     getCustomerName,
+    logExport,
     toggleSidebar,
     formatDate,
     isDemo,
@@ -59,16 +60,19 @@ export function Header() {
   const exportCustomers = (format: ExportFormat) => {
     const rows = sortCustomers(filterCustomers(customers, search, customerFilters), customerSort)
     exportRows('mijozlar', rows, customerColumns(formatDate), format, { ...options, sheetName: 'Mijozlar' })
+    logExport(`Mijozlar — ${format === 'csv' ? 'CSV' : 'Excel'} (${rows.length} ta)`)
   }
 
   const exportTransactions = (format: ExportFormat) => {
     const { period } = transactionPeriod(transactionFilters, dateRange)
     const rows = sortTransactions(filterTransactions(transactions, transactionFilters, period, search, getCustomerName), transactionSort)
     exportRows('tranzaksiyalar', rows, transactionColumns(formatDate, getCustomerName), format, { ...options, sheetName: 'Tranzaksiyalar' })
+    logExport(`Tranzaksiyalar — ${format === 'csv' ? 'CSV' : 'Excel'} (${rows.length} ta)`)
   }
 
   const exportBackup = () => {
     downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
+    logExport('To\'liq zaxira (JSON)', 'backup')
   }
 
   // Faqat ruxsat berilgan hisobotlar: kuzatuvchi va menejer hisobot yuklamaydi, zaxira — faqat administrator
