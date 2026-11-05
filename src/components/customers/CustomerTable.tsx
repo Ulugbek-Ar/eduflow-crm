@@ -8,8 +8,9 @@ import type { Customer, CustomerFilters, CustomerSortKey, CustomerStatus, Custom
 import type { SortDirection } from '../../types/dashboard.types'
 import { cx, toOptions } from '../../utils/cx'
 import { deleteCustomerMessage, EMPTY_CUSTOMER_FILTERS, filterCustomers, hasActiveFilters, sortCustomers } from '../../utils/customers'
-import { paginate } from '../../utils/list'
+import { countActive, paginate } from '../../utils/list'
 import { Badge } from '../ui/Badge'
+import { FilterPanel } from '../ui/FilterPanel'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { DateInput } from '../ui/DateInput'
@@ -124,7 +125,7 @@ export function CustomerTable() {
         </div>
       </div>
 
-      <div className="filters">
+      <FilterPanel activeCount={countActive(filters, EMPTY_CUSTOMER_FILTERS)}>
         <Select
           label="Holat"
           hideLabel
@@ -168,7 +169,7 @@ export function CustomerTable() {
             Filtrlarni tozalash
           </Button>
         )}
-      </div>
+      </FilterPanel>
 
       {view === 'kanban' && filtered.length > 0 ? (
         <CustomerKanban customers={filtered} />

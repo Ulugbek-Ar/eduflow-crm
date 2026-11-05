@@ -3,6 +3,7 @@ import { useDashboard } from '../../context/useDashboard'
 import { useCan } from '../../hooks/useAuth'
 import { computeDebts, pendingPayments, totalDebt } from '../../utils/debts'
 import { Button } from '../ui/Button'
+import { Hint } from '../ui/Hint'
 
 // Qarzdorliklar (joriy oy) va "Kutilmoqda" statusidagi to'lovlar. Hisob qoidasi: src/utils/debts.ts
 export function DebtsCard() {
@@ -15,7 +16,10 @@ export function DebtsCard() {
     <section className="card" aria-labelledby="debts-title">
       <div className="card-head">
         <div>
-          <h2 id="debts-title">Qarzdorliklar va kutilayotgan to'lovlar</h2>
+          <div className="title-row">
+            <h2 id="debts-title">Qarzdorliklar va kutilayotgan to'lovlar</h2>
+            <Hint term="debt" />
+          </div>
           <span className="muted">
             Joriy oy · {debts.length} ta qarzdor, jami <strong className="text-danger">{money(totalDebt(debts))}</strong>
           </span>

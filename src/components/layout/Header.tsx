@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DATE_RANGE_LABELS, Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth, useCan } from '../../hooks/useAuth'
+import { useQuickAdd } from '../../hooks/useQuickAdd'
 import { useConfirm } from '../../hooks/useConfirm'
 import { createBackup } from '../../services/storage.service'
 import { dateStamp, downloadJson, exportRows } from '../../services/export.service'
@@ -11,6 +12,7 @@ import { filterCustomers, sortCustomers } from '../../utils/customers'
 import { customerColumns, transactionColumns } from '../../utils/reports'
 import { globalSearch } from '../../utils/search'
 import { filterTransactions, sortTransactions, transactionPeriod } from '../../utils/transactions'
+import { cx } from '../../utils/cx'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
@@ -22,6 +24,8 @@ import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
 const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 const LIST_SECTIONS: readonly Section[] = ['customers', 'finance', 'courses']
+// Davr (bugun / 7 kun / oy / yil) faqat shu bo'limlardagi raqamlarga ta'sir qiladi — boshqa joyda ko'rsatilmaydi
+const PERIOD_SECTIONS: readonly Section[] = ['overview', 'finance', 'analytics']
 
 export function Header() {
   const {
@@ -40,7 +44,6 @@ export function Header() {
     transactionSort,
     getCustomerName,
     logExport,
-    toggleSidebar,
     formatDate,
     isDemo,
     clearDemoData,
@@ -49,7 +52,12 @@ export function Header() {
   const can = useCan()
   // Alohida demo markazda yuqoridagi demo tasmasi bor — bu belgi faqat haqiqiy bazadagi namunaviy ma'lumot uchun
   const { mode } = useAuth()
+  const quickAdd = useQuickAdd()
   const [resultsOpen, setResultsOpen] = useState(false)
+  // Telefonda qidiruv tugma orqali ochiladi (header bitta qatorda qoladi)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searching = searchOpen || search !== ''
+  const showPeriod = PERIOD_SECTIONS.includes(activeSection)
   // Bu bo'limlar ro'yxatni o'zi filtrlaydi; qolganlarida natijalar oynasi chiqadi
   const showResults = resultsOpen && !LIST_SECTIONS.includes(activeSection) && search.trim().length >= 2
 
@@ -120,9 +128,8 @@ export function Header() {
   }
 
   return (
-    <header className="header">
+    <header className={cx('header', searching && 'is-searching')}>
       <div className="header-title">
-        <IconButton icon="menu" label="Menyuni ochish" className="menu-btn" onClick={toggleSidebar} />
         <h1>{title}</h1>
         {isDemo && mode === 'main' && can('data.manage') && (
           <span className="demo-banner">
@@ -159,6 +166,9 @@ export function Header() {
               setResultsOpen(true)
             }}
             onFocus={() => setResultsOpen(true)}
+            onBlur={(e) => {
+              if (!e.target.value) setSearchOpen(false)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown' && showResults) {
                 e.preventDefault()
@@ -183,13 +193,41 @@ export function Header() {
           </kbd>
         </div>
 
-        <div className="segmented" role="group" aria-label="Davr">
-          {RANGES.map((range) => (
-            <button key={range} type="button" aria-pressed={dateRange === range} className={dateRange === range ? 'is-active' : undefined} onClick={() => setDateRange(range)}>
-              {DATE_RANGE_LABELS[range]}
-            </button>
-          ))}
-        </div>
+        <IconButton
+          icon="search"
+          label="Qidirish"
+          className="header-icon-btn search-toggle"
+          aria-expanded={searching}
+          onClick={() => {
+            setSearchOpen(true)
+            // Maydon ko'rinishi bilan fokus unga o'tadi
+            window.requestAnimationFrame(() => document.getElementById('global-search')?.focus())
+          }}
+        />
+
+        {showPeriod && (
+          <div className="segmented header-period" role="group" aria-label="Davr">
+            {RANGES.map((range) => (
+              <button key={range} type="button" aria-pressed={dateRange === range} className={dateRange === range ? 'is-active' : undefined} onClick={() => setDateRange(range)}>
+                {DATE_RANGE_LABELS[range]}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {quickAdd.length > 0 && (
+          <Dropdown
+            label="Qo'shish"
+            className="header-add"
+            trigger={(props) => (
+              <Button icon="plus" {...props}>
+                Qo'shish
+                <Icon name="chevronDown" size={14} />
+              </Button>
+            )}
+            sections={[{ label: 'Yangi yozuv', items: quickAdd.map((a) => ({ id: a.id, label: a.label, description: a.description, icon: a.icon, onSelect: a.run })) }]}
+          />
+        )}
 
         <div className="header-icons">
           <ThemeToggle />
@@ -199,11 +237,10 @@ export function Header() {
         {exportSections.length > 0 && (
         <Dropdown
           label="Hisobot yuklash"
+          className="header-export-menu"
           trigger={(props) => (
-            <Button icon="download" className="header-export" aria-label="Hisobot yuklash" {...props}>
-              <span className="hide-mobile">Hisobot yuklash</span>
-              <span className="show-mobile">Hisobot</span>
-              <Icon name="chevronDown" size={14} />
+            <Button variant="ghost" icon="download" className="header-export" aria-label="Hisobot yuklash" title="Hisobot yuklash" {...props}>
+              <span className="export-label">Yuklab olish</span>
             </Button>
           )}
           sections={exportSections}

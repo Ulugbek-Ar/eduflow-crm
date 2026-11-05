@@ -20,6 +20,7 @@ import { computeDebts } from '../../utils/debts'
 import { formatNumber, formatPercent } from '../../utils/format'
 import { customerColumns, debtColumns, sourceColumns, transactionColumns } from '../../utils/reports'
 import { Button } from '../ui/Button'
+import { Hint } from '../ui/Hint'
 
 const SOURCES = Object.keys(SOURCE_LABELS) as CustomerSource[]
 
@@ -93,6 +94,7 @@ export function AnalyticsPanel() {
             <strong>{optionalMoney(aov.value)}</strong>
             <span className="kpi-foot muted">{aov.count} ta to'langan to'lov</span>
           </div>
+          <Hint term="aov" className="kpi-hint" />
         </article>
         <article className="card kpi">
           <span className="kpi-icon tone-success">
@@ -113,6 +115,7 @@ export function AnalyticsPanel() {
             <strong>{money(marketing)}</strong>
             <span className="kpi-foot muted">Umumiy CPL: {optionalMoney(overallCpl)}</span>
           </div>
+          <Hint term="cpl" className="kpi-hint" />
         </article>
         <article className="card kpi">
           <span className="kpi-icon tone-primary">
@@ -123,6 +126,7 @@ export function AnalyticsPanel() {
             <strong>{overallConversion === null ? '—' : `${Math.round(overallConversion)}%`}</strong>
             <span className="kpi-foot muted">{formatNumber(leadsInPeriod.length)} ta liddan</span>
           </div>
+          <Hint term="conversion" className="kpi-hint" />
         </article>
       </section>
 
@@ -130,7 +134,10 @@ export function AnalyticsPanel() {
         <section className="card" aria-labelledby="funnel-title">
           <div className="card-head">
             <div>
-              <h2 id="funnel-title">Sotuv voronkasi</h2>
+              <div className="title-row">
+                <h2 id="funnel-title">Sotuv voronkasi</h2>
+                <Hint term="funnel" />
+              </div>
               <span className="muted">
                 {periodLabel} kelgan {leadsInPeriod.length} ta lid hozir qaysi bosqichda
               </span>
@@ -239,10 +246,10 @@ export function AnalyticsPanel() {
                   Marketing chiqimi
                 </th>
                 <th scope="col" className="align-right">
-                  CPL
+                  CPL <Hint term="cpl" />
                 </th>
                 <th scope="col" className="align-right">
-                  ROI
+                  ROI <Hint term="roi" />
                 </th>
               </tr>
             </thead>

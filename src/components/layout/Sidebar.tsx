@@ -5,6 +5,7 @@ import { canOpenSection } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
 import { cx } from '../../utils/cx'
+import { Hint } from '../ui/Hint'
 
 export function Sidebar() {
   const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } =
@@ -60,7 +61,9 @@ export function Sidebar() {
         </nav>
 
         <div className="sidebar-balance">
-          <small>Kassa balansi</small>
+          <small>
+            Kassa balansi <Hint term="balance" className="hint-on-dark" />
+          </small>
           <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
         </div>
 

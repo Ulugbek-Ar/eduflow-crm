@@ -2,12 +2,14 @@ import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, SOURCE_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useFormDraft } from '../../hooks/useFormDraft'
 import type { CustomerSource } from '../../types/customer.types'
 import type { PaymentMethod, TransactionCategory, TransactionInput, TransactionStatus, TransactionType } from '../../types/finance.types'
 import { cx, toOptions } from '../../utils/cx'
 import { formatAmountInput, parseAmount, toInputDate, todayInputValue } from '../../utils/format'
 import type { TransactionFormErrors } from '../../utils/transactions'
 import { Button } from '../ui/Button'
+import { DraftNotice } from '../ui/DraftNotice'
 import { Combobox } from '../ui/Combobox'
 import { DateInput } from '../ui/DateInput'
 import { Input } from '../ui/Input'
@@ -41,7 +43,9 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
   const { customers, getTransaction, addTransaction, updateTransaction, closeModal, settings } = useDashboard()
   const editing = getTransaction(transactionId)
 
-  const [form, setForm] = useState<FormState>(() => {
+  // Qoralama faqat bo'sh yangi formada (mijoz yoki summa oldindan berilmagan)
+  const draftEnabled = !editing && !customerId && !presetAmount
+  const { form, setForm, restored, discard, clear } = useFormDraft<FormState>(`transaction-${kind ?? 'income'}`, draftEnabled, () => {
     const type = editing?.type ?? kind ?? 'income'
     return {
       type,
@@ -104,7 +108,10 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
       date: toIsoDate(),
     }
     if (editing) updateTransaction(editing.id, data)
-    else addTransaction(data)
+    else {
+      addTransaction(data)
+      clear()
+    }
     closeModal()
   }
 
@@ -126,6 +133,7 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
       }
     >
       <form id="transaction-form" className="form" onSubmit={handleSubmit} noValidate>
+        {restored && <DraftNotice onDiscard={discard} />}
         <div className="segmented segmented-full" role="group" aria-label="Tranzaksiya turi">
           {(['income', 'expense'] as const).map((type) => (
             <button

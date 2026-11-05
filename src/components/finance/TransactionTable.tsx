@@ -7,7 +7,7 @@ import type { SortDirection } from '../../types/dashboard.types'
 import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey, TransactionStatus } from '../../types/finance.types'
 import { filterByPeriod } from '../../utils/analytics'
 import { toOptions } from '../../utils/cx'
-import { paginate } from '../../utils/list'
+import { countActive, paginate } from '../../utils/list'
 import {
   EMPTY_TRANSACTION_FILTERS,
   filterTransactions,
@@ -16,6 +16,7 @@ import {
   transactionPeriod,
 } from '../../utils/transactions'
 import { Badge } from '../ui/Badge'
+import { FilterPanel } from '../ui/FilterPanel'
 import type { BadgeTone } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -135,7 +136,7 @@ export function TransactionTable() {
           </div>
         </div>
 
-        <div className="filters">
+        <FilterPanel activeCount={countActive(filters, EMPTY_TRANSACTION_FILTERS)}>
           <Select
             label="Turi"
             hideLabel
@@ -184,7 +185,7 @@ export function TransactionTable() {
               Filtrlarni tozalash
             </Button>
           )}
-        </div>
+        </FilterPanel>
 
         {current.total === 0 ? (
           <EmptyState

@@ -1,5 +1,6 @@
 import { CustomerTable } from './components/customers/CustomerTable'
 import { DemoBar } from './components/layout/DemoBar'
+import { MobileNav } from './components/layout/MobileNav'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { KpiCards } from './components/overview/KpiCards'
@@ -161,6 +162,7 @@ function Shell() {
         Asosiy kontentga o'tish
       </a>
       <Sidebar />
+      <MobileNav />
       <div className="content">
         <DemoBar />
         <Header />

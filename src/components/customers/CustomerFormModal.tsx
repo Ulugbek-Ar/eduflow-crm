@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { FUNNEL_STAGES, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useFormDraft } from '../../hooks/useFormDraft'
 import type { CustomerInput } from '../../types/customer.types'
 import { toOptions } from '../../utils/cx'
 import { courseChoices } from '../../utils/courses'
@@ -9,6 +10,7 @@ import { validateCustomer } from '../../utils/customers'
 import type { CustomerFormErrors } from '../../utils/customers'
 import { formatPhone } from '../../utils/phone'
 import { Button } from '../ui/Button'
+import { DraftNotice } from '../ui/DraftNotice'
 import { Input, Textarea } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { Select } from '../ui/Select'
@@ -20,7 +22,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
   const { customers, courses, getCustomer, addCustomer, updateCustomer, closeModal } = useDashboard()
   const editing = getCustomer(customerId)
 
-  const [form, setForm] = useState<CustomerInput>(() => ({
+  const { form, setForm, restored, discard, clear } = useFormDraft<CustomerInput>('customer', !editing, () => ({
     name: editing?.name ?? '',
     phone: editing?.phone ?? '+998',
     email: editing?.email ?? '',
@@ -51,7 +53,10 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
       return
     }
     if (editing) updateCustomer(editing.id, form)
-    else addCustomer(form)
+    else {
+      addCustomer(form)
+      clear()
+    }
     closeModal()
   }
 
@@ -74,6 +79,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
       }
     >
       <form id="customer-form" className="form" onSubmit={handleSubmit} noValidate>
+        {restored && <DraftNotice onDiscard={discard} />}
         <Input
           ref={nameRef}
           label="Ism familiya"

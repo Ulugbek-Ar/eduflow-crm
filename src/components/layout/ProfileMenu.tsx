@@ -2,6 +2,7 @@ import { ROLE_LABELS } from '../../auth/permissions'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
+import { useTheme } from '../../hooks/useTheme'
 import { useToast } from '../../hooks/useToast'
 import { displayName } from '../../services/users.service'
 import { getInitials } from '../../utils/customers'
@@ -12,6 +13,7 @@ export function ProfileMenu() {
   const { setActiveSection } = useDashboard()
   const { user, logout, mode } = useAuth()
   const toast = useToast()
+  const { resolved, setPreference } = useTheme()
   if (!user) return null
   const name = displayName(user)
   const role = ROLE_LABELS[user.role]
@@ -19,6 +21,7 @@ export function ProfileMenu() {
   return (
     <Dropdown
       label="Profil menyusi"
+      className="header-profile"
       header={
         <div className="profile-menu-head">
           <strong>{name}</strong>
@@ -54,6 +57,12 @@ export function ProfileMenu() {
                 setActiveSection('settings')
                 scrollToId('profile')
               },
+            },
+            {
+              id: 'theme',
+              label: resolved === 'dark' ? 'Yorug\' mavzu' : 'Qorong\'i mavzu',
+              icon: resolved === 'dark' ? 'sun' : 'moon',
+              onSelect: () => setPreference(resolved === 'dark' ? 'light' : 'dark'),
             },
             {
               id: 'logout',

@@ -1,9 +1,11 @@
 import { DATE_RANGE_LABELS, Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
+import type { GlossaryKey } from '../../constants/glossary'
 import { useDashboard } from '../../context/useDashboard'
 import { overviewKpis } from '../../utils/analytics'
 import { cx } from '../../utils/cx'
 import { formatNumber, formatPercent } from '../../utils/format'
+import { Hint } from '../ui/Hint'
 
 interface Kpi {
   label: string
@@ -13,6 +15,7 @@ interface Kpi {
   hint: string
   icon: IconName
   tone: 'primary' | 'success'
+  glossary?: GlossaryKey
 }
 
 function TrendBadge({ change, unit }: { change: number | null; unit: Kpi['unit'] }) {
@@ -67,6 +70,7 @@ export function KpiCards() {
       hint: 'davrda kelgan · oldingi davrga nisbatan',
       icon: 'userPlus',
       tone: 'primary',
+      glossary: 'lead',
     },
     {
       label: 'Konversiya',
@@ -76,6 +80,7 @@ export function KpiCards() {
       hint: 'davr lidlaridan → to\'lov qildi',
       icon: 'percent',
       tone: 'success',
+      glossary: 'conversion',
     },
   ]
   return (
@@ -93,6 +98,7 @@ export function KpiCards() {
               <span className="muted">{kpi.hint}</span>
             </span>
           </div>
+          {kpi.glossary && <Hint term={kpi.glossary} className="kpi-hint" />}
         </article>
       ))}
     </section>
