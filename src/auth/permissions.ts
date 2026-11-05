@@ -75,6 +75,7 @@ export const SECTION_PERMISSION: Record<Section, Permission | null> = {
   analytics: 'analytics.view',
   admin: 'staff.manage',
   settings: null,
+  help: null,
 }
 
 export function canOpenSection(role: Role | null | undefined, section: Section): boolean {

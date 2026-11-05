@@ -1,8 +1,10 @@
 import { CustomerTable } from './components/customers/CustomerTable'
 import { DemoBar } from './components/layout/DemoBar'
 import { MobileNav } from './components/layout/MobileNav'
+import { PeriodBar } from './components/layout/PeriodBar'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
+import { GettingStarted } from './components/overview/GettingStarted'
 import { KpiCards } from './components/overview/KpiCards'
 import { QuickActions } from './components/overview/QuickActions'
 import { RecentActivity } from './components/overview/RecentActivity'
@@ -12,7 +14,7 @@ import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
-import { FirstRunScreen } from './components/onboarding/FirstRunScreen'
+import { SetupWizard } from './components/onboarding/SetupWizard'
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
 import { SetupAdminScreen } from './components/auth/SetupAdminScreen'
 import { ToastProvider } from './components/ui/Toast'
@@ -37,6 +39,7 @@ function ActiveSection() {
     case 'overview':
       return (
         <div className="stack">
+          <GettingStarted />
           <KpiCards />
           <div className="overview-grid">
             <RevenueChart />
@@ -62,6 +65,8 @@ function ActiveSection() {
       return <AnalyticsPanel />
     case 'admin':
       return <AdminPanel />
+    case 'help':
+      return <HelpPanel />
     case 'settings':
       return <SettingsPanel />
   }
@@ -78,6 +83,7 @@ const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
 const loadAnalyticsPanel = () => import('./components/analytics/AnalyticsPanel')
 const loadCourseForm = () => import('./components/courses/CourseFormModal')
 const loadAdminPanel = () => import('./components/admin/AdminPanel')
+const loadHelpPanel = () => import('./components/help/HelpPanel')
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
@@ -88,6 +94,8 @@ const CoursesPanel = lazy(() => loadCoursesPanel().then((m) => ({ default: m.Cou
 const AnalyticsPanel = lazy(() => loadAnalyticsPanel().then((m) => ({ default: m.AnalyticsPanel })))
 const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.CourseFormModal })))
 const AdminPanel = lazy(() => loadAdminPanel().then((m) => ({ default: m.AdminPanel })))
+const HelpPanel = lazy(() => loadHelpPanel().then((m) => ({ default: m.HelpPanel })))
+const ProductTour = lazy(() => import('./components/onboarding/ProductTour').then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
@@ -114,7 +122,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function Shell() {
-  const { modal, activeSection, openModal, sidebarCollapsed } = useDashboard()
+  const { modal, activeSection, openModal, sidebarCollapsed, tourOpen, endTour } = useDashboard()
   const { can } = useAuth()
 
   useEffect(() => {
@@ -167,6 +175,7 @@ function Shell() {
         <DemoBar />
         <Header />
         <main className="main" id="main-content" tabIndex={-1}>
+          <PeriodBar />
           <ErrorBoundary key={activeSection} compact>
             <Suspense fallback={<SectionFallback />}>
               <ActiveSection />
@@ -175,6 +184,7 @@ function Shell() {
         </main>
       </div>
       <Suspense fallback={null}>
+        {tourOpen && !modal && <ProductTour onClose={endTour} />}
         {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
         {modal?.type === 'course' && <CourseFormModal key={modal.payload?.id ?? 'new'} courseId={modal.payload?.id} />}
         {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
@@ -198,8 +208,8 @@ function AuthGate() {
   if (!user) return needsSetup ? <SetupAdminScreen /> : <LoginScreen />
   // Vaqtinchalik parol bilan kirilgan — avval yangi parol
   if (user.mustChange) return <ForcePasswordChange />
-  // Ma'lumot avtomatik yozilmaydi: avval "bo'sh" yoki "demo" tanlanadi
-  if (!firstRunDone && isFirstRun()) return <FirstRunScreen onDone={() => setFirstRunDone(true)} />
+  // Birinchi kirish: sozlash ustasi (markaz, kurslar, xodimlar, ma'lumot). Ma'lumot avtomatik yozilmaydi
+  if (!firstRunDone && isFirstRun()) return <SetupWizard onDone={() => setFirstRunDone(true)} />
   // Rejim yoki xodim almashsa, panel holati (bo'lim, filtrlar) noldan boshlanadi
   return (
     <DashboardProvider key={`${mode}:${user.id}`}>

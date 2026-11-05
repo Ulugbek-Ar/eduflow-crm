@@ -86,6 +86,8 @@ export function seedSession(userId = TEST_USER_ID, sessionId = TEST_SESSION_ID) 
   const now = new Date().toISOString()
   localStorage.setItem('apex:sessions', JSON.stringify([{ id: sessionId, userId, startedAt: now, lastSeenAt: now, device: 'Chrome · Windows' }]))
   sessionStorage.setItem('apex:session', JSON.stringify({ id: sessionId, userId, startedAt: now }))
+  // Tanishtiruv testlarga xalaqit bermasin (alohida testda tekshiriladi)
+  localStorage.setItem('apex:tour', JSON.stringify({ [userId]: true }))
 }
 
 export function seedData({

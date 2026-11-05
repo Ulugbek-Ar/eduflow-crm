@@ -12,11 +12,11 @@ async function submit(user: ReturnType<typeof renderApp>['user'], login: string,
 }
 
 describe('LoginScreen', () => {
-  it('to\'g\'ri parol bilan kiradi (birinchi kirishda tanlov ekrani)', async () => {
+  it('to\'g\'ri parol bilan kiradi (birinchi kirishda sozlash ustasi)', async () => {
     await seedCredentials()
     const { user } = renderApp()
     await submit(user, TEST_LOGIN, TEST_PASSWORD)
-    expect(await screen.findByRole('heading', { name: 'Xush kelibsiz!' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Markaz haqida' })).toBeTruthy()
   })
 
   it('noto\'g\'ri parolda xato va qolgan urinishlar soni', async () => {

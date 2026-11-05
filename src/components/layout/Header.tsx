@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DATE_RANGE_LABELS, Icon, NAV_ITEMS } from '../../constants/navigation'
+import { Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth, useCan } from '../../hooks/useAuth'
 import { useQuickAdd } from '../../hooks/useQuickAdd'
@@ -7,7 +7,7 @@ import { useConfirm } from '../../hooks/useConfirm'
 import { createBackup } from '../../services/storage.service'
 import { dateStamp, downloadJson, exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
-import type { DateRange, Section } from '../../types/dashboard.types'
+import type { Section } from '../../types/dashboard.types'
 import { filterCustomers, sortCustomers } from '../../utils/customers'
 import { customerColumns, transactionColumns } from '../../utils/reports'
 import { globalSearch } from '../../utils/search'
@@ -22,10 +22,7 @@ import { SearchResults } from './SearchResults'
 import { ThemeToggle } from './ThemeToggle'
 import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
-const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 const LIST_SECTIONS: readonly Section[] = ['customers', 'finance', 'courses']
-// Davr (bugun / 7 kun / oy / yil) faqat shu bo'limlardagi raqamlarga ta'sir qiladi — boshqa joyda ko'rsatilmaydi
-const PERIOD_SECTIONS: readonly Section[] = ['overview', 'finance', 'analytics']
 
 export function Header() {
   const {
@@ -33,7 +30,6 @@ export function Header() {
     search,
     setSearch,
     dateRange,
-    setDateRange,
     customers,
     transactions,
     settings,
@@ -57,7 +53,6 @@ export function Header() {
   // Telefonda qidiruv tugma orqali ochiladi (header bitta qatorda qoladi)
   const [searchOpen, setSearchOpen] = useState(false)
   const searching = searchOpen || search !== ''
-  const showPeriod = PERIOD_SECTIONS.includes(activeSection)
   // Bu bo'limlar ro'yxatni o'zi filtrlaydi; qolganlarida natijalar oynasi chiqadi
   const showResults = resultsOpen && !LIST_SECTIONS.includes(activeSection) && search.trim().length >= 2
 
@@ -205,15 +200,6 @@ export function Header() {
           }}
         />
 
-        {showPeriod && (
-          <div className="segmented header-period" role="group" aria-label="Davr">
-            {RANGES.map((range) => (
-              <button key={range} type="button" aria-pressed={dateRange === range} className={dateRange === range ? 'is-active' : undefined} onClick={() => setDateRange(range)}>
-                {DATE_RANGE_LABELS[range]}
-              </button>
-            ))}
-          </div>
-        )}
 
         {quickAdd.length > 0 && (
           <Dropdown

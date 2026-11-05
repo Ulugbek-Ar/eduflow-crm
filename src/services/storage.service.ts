@@ -420,6 +420,13 @@ export function startFresh(mode: 'empty' | 'demo'): SaveResult {
   return combineResults([saved, setDemoMode(mode === 'demo')])
 }
 
+// Sozlash ustasi oxirida: markaz ma'lumotlari, birinchi kurslar (yoki zaxiradan tiklangan ma'lumot) yoziladi.
+// Boshqa tabda allaqachon sozlangan bo'lsa — mavjud ma'lumot ustidan yozilmaydi
+export function completeSetup(data: StoredData): SaveResult {
+  if (!isFirstRun()) return SAVED
+  return combineResults([saveAll(data), setDemoMode(false)])
+}
+
 // Ma'lumotlar paneli hali ochilmagan paytda (ro'yxatdan o'tish ekrani) sozlamani yozish
 export function updateStoredSettings(patch: Partial<Settings>): SaveResult {
   return setItem(STORAGE_KEYS.settings, { ...sanitizeSettings(readJson(STORAGE_KEYS.settings)), ...patch })

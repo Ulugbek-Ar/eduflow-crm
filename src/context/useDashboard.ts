@@ -57,6 +57,10 @@ export interface DashboardContextValue {
   // Demo mijoz va tranzaksiyalarni o'chiradi (sozlamalar qoladi), demo rejimdan chiqadi
   clearDemoData: () => void
   replaceData: (data: StoredData) => void
+  // Qisqa tanishtiruv (birinchi kirishda yoki Yordam bo'limidan)
+  tourOpen: boolean
+  startTour: () => void
+  endTour: () => void
   // Savatcha: o'chirilgan yozuvlar 30 kun saqlanadi
   trash: TrashEntry[]
   restoreFromTrash: (kind: TrashKind, id: string) => void

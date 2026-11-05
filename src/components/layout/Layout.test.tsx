@@ -18,6 +18,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
       'Tahlil va hisobotlar',
       'Boshqaruv',
       'Sozlamalar',
+      'Yordam',
     ])
     expect(labels).toEqual(NAV_ITEMS.map((item) => item.label))
   })
@@ -30,7 +31,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     unmount()
     sessionStorage.clear()
     await renderSignedIn(undefined, { role: 'manager' })
-    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar'])
+    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar', 'Yordam'])
   })
 
   it('sidebar yig\'iladi, nomlar tooltip va ekran o\'quvchi uchun qoladi, holat saqlanadi', async () => {

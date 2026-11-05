@@ -147,6 +147,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'analytics', label: 'Tahlil va hisobotlar', icon: 'barChart' },
   { id: 'admin', label: 'Boshqaruv', icon: 'shield' },
   { id: 'settings', label: 'Sozlamalar', icon: 'settings' },
+  { id: 'help', label: 'Yordam', icon: 'info' },
 ]
 
 // Interfeys yorliqlari

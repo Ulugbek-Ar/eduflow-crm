@@ -1,17 +1,19 @@
 // @vitest-environment jsdom
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { renderApp, seedCredentials, seedSession } from '../../test/helpers'
+import { setDemoMode } from '../../services/storage.service'
+import { makeCustomer, makeTransaction, renderApp, renderSignedIn, seedCredentials, seedSession } from '../../test/helpers'
 
 describe('Birinchi ishga tushish va demo rejim', () => {
-  it('"Demo ma\'lumot" tanlansa belgi chiqadi, tasdiqlangach tozalanadi', async () => {
+  it('haqiqiy bazadagi namunaviy ma\'lumot belgisi: tasdiqlangach tozalanadi', async () => {
     await seedCredentials()
     seedSession()
+    const { unmount } = await renderSignedIn({ customers: [makeCustomer()], transactions: [makeTransaction()] })
+    unmount()
+    setDemoMode(true)
     const { user } = renderApp()
-    await user.click(await screen.findByRole('button', { name: /Demo ma'lumot bilan tanishish/ }))
 
     expect(await screen.findByText('Demo ma\'lumot')).toBeTruthy()
-    expect(JSON.parse(localStorage.getItem('apex:customers') ?? '[]')).toHaveLength(15)
 
     await user.click(screen.getByRole('button', { name: /Demo ma'lumotni tozalash/ }))
     const confirm = await screen.findByRole('alertdialog', { name: 'Demo ma\'lumotni tozalash' })
@@ -22,11 +24,11 @@ describe('Birinchi ishga tushish va demo rejim', () => {
     expect(localStorage.getItem('apex:demo')).toBe('false')
   })
 
-  it('"Bo\'sh boshlash" — demo belgisi yo\'q, baza bo\'sh', async () => {
+  it('sozlash ustasidan "Keyinroq sozlayman" — demo belgisi yo\'q, baza bo\'sh', async () => {
     await seedCredentials()
     seedSession()
     const { user } = renderApp()
-    await user.click(await screen.findByRole('button', { name: /Bo'sh boshlash/ }))
+    await user.click(await screen.findByRole('button', { name: 'Keyinroq sozlayman' }))
     expect(await screen.findByRole('heading', { name: 'Umumiy ko\'rinish' })).toBeTruthy()
     expect(screen.queryByText('Demo ma\'lumot')).toBeNull()
     expect(localStorage.getItem('apex:customers')).toBe('[]')

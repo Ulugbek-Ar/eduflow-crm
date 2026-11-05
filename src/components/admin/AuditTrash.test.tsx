@@ -90,7 +90,7 @@ describe('Amallar jurnali', () => {
     await screen.findByText(/Login yoki parol noto'g'ri/)
     await user.type(screen.getByLabelText('Parol'), 'maxfiyParol1')
     await user.click(screen.getByRole('button', { name: 'Kirish' }))
-    await user.click(await screen.findByRole('button', { name: /Bo'sh boshlash/ }, { timeout: 4000 }))
+    await user.click(await screen.findByRole('button', { name: 'Keyinroq sozlayman' }, { timeout: 4000 }))
 
     await openAdminTab(user, 'Amallar jurnali')
     const log = await screen.findByRole('region', { name: 'Amallar jurnali' })

@@ -52,6 +52,7 @@ export function Sidebar() {
               className={cx('nav-item', activeSection === item.id && 'is-active')}
               aria-current={activeSection === item.id ? 'page' : undefined}
               data-tooltip={item.label}
+              data-tour={item.id}
               onClick={() => setActiveSection(item.id)}
             >
               <Icon name={item.icon} />

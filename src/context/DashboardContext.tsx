@@ -1,11 +1,12 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { SECTION_PERMISSION } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import { CATEGORY_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
-import { useAuditActor, useCan } from '../hooks/useAuth'
+import { AuthContext, useAuditActor, useCan } from '../hooks/useAuth'
 import { logAudit } from '../services/audit.service'
 import type { AuditAction } from '../services/audit.service'
+import { isTourDone, markTourDone } from '../services/tour.service'
 import { loadTrash, pruneTrash, saveTrash, TRASH_KEY } from '../services/trash.service'
 import type { TrashEntry, TrashKind } from '../services/trash.service'
 import { useConfirm } from '../hooks/useConfirm'
@@ -90,6 +91,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const confirm = useConfirm()
   const can = useCan()
   const actor = useAuditActor()
+  const authMode = useContext(AuthContext)?.mode
+  // Demo markazda rol almashtirilsa ham tanishtiruv qayta chiqmaydi
+  const tourKey = authMode === 'demo' ? 'demo' : (actor?.userId ?? 'local')
+  const [tourOpen, setTourOpen] = useState(() => Boolean(actor) && !isTourDone(tourKey))
   const [initial] = useState(loadData)
   const [trash, setTrash] = useState(() => loadTrash())
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref
@@ -465,6 +470,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       reportSave('all', combineResults([saved, setDemoMode(false)]))
       audit('data.import', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya, ${data.courses.length} kurs`)
       if (saved.ok) toast.success(`Zaxira tiklandi: ${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+    },
+    tourOpen,
+    startTour: () => {
+      setSection('overview')
+      setSidebarOpen(false)
+      setTourOpen(true)
+    },
+    endTour: () => {
+      markTourDone(tourKey)
+      setTourOpen(false)
     },
     trash,
     restoreFromTrash: (kind, id) => {
