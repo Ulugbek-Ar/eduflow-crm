@@ -4266,3 +4266,290 @@ body.scroll-locked {
     flex: 1;
   }
 }
+
+/* ===== Chek va mijoz kartasi ===== */
+.receipt-size {
+  margin-bottom: 14px;
+}
+
+.receipt-preview {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.receipt-preview .receipt {
+  padding: 14px;
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+
+.receipt-preview.print-thermal .receipt {
+  width: 300px;
+}
+
+.receipt-preview.print-a4 .receipt {
+  width: 100%;
+}
+
+/* Chek doim oq qog'ozda qora (mavzuga bog'liq emas) */
+.receipt,
+.print-card {
+  background: #fff;
+  color: #111;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.receipt {
+  display: grid;
+  gap: 8px;
+}
+
+.receipt-head,
+.receipt-title {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.receipt-logo {
+  max-width: 48px;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.receipt-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.receipt-org {
+  font-size: 14px;
+}
+
+.receipt-title {
+  padding: 6px 0;
+  border-top: 1px dashed #777;
+  border-bottom: 1px dashed #777;
+}
+
+.receipt-title strong {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.receipt-rows {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.receipt-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.receipt-rows dt {
+  color: #555;
+}
+
+.receipt-rows dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.receipt-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px dashed #777;
+  font-size: 13px;
+}
+
+.receipt-total strong {
+  font-size: 18px;
+}
+
+.receipt-words {
+  font-style: italic;
+}
+
+.receipt-debt {
+  font-weight: 600;
+}
+
+.receipt-stamp {
+  padding: 4px;
+  border: 2px solid #b91c1c;
+  color: #b91c1c;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.1em;
+}
+
+.receipt-foot {
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.receipt-sign {
+  display: grid;
+  gap: 14px;
+}
+
+.receipt-line {
+  display: block;
+  border-bottom: 1px solid #111;
+}
+
+.receipt-thanks {
+  color: #555;
+  text-align: center;
+}
+
+.print-a4 .receipt {
+  max-width: 150mm;
+  margin: 0 auto;
+  font-size: 13px;
+}
+
+.print-a4 .receipt-total strong {
+  font-size: 22px;
+}
+
+.print-card {
+  display: grid;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.print-card h1 {
+  font-size: 20px;
+}
+
+.print-card h2 {
+  font-size: 14px;
+}
+
+.print-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #111;
+}
+
+.print-card-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.print-card-title {
+  text-align: right;
+}
+
+.print-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.print-grid dt {
+  color: #555;
+  font-size: 11px;
+}
+
+.print-grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.print-wide {
+  grid-column: 1 / -1;
+}
+
+.print-summary {
+  display: flex;
+  gap: 24px;
+  padding: 10px 12px;
+  border: 1px solid #999;
+  border-radius: 6px;
+}
+
+.print-summary div {
+  display: grid;
+}
+
+.print-summary strong {
+  font-size: 15px;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-table th,
+.print-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #ccc;
+  text-align: left;
+}
+
+.print-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.print-table .align-right {
+  text-align: right;
+}
+
+.print-card-foot {
+  display: grid;
+  grid-template-columns: auto 200px;
+  gap: 12px;
+  align-items: end;
+  margin-top: 24px;
+}
+
+@media screen {
+  .print-root {
+    display: none;
+  }
+}
+
+@media print {
+  body.is-printing > :not(.print-root) {
+    display: none !important;
+  }
+
+  body.is-printing {
+    background: #fff;
+  }
+
+  .print-root {
+    display: block;
+  }
+
+  .print-thermal .receipt {
+    width: 74mm;
+    font-size: 11px;
+  }
+}
+

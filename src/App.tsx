@@ -83,6 +83,7 @@ const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
 const loadAnalyticsPanel = () => import('./components/analytics/AnalyticsPanel')
 const loadCourseForm = () => import('./components/courses/CourseFormModal')
 const loadAdminPanel = () => import('./components/admin/AdminPanel')
+const loadReceipt = () => import('./components/print/ReceiptModal')
 const loadHelpPanel = () => import('./components/help/HelpPanel')
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
@@ -94,6 +95,7 @@ const CoursesPanel = lazy(() => loadCoursesPanel().then((m) => ({ default: m.Cou
 const AnalyticsPanel = lazy(() => loadAnalyticsPanel().then((m) => ({ default: m.AnalyticsPanel })))
 const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.CourseFormModal })))
 const AdminPanel = lazy(() => loadAdminPanel().then((m) => ({ default: m.AdminPanel })))
+const ReceiptModal = lazy(() => loadReceipt().then((m) => ({ default: m.ReceiptModal })))
 const HelpPanel = lazy(() => loadHelpPanel().then((m) => ({ default: m.HelpPanel })))
 const ProductTour = lazy(() => import('./components/onboarding/ProductTour').then((m) => ({ default: m.ProductTour })))
 
@@ -188,6 +190,7 @@ function Shell() {
         {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
         {modal?.type === 'course' && <CourseFormModal key={modal.payload?.id ?? 'new'} courseId={modal.payload?.id} />}
         {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
+        {modal?.type === 'receipt' && <ReceiptModal key={modal.payload.id} transactionId={modal.payload.id} />}
         {modal?.type === 'transaction' && (
           <TransactionFormModal
             key={modal.payload?.id ?? 'new'}

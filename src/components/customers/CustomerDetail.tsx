@@ -1,17 +1,23 @@
+import { useState } from 'react'
 import { FUNNEL_STAGES, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
 import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
-import { useCan } from '../../hooks/useAuth'
+import { useAuditActor, useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
 import { customerDebt, studyMonthNumber } from '../../utils/debts'
-import { Button } from '../ui/Button'
+import { CustomerCard } from '../print/CustomerCard'
+import { PrintDocument } from '../print/PrintDocument'
+import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate } = useDashboard()
+  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings } = useDashboard()
   const confirm = useConfirm()
   const can = useCan()
+  const actor = useAuditActor()
+  // Chop etish vaqti (bosilgan paytda) — kartada ko'rsatiladi
+  const [printedAt, setPrintedAt] = useState<string | null>(null)
   const customer = getCustomer(customerId)
 
   if (!customer) {
@@ -57,6 +63,9 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
               O'chirish
             </Button>
           )}
+          <Button variant="ghost" icon="fileText" onClick={() => setPrintedAt(new Date().toISOString())}>
+            Chop etish
+          </Button>
           {can('customers.edit') && (
             <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
               Tahrirlash
@@ -173,9 +182,26 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
                 {t.type === 'income' ? '+' : '−'}
                 {money(t.amount)}
               </span>
+              {t.type === 'income' && (
+                <IconButton icon="receipt" label={`Chek: ${formatDate(t.date)}, ${money(t.amount)}`} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {printedAt && (
+        <PrintDocument size="a4" onDone={() => setPrintedAt(null)}>
+          <CustomerCard
+            customer={customer}
+            payments={payments}
+            debt={debt}
+            totalPaid={totalPaid}
+            settings={settings}
+            money={money}
+            printedBy={actor?.userName ?? ''}
+            printedAt={printedAt}
+          />
+        </PrintDocument>
       )}
     </Modal>
   )

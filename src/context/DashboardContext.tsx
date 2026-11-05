@@ -81,6 +81,7 @@ function modalPermission(modal: NonNullable<ModalState>): Permission {
     customerDetail: 'customers.view',
     course: 'courses.edit',
     transaction: 'payments.create',
+    receipt: 'payments.view',
   }
   if (modal.type === 'transaction' && (modal.payload?.id || modal.payload?.kind === 'expense')) return 'payments.manage'
   return byType[modal.type]
@@ -342,7 +343,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const created = { ...withCustomerName(cleanTransaction(data)), id: createId('t') }
       setTransactions((list) => [created, ...list])
       audit('payment.create', txSummary(created), created.id)
-      toast.success(`${data.type === 'income' ? 'To\'lov' : 'Xarajat'} qayd etildi: ${money(data.amount)}`)
+      const receipt = created.type === 'income' ? { action: { label: 'Chek', onClick: () => setModal({ type: 'receipt', payload: { id: created.id } }) } } : undefined
+      toast.success(`${data.type === 'income' ? 'To\'lov' : 'Xarajat'} qayd etildi: ${money(data.amount)}`, receipt)
     },
     updateTransaction: (id, patch) => {
       if (!allowed('payments.manage')) return

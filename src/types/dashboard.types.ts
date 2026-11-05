@@ -18,6 +18,7 @@ export type ModalState =
   | { type: 'customerDetail'; payload: { id: string } }
   | { type: 'transaction'; payload?: { id?: string; kind?: TransactionType; customerId?: string; amount?: number } }
   | { type: 'course'; payload?: { id?: string } }
+  | { type: 'receipt'; payload: { id: string } }
   | null
 
 export type ModalType = NonNullable<ModalState>['type']

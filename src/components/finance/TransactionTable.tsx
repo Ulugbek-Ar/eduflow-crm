@@ -278,16 +278,21 @@ export function TransactionTable() {
                         )}
                       </td>
                       <td className="cell-actions">
-                        {canManage && (
                         <div className="row-actions">
+                          {t.type === 'income' && (
+                            <IconButton icon="receipt" label="Chek" onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+                          )}
+                        {canManage && (
+                        <>
                           <IconButton
                             icon="edit"
                             label="Tranzaksiyani tahrirlash"
                             onClick={() => openModal({ type: 'transaction', payload: { id: t.id } })}
                           />
                           <IconButton icon="trash" tone="danger" label="Tranzaksiyani o'chirish" onClick={() => handleDelete(t)} />
-                        </div>
+                        </>
                         )}
+                        </div>
                       </td>
                     </tr>
                   ))}
