@@ -12,6 +12,26 @@ import './landing.css'
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}landing/${name}`
 
+// Skrinshot: WebP (telefon uchun kichik, kompyuter uchun katta), eski brauzerlar uchun JPEG
+const HERO_SIZES = '(max-width: 860px) calc(100vw - 32px), 620px'
+const SHOT_SIZES = '(max-width: 860px) calc(100vw - 32px), 460px'
+
+function Shot(props: { name: string; widths: number[]; width: number; height: number; alt: string; sizes: string; priority?: boolean }) {
+  return (
+    <picture>
+      <source type="image/webp" srcSet={props.widths.map((w) => `${asset(`${props.name}-${w}.webp`)} ${w}w`).join(', ')} sizes={props.sizes} />
+      <img
+        src={asset(`${props.name}.jpg`)}
+        width={props.width}
+        height={props.height}
+        alt={props.alt}
+        decoding="async"
+        {...(props.priority ? { fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
+      />
+    </picture>
+  )
+}
+
 const AUDIENCE: Array<{ icon: IconName; title: string }> = [
   { icon: 'book', title: tr('O\'quv markazlari') },
   { icon: 'globe', title: tr('Til kurslari') },
@@ -117,14 +137,7 @@ export function LandingPage() {
             <p className="lp-note muted">{tr('Karta talab qilinmaydi · O\'zbek va rus tilida · Telefon va kompyuterda')}</p>
           </div>
           <figure className="lp-hero-shot">
-            <img
-              src={asset('overview.jpg')}
-              width={1440}
-              height={900}
-              alt={tr('Boshqaruv paneli: tushum, lidlar, konversiya va oylik grafik')}
-              fetchPriority="high"
-              decoding="async"
-            />
+            <Shot name="overview" widths={[720, 1440]} width={1440} height={900} sizes={HERO_SIZES} priority alt={tr('Boshqaruv paneli: tushum, lidlar, konversiya va oylik grafik')} />
           </figure>
         </section>
 
@@ -172,15 +185,15 @@ export function LandingPage() {
           <h2 id="shots-title">{tr('Qanday ko\'rinadi')}</h2>
           <div className="lp-shots">
             <figure>
-              <img src={asset('customers.jpg')} width={1440} height={900} loading="lazy" decoding="async" alt={tr('Mijozlar voronkasi (Kanban)')} />
+              <Shot name="customers" widths={[720, 1440]} width={1440} height={900} sizes={SHOT_SIZES} alt={tr('Mijozlar voronkasi (Kanban)')} />
               <figcaption>{tr('Mijozlar voronkasi')}</figcaption>
             </figure>
             <figure>
-              <img src={asset('finance.jpg')} width={1440} height={900} loading="lazy" decoding="async" alt={tr('Moliya: kassa balansi va to\'lovlar jurnali')} />
+              <Shot name="finance" widths={[720, 1440]} width={1440} height={900} sizes={SHOT_SIZES} alt={tr('Moliya: kassa balansi va to\'lovlar jurnali')} />
               <figcaption>{tr('Moliya va kassa')}</figcaption>
             </figure>
             <figure className="lp-shot-phone">
-              <img src={asset('mobile.jpg')} width={390} height={844} loading="lazy" decoding="async" alt={tr('Telefondagi ko\'rinish')} />
+              <Shot name="mobile" widths={[390]} width={390} height={844} sizes="280px" alt={tr('Telefondagi ko\'rinish')} />
               <figcaption>{tr('Telefonda')}</figcaption>
             </figure>
           </div>

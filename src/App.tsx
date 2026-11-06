@@ -21,6 +21,7 @@ import { SetupWizard } from './components/onboarding/SetupWizard'
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
 import { SetupAdminScreen } from './components/auth/SetupAdminScreen'
 import { CloudDataGate, CloudLoading, CloudSignUpScreen } from './components/auth/CloudScreens'
+import { DemoOnlyScreen } from './components/auth/DemoOnlyScreen'
 import { isCloudEnabled } from './data/config'
 import { ToastProvider } from './components/ui/Toast'
 import { NAV_ITEMS } from './constants/navigation'
@@ -227,6 +228,7 @@ function AuthGate() {
   useEffect(() => openDemoFromLink(), [])
   if (loading) return <CloudLoading />
   if (!user) {
+    if (DEMO_ONLY) return <DemoOnlyScreen />
     if (cloud && signUp) return <CloudSignUpScreen cloud={cloud} onBack={() => setSignUp(false)} />
     return needsSetup ? <SetupAdminScreen /> : <LoginScreen onSignUp={cloud ? () => setSignUp(true) : undefined} />
   }
@@ -252,6 +254,8 @@ function AuthGate() {
 
 // Kalitlar berilgan va tab demo rejimda emas — bulutli (Supabase) rejim; supabase-js faqat shunda yuklanadi
 const CLOUD_MODE = isCloudEnabled() && getStorageNamespace() !== 'demo'
+// Namoyish sayti (GitHub Pages): faqat demo markaz
+const DEMO_ONLY = import.meta.env.VITE_DEMO_ONLY === '1'
 const CloudAuthProvider = lazy(() => loadWithRetry(() => import('./context/CloudAuthProvider')).then((m) => ({ default: m.CloudAuthProvider })))
 
 export default function App() {

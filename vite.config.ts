@@ -29,16 +29,17 @@ function siteUrl(): string {
 function appMeta(): Plugin {
   return {
     name: 'app-meta',
-    transformIndexHtml: (html) => {
+    // Vite base bilan yo'llarni o'zgartirgandan keyin ishlaydi (pastki papkada ham to'liq manzil to'g'ri chiqadi)
+    transformIndexHtml: { order: 'post', handler: (html) => {
       const url = siteUrl()
       let out = html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION)
       if (url) {
         out = out
-          .replace('content="/og-image.jpg"', `content="${url}/og-image.jpg"`)
+          .replace(/content="[^"]*og-image\.jpg"/, `content="${url}/og-image.jpg"`)
           .replace('<meta property="og:type"', `<link rel="canonical" href="${url}/" />\n    <meta property="og:url" content="${url}/" />\n    <meta property="og:type"`)
       }
       return out
-    },
+    } },
   }
 }
 
