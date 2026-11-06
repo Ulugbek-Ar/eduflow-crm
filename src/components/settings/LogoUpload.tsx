@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { isLogoDataUrl, LOGO_MAX_BYTES } from '../../utils/guards'
@@ -31,16 +32,16 @@ export function LogoUpload({ value, logoText, onChange }: LogoUploadProps) {
     setError('')
     if (!file) return
     if (!ACCEPT.split(',').includes(file.type)) {
-      setError('Faqat PNG, JPG, WEBP, GIF yoki SVG rasm')
+      setError(tr('Faqat PNG, JPG, WEBP, GIF yoki SVG rasm'))
       return
     }
     if (file.size > LOGO_MAX_BYTES) {
-      setError(`Rasm hajmi 200 KB dan oshmasligi kerak (hozir ${Math.ceil(file.size / 1024)} KB)`)
+      setError(tr('Rasm hajmi 200 KB dan oshmasligi kerak (hozir {0} KB)', { 0: Math.ceil(file.size / 1024) }))
       return
     }
     const dataUrl = await readAsDataUrl(file).catch(() => '')
     if (!isLogoDataUrl(dataUrl)) {
-      setError('Rasmni o\'qib bo\'lmadi')
+      setError(tr('Rasmni o\'qib bo\'lmadi'))
       return
     }
     onChange(dataUrl)
@@ -52,15 +53,15 @@ export function LogoUpload({ value, logoText, onChange }: LogoUploadProps) {
         {value ? <img src={value} alt="" className="logo-image" /> : <span className="logo-text">{logoText || '—'}</span>}
       </span>
       <div className="logo-upload-body">
-        <strong id="logo-upload-label">Logotip</strong>
-        <small className="muted">PNG, JPG, WEBP yoki SVG, 200 KB gacha. Yuklanmasa harfli logo ko'rinadi.</small>
+        <strong id="logo-upload-label">{tr('Logotip')}</strong>
+        <small className="muted">{tr('PNG, JPG, WEBP yoki SVG, 200 KB gacha. Yuklanmasa harfli logo ko\'rinadi.')}</small>
         <div className="toolbar">
           <Button size="sm" variant="ghost" icon="image" onClick={() => fileRef.current?.click()}>
-            {value ? 'Almashtirish' : 'Rasm yuklash'}
+            {value ? tr('Almashtirish') : tr('Rasm yuklash')}
           </Button>
           {value && (
             <Button size="sm" variant="ghost" icon="trash" onClick={() => onChange('')}>
-              Olib tashlash
+              {tr('Olib tashlash')}
             </Button>
           )}
         </div>
@@ -70,7 +71,7 @@ export function LogoUpload({ value, logoText, onChange }: LogoUploadProps) {
           </p>
         )}
       </div>
-      <input ref={fileRef} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label="Logotip rasmini tanlash" onChange={handleFile} />
+      <input ref={fileRef} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label={tr('Logotip rasmini tanlash')} onChange={handleFile} />
     </div>
   )
 }

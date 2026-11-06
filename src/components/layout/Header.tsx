@@ -1,15 +1,19 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
-import { DATE_RANGE_LABELS, Icon, NAV_ITEMS } from '../../constants/navigation'
+import { Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuth, useCan } from '../../hooks/useAuth'
+import { useQuickAdd } from '../../hooks/useQuickAdd'
 import { useConfirm } from '../../hooks/useConfirm'
 import { createBackup } from '../../services/storage.service'
 import { dateStamp, downloadJson, exportRows } from '../../services/export.service'
 import type { ExportFormat } from '../../services/export.service'
-import type { DateRange, Section } from '../../types/dashboard.types'
+import type { Section } from '../../types/dashboard.types'
 import { filterCustomers, sortCustomers } from '../../utils/customers'
 import { customerColumns, transactionColumns } from '../../utils/reports'
 import { globalSearch } from '../../utils/search'
 import { filterTransactions, sortTransactions, transactionPeriod } from '../../utils/transactions'
+import { cx } from '../../utils/cx'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
@@ -19,7 +23,6 @@ import { SearchResults } from './SearchResults'
 import { ThemeToggle } from './ThemeToggle'
 import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
-const RANGES = Object.keys(DATE_RANGE_LABELS) as DateRange[]
 const LIST_SECTIONS: readonly Section[] = ['customers', 'finance', 'courses']
 
 export function Header() {
@@ -28,7 +31,6 @@ export function Header() {
     search,
     setSearch,
     dateRange,
-    setDateRange,
     customers,
     transactions,
     settings,
@@ -38,13 +40,20 @@ export function Header() {
     transactionFilters,
     transactionSort,
     getCustomerName,
-    toggleSidebar,
+    logExport,
     formatDate,
     isDemo,
     clearDemoData,
   } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  // Alohida demo markazda yuqoridagi demo tasmasi bor — bu belgi faqat haqiqiy bazadagi namunaviy ma'lumot uchun
+  const { mode } = useAuth()
+  const quickAdd = useQuickAdd()
   const [resultsOpen, setResultsOpen] = useState(false)
+  // Telefonda qidiruv tugma orqali ochiladi (header bitta qatorda qoladi)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searching = searchOpen || search !== ''
   // Bu bo'limlar ro'yxatni o'zi filtrlaydi; qolganlarida natijalar oynasi chiqadi
   const showResults = resultsOpen && !LIST_SECTIONS.includes(activeSection) && search.trim().length >= 2
 
@@ -55,38 +64,75 @@ export function Header() {
   const exportCustomers = (format: ExportFormat) => {
     const rows = sortCustomers(filterCustomers(customers, search, customerFilters), customerSort)
     exportRows('mijozlar', rows, customerColumns(formatDate), format, { ...options, sheetName: 'Mijozlar' })
+    logExport(`Mijozlar — ${format === 'csv' ? 'CSV' : 'Excel'} (${rows.length} ta)`)
   }
 
   const exportTransactions = (format: ExportFormat) => {
     const { period } = transactionPeriod(transactionFilters, dateRange)
     const rows = sortTransactions(filterTransactions(transactions, transactionFilters, period, search, getCustomerName), transactionSort)
     exportRows('tranzaksiyalar', rows, transactionColumns(formatDate, getCustomerName), format, { ...options, sheetName: 'Tranzaksiyalar' })
+    logExport(`Tranzaksiyalar — ${format === 'csv' ? 'CSV' : 'Excel'} (${rows.length} ta)`)
   }
 
   const exportBackup = () => {
     downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
+    logExport('To\'liq zaxira (JSON)', 'backup')
   }
+
+  // Faqat ruxsat berilgan hisobotlar: kuzatuvchi va menejer hisobot yuklamaydi, zaxira — faqat administrator
+  const exportSections = [
+    {
+      label: tr('Mijozlar'),
+      show: can('reports.export') && can('customers.view'),
+      items: [
+        { id: 'customers-csv', label: tr('Mijozlar — CSV'), icon: 'fileText' as const, onSelect: () => exportCustomers('csv') },
+        { id: 'customers-xls', label: tr('Mijozlar — Excel'), icon: 'sheet' as const, onSelect: () => exportCustomers('xls') },
+      ],
+    },
+    {
+      label: tr('Tranzaksiyalar'),
+      show: can('reports.export') && can('payments.view'),
+      items: [
+        { id: 'tx-csv', label: tr('Tranzaksiyalar — CSV'), icon: 'fileText' as const, onSelect: () => exportTransactions('csv') },
+        { id: 'tx-xls', label: tr('Tranzaksiyalar — Excel'), icon: 'sheet' as const, onSelect: () => exportTransactions('xls') },
+      ],
+    },
+    {
+      label: tr('Zaxira'),
+      show: can('data.manage'),
+      items: [
+        {
+          id: 'backup',
+          label: tr('To\'liq zaxira — JSON'),
+          description: tr('Barcha ma\'lumot va sozlamalar'),
+          icon: 'database' as const,
+          onSelect: exportBackup,
+        },
+      ],
+    },
+  ]
+    .filter((section) => section.show)
+    .map(({ label, items }) => ({ label, items }))
 
   const handleClearDemo = async () => {
     const ok = await confirm({
-      title: 'Demo ma\'lumotni tozalash',
-      message: `Barcha mijozlar (${customers.length}) va tranzaksiyalar (${transactions.length}) o'chiriladi, jumladan demo rejimda o'zingiz qo'shganlari ham. Sozlamalar va kurslar saqlanib qoladi. Davom etasizmi?`,
-      confirmLabel: 'Tozalash',
+      title: tr('Demo ma\'lumotni tozalash'),
+      message: tr('Barcha mijozlar ({0}) va tranzaksiyalar ({1}) o\'chiriladi, jumladan demo rejimda o\'zingiz qo\'shganlari ham. Sozlamalar va kurslar saqlanib qoladi. Davom etasizmi?', { 0: customers.length, 1: transactions.length }),
+      confirmLabel: tr('Tozalash'),
     })
     if (ok) clearDemoData()
   }
 
   return (
-    <header className="header">
+    <header className={cx('header', searching && 'is-searching')}>
       <div className="header-title">
-        <IconButton icon="menu" label="Menyuni ochish" className="menu-btn" onClick={toggleSidebar} />
         <h1>{title}</h1>
-        {isDemo && (
+        {isDemo && mode === 'main' && can('data.manage') && (
           <span className="demo-banner">
-            <Badge tone="primary">Demo ma'lumot</Badge>
+            <Badge tone="primary">{tr('Demo ma\'lumot')}</Badge>
             <Button variant="ghost" size="sm" icon="trash" onClick={handleClearDemo}>
-              <span className="hide-mobile">Demo ma'lumotni tozalash</span>
-              <span className="show-mobile">Tozalash</span>
+              <span className="hide-mobile">{tr('Demo ma\'lumotni tozalash')}</span>
+              <span className="show-mobile">{tr('Tozalash')}</span>
             </Button>
           </span>
         )}
@@ -102,12 +148,12 @@ export function Header() {
         >
           <Icon name="search" size={16} />
           <label htmlFor="global-search" className="sr-only">
-            Qidiruv
+            {tr('Qidiruv')}
           </label>
           <input
             id="global-search"
             type="search"
-            placeholder="Qidiruv..."
+            placeholder={tr('Qidiruv...')}
             aria-keyshortcuts="Control+K Meta+K"
             aria-controls={showResults ? 'search-results' : undefined}
             value={search}
@@ -116,6 +162,9 @@ export function Header() {
               setResultsOpen(true)
             }}
             onFocus={() => setResultsOpen(true)}
+            onBlur={(e) => {
+              if (!e.target.value) setSearchOpen(false)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown' && showResults) {
                 e.preventDefault()
@@ -136,61 +185,54 @@ export function Header() {
             />
           )}
           <kbd className="search-kbd" aria-hidden="true">
-            Ctrl K
+            {tr('Ctrl K')}
           </kbd>
         </div>
 
-        <div className="segmented" role="group" aria-label="Davr">
-          {RANGES.map((range) => (
-            <button key={range} type="button" aria-pressed={dateRange === range} className={dateRange === range ? 'is-active' : undefined} onClick={() => setDateRange(range)}>
-              {DATE_RANGE_LABELS[range]}
-            </button>
-          ))}
-        </div>
+        <IconButton
+          icon="search"
+          label={tr('Qidirish')}
+          className="header-icon-btn search-toggle"
+          aria-expanded={searching}
+          onClick={() => {
+            setSearchOpen(true)
+            // Maydon ko'rinishi bilan fokus unga o'tadi
+            window.requestAnimationFrame(() => document.getElementById('global-search')?.focus())
+          }}
+        />
+
+
+        {quickAdd.length > 0 && (
+          <Dropdown
+            label={tr('Qo\'shish')}
+            className="header-add"
+            trigger={(props) => (
+              <Button icon="plus" {...props}>
+                {tr('Qo\'shish')}
+                <Icon name="chevronDown" size={14} />
+              </Button>
+            )}
+            sections={[{ label: tr('Yangi yozuv'), items: quickAdd.map((a) => ({ id: a.id, label: a.label, description: a.description, icon: a.icon, onSelect: a.run })) }]}
+          />
+        )}
 
         <div className="header-icons">
           <ThemeToggle />
           <NotificationBell />
         </div>
 
+        {exportSections.length > 0 && (
         <Dropdown
-          label="Hisobot yuklash"
+          label={tr('Hisobot yuklash')}
+          className="header-export-menu"
           trigger={(props) => (
-            <Button icon="download" className="header-export" aria-label="Hisobot yuklash" {...props}>
-              <span className="hide-mobile">Hisobot yuklash</span>
-              <span className="show-mobile">Hisobot</span>
-              <Icon name="chevronDown" size={14} />
+            <Button variant="ghost" icon="download" className="header-export" aria-label={tr('Hisobot yuklash')} title={tr('Hisobot yuklash')} {...props}>
+              <span className="export-label">{tr('Yuklab olish')}</span>
             </Button>
           )}
-          sections={[
-            {
-              label: 'Mijozlar',
-              items: [
-                { id: 'customers-csv', label: 'Mijozlar — CSV', icon: 'fileText', onSelect: () => exportCustomers('csv') },
-                { id: 'customers-xls', label: 'Mijozlar — Excel', icon: 'sheet', onSelect: () => exportCustomers('xls') },
-              ],
-            },
-            {
-              label: 'Tranzaksiyalar',
-              items: [
-                { id: 'tx-csv', label: 'Tranzaksiyalar — CSV', icon: 'fileText', onSelect: () => exportTransactions('csv') },
-                { id: 'tx-xls', label: 'Tranzaksiyalar — Excel', icon: 'sheet', onSelect: () => exportTransactions('xls') },
-              ],
-            },
-            {
-              label: 'Zaxira',
-              items: [
-                {
-                  id: 'backup',
-                  label: 'To\'liq zaxira — JSON',
-                  description: 'Barcha ma\'lumot va sozlamalar',
-                  icon: 'database',
-                  onSelect: exportBackup,
-                },
-              ],
-            },
-          ]}
+          sections={exportSections}
         />
+        )}
         <ProfileMenu />
       </div>
     </header>

@@ -2,10 +2,20 @@ import { createContext, useContext } from 'react'
 
 export type ToastTone = 'success' | 'error' | 'info'
 
+// Toast ichidagi tugma (masalan, o'chirishdan keyin "Bekor qilish")
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
+export interface ToastOptions {
+  action?: ToastAction
+}
+
 export interface ToastApi {
-  success: (message: string) => void
-  error: (message: string) => void
-  info: (message: string) => void
+  success: (message: string, options?: ToastOptions) => void
+  error: (message: string, options?: ToastOptions) => void
+  info: (message: string, options?: ToastOptions) => void
 }
 
 export const ToastContext = createContext<ToastApi | null>(null)

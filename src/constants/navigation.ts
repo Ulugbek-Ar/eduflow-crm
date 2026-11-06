@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { createElement } from 'react'
 import type { CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange, Section } from '../types/dashboard.types'
@@ -5,7 +6,8 @@ import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategor
 
 // Ikonlar: 24x24 viewBox, stroke uslubida chiziladigan path'lar
 export const ICONS = {
-  logo: ['M3 20 12 4l9 16', 'M7.5 14h9'],
+  // Bitiruvchi qalpoqchasi — ta'lim belgisi
+  logo: ['M2 9.5 12 5l10 4.5-10 4.5z', 'M6 11.3V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.7', 'M22 9.5V15'],
   overview: ['M3 3h7v9H3z', 'M14 3h7v5h-7z', 'M14 12h7v9h-7z', 'M3 16h7v5H3z'],
   customers: [
     'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2',
@@ -98,6 +100,11 @@ export const ICONS = {
     'M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
     'm21 15-5-5L5 21',
   ],
+  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+  key: ['M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4'],
+  ban: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'm4.93 4.93 14.14 14.14'],
+  copy: ['M20 9h-9a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2z', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+  play: ['m5 3 14 9-14 9V3z'],
   move: ['M5 9l-3 3 3 3', 'M9 5l3-3 3 3', 'M15 19l-3 3-3-3', 'M19 9l3 3-3 3', 'M2 12h20', 'M12 2v20'],
 } as const
 
@@ -135,66 +142,68 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'overview', label: 'Umumiy ko\'rinish', icon: 'overview' },
-  { id: 'customers', label: 'Mijozlar va lidlar', icon: 'customers' },
-  { id: 'finance', label: 'Moliya va kassa', icon: 'dollar' },
-  { id: 'courses', label: 'Kurslar va xizmatlar', icon: 'bookOpen' },
-  { id: 'analytics', label: 'Tahlil va hisobotlar', icon: 'barChart' },
-  { id: 'settings', label: 'Sozlamalar', icon: 'settings' },
+  { id: 'overview', label: tr('Umumiy ko\'rinish'), icon: 'overview' },
+  { id: 'customers', label: tr('Mijozlar va lidlar'), icon: 'customers' },
+  { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
+  { id: 'courses', label: tr('Kurslar va xizmatlar'), icon: 'bookOpen' },
+  { id: 'analytics', label: tr('Tahlil va hisobotlar'), icon: 'barChart' },
+  { id: 'admin', label: tr('Boshqaruv'), icon: 'shield' },
+  { id: 'settings', label: tr('Sozlamalar'), icon: 'settings' },
+  { id: 'help', label: tr('Yordam'), icon: 'info' },
 ]
 
 // Interfeys yorliqlari
 export const DATE_RANGE_LABELS: Record<DateRange, string> = {
-  today: 'Bugun',
-  '7d': '7 kun',
-  month: 'Shu oy',
-  year: 'Shu yil',
+  today: tr('Bugun'),
+  '7d': tr('7 kun'),
+  month: tr('Shu oy'),
+  year: tr('Shu yil'),
 }
 
 export const STATUS_LABELS: Record<CustomerStatus, string> = {
-  new: 'Yangi',
-  contacted: 'Bog\'lanildi',
-  thinking: 'O\'ylayapti',
-  paid: 'To\'lov qildi',
-  cancelled: 'Bekor qilindi',
+  new: tr('Yangi'),
+  contacted: tr('Bog\'lanildi'),
+  thinking: tr('O\'ylayapti'),
+  paid: tr('To\'lov qildi'),
+  cancelled: tr('Bekor qilindi'),
 }
 
 // Voronka tartibi: Kanban ustunlari, saralash va filtrlar shu tartibda
 export const FUNNEL_STAGES: readonly CustomerStatus[] = ['new', 'contacted', 'thinking', 'paid', 'cancelled']
 
 export const SOURCE_LABELS: Record<CustomerSource, string> = {
-  telegram: 'Telegram',
-  instagram: 'Instagram',
-  website: 'Sayt',
-  referral: 'Tavsiya',
+  telegram: tr('Telegram'),
+  instagram: tr('Instagram'),
+  website: tr('Sayt'),
+  referral: tr('Tavsiya'),
 }
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash: 'Naqd',
-  card: 'Karta',
-  transfer: 'O\'tkazma',
+  cash: tr('Naqd'),
+  card: tr('Karta'),
+  transfer: tr('O\'tkazma'),
 }
 
 export const TX_STATUS_LABELS: Record<TransactionStatus, string> = {
-  paid: 'To\'langan',
-  pending: 'Kutilmoqda',
-  cancelled: 'Bekor qilingan',
+  paid: tr('To\'langan'),
+  pending: tr('Kutilmoqda'),
+  cancelled: tr('Bekor qilingan'),
 }
 
 export const TYPE_LABELS: Record<TransactionType, string> = {
-  income: 'Kirim',
-  expense: 'Chiqim',
+  income: tr('Kirim'),
+  expense: tr('Chiqim'),
 }
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  course_fee: 'Kurs to\'lovi',
-  other_income: 'Boshqa kirim',
-  rent: 'Ijara',
-  salary: 'Maosh',
-  marketing: 'Marketing',
-  equipment: 'Jihozlar',
-  utilities: 'Kommunal xizmatlar',
-  other_expense: 'Boshqa chiqim',
+  course_fee: tr('Kurs to\'lovi'),
+  other_income: tr('Boshqa kirim'),
+  rent: tr('Ijara'),
+  salary: tr('Maosh'),
+  marketing: tr('Marketing'),
+  equipment: tr('Jihozlar'),
+  utilities: tr('Kommunal xizmatlar'),
+  other_expense: tr('Boshqa chiqim'),
 }
 
 export const INCOME_CATEGORIES: readonly IncomeCategory[] = ['course_fee', 'other_income']

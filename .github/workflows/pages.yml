@@ -1,11 +1,11 @@
 name: GitHub Pages
 
-# Dashboard'ning ommaviy havolasi: https://ulugbek-ar.github.io/eduflow-crm/
+# Namoyish (demo) sayti: https://ulugbek-ar.github.io/eduflow-crm/ — asosiy sayt Vercel'da (vercel.json)
 # Shu branch'ga har push'da tekshiruv (npm run check) o'tsa, sayt qayta yig'ilib gh-pages branch'iga joylanadi
 on:
   push:
     branches:
-      - claude/crm-funnel-courses-analytics
+      - main
   workflow_dispatch:
 
 permissions:
@@ -32,8 +32,13 @@ jobs:
 
       - run: npm run check
 
-      # Nisbiy yo'llar (./assets/...) — sayt /eduflow-crm/ ostida ochiladi
-      - run: npx vite build --base ./ --outDir site && touch site/.nojekyll
+      # Sayt /eduflow-crm/ ostida: /app, /privacy, /terms to'g'ridan-to'g'ri ochilishi uchun 404.html = index.html
+      - run: npx vite build --base /eduflow-crm/ --outDir site && cp site/index.html site/404.html && touch site/.nojekyll
+        env:
+          VITE_SITE_URL: https://ulugbek-ar.github.io/eduflow-crm
+          # Pages — faqat namoyish: ro'yxatdan o'tish yo'q, /app da darhol "Demo'ni ko'rish"
+          VITE_DEMO_ONLY: '1'
+          VITE_MAIN_SITE_URL: ${{ vars.MAIN_SITE_URL }}
 
       - name: gh-pages branch'iga joylash
         env:

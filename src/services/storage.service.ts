@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { createMockCourses, createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Course } from '../types/course.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
@@ -26,8 +27,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v6 — kurslar alohida entity (apex:courses), settings.courses olib tashlandi;
 // v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi;
 // v8 — sozlamalarda logotip rasmi (settings.logoImage);
-// v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt)
-export const SCHEMA_VERSION = 9
+// v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt);
+// v10 — kurs davomiyligi noma'lum bo'lsa 0 ("muddatsiz"), v6 migratsiyasidagi "1 oy" tuzatiladi
+export const SCHEMA_VERSION = 10
 
 export interface StoredData {
   customers: Customer[]
@@ -44,11 +46,67 @@ export interface LoadResult {
   saveError?: SaveFailure
 }
 
+// ===== Nom maydoni: haqiqiy ma'lumot va demo =====
+// Demo rejimda barcha apex:* kalitlari eduflow-demo:* ga yoziladi — "Demo'ni ko'rish" haqiqiy markaz
+// ma'lumotiga hech qachon tegmaydi. Interfeys afzalliklari (mavzu, sidebar, til) ikkalasida umumiy
+
+export type StorageNamespace = 'main' | 'demo'
+
+export const DEMO_PREFIX = 'eduflow-demo:'
+// Tab qaysi rejimda ochilgani (sessionStorage: tab yopilganda demo tugaydi)
+export const MODE_KEY = 'eduflow:mode'
+const SHARED_KEYS: ReadonlySet<string> = new Set(['apex:theme', 'apex:sidebar-collapsed', 'apex:customers-view', 'apex:lang'])
+
+let namespace: StorageNamespace = 'main'
+
+export function getStorageNamespace(): StorageNamespace {
+  return namespace
+}
+
+export function setStorageNamespace(next: StorageNamespace): void {
+  namespace = next
+  try {
+    if (next === 'demo') sessionStorage.setItem(MODE_KEY, 'demo')
+    else sessionStorage.removeItem(MODE_KEY)
+  } catch {
+    // sessionStorage bloklangan — rejim faqat shu sahifa davomida
+  }
+}
+
+// Ilova ishga tushganda: tab avval demo rejimda bo'lgan bo'lsa, shu rejimda davom etadi
+export function initStorageNamespace(): StorageNamespace {
+  try {
+    namespace = sessionStorage.getItem(MODE_KEY) === 'demo' ? 'demo' : 'main'
+  } catch {
+    namespace = 'main'
+  }
+  return namespace
+}
+
+export function physicalKey(key: string): string {
+  if (namespace !== 'demo' || !key.startsWith('apex:') || SHARED_KEYS.has(key)) return key
+  return `${DEMO_PREFIX}${key.slice('apex:'.length)}`
+}
+
+// Demo'dan chiqishda yoki qayta boshlashda — demo kalitlari butunlay o'chiriladi
+export function clearDemoStorage(): void {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith(DEMO_PREFIX)) keys.push(key)
+    }
+    for (const key of keys) localStorage.removeItem(key)
+  } catch {
+    // e'tiborsiz
+  }
+}
+
 // ===== Past darajadagi o'qish/yozish =====
 
 export function readJson(key: string): unknown {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = localStorage.getItem(physicalKey(key))
     return raw === null ? undefined : (JSON.parse(raw) as unknown)
   } catch {
     return undefined
@@ -61,7 +119,7 @@ export function getItem<T>(key: StorageKey, fallback: T, guard: (value: unknown)
 }
 
 // 'quota' — brauzer xotirasi to'lgan; 'unavailable' — saqlash bloklangan yoki boshqa xato
-export type SaveFailure = 'quota' | 'unavailable'
+export type SaveFailure = 'quota' | 'unavailable' | 'network'
 export type SaveResult = { ok: true } | { ok: false; reason: SaveFailure }
 
 const SAVED: SaveResult = { ok: true }
@@ -75,9 +133,10 @@ export function isQuotaError(error: unknown): boolean {
 export function setItem<T>(key: string, value: T): SaveResult {
   try {
     const serialized = JSON.stringify(value)
+    const target = physicalKey(key)
     // Bir xil qiymatni qayta yozmaslik boshqa tablar bilan cheksiz sinxron aylanishining oldini oladi
-    if (localStorage.getItem(key) !== serialized) {
-      localStorage.setItem(key, serialized)
+    if (localStorage.getItem(target) !== serialized) {
+      localStorage.setItem(target, serialized)
       notifyStorageChanged()
     }
     return SAVED
@@ -87,15 +146,25 @@ export function setItem<T>(key: string, value: T): SaveResult {
   }
 }
 
+export function removeItem(key: string): void {
+  try {
+    localStorage.removeItem(physicalKey(key))
+    notifyStorageChanged()
+  } catch {
+    // e'tiborsiz
+  }
+}
+
 // Bir nechta yozuv natijasidan birinchi xato (bo'lmasa — muvaffaqiyat)
 export function combineResults(results: readonly SaveResult[]): SaveResult {
   return results.find((r) => !r.ok) ?? SAVED
 }
 
 export function saveErrorMessage(reason: SaveFailure): string {
+  if (reason === 'network') return tr('O\'zgarish serverga yetib bormadi. Internetni tekshiring — keyingi o\'zgarishda qayta yuboriladi.')
   return reason === 'quota'
-    ? 'Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.'
-    : 'Ma\'lumot saqlanmadi: brauzer saqlashni bloklagan. JSON zaxira oling.'
+    ? tr('Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.')
+    : tr('Ma\'lumot saqlanmadi: brauzer saqlashni bloklagan. JSON zaxira oling.')
 }
 
 // ===== Band joy (taxminiy) =====
@@ -238,12 +307,22 @@ export function migrateCourses(rawSettings: unknown, customers: readonly Custome
     id: `k${index + 1}`,
     name,
     type: 'course',
-    durationMonths: 1,
+    // Davomiylik noma'lum — "muddatsiz" (0): kurs muddati tugadi deb qarzdorlar yashirinib qolmasin
+    durationMonths: 0,
     monthlyPrice: 0,
     activeGroups: 0,
     status: 'active',
     createdAt: now.toISOString(),
   }))
+}
+
+// v9 -> v10: v6 migratsiyasi yaratgan kurslarda (aynan: kurs, 1 oy, narx 0, 0 guruh) davomiylik aslida
+// noma'lum edi — "muddatsiz" qilinadi. Faqat v10 dan eski ma'lumotga qo'llanadi (yangi 1 oylik kurslarga tegmaydi)
+export function fixLegacyCourseDuration(courses: readonly Course[], fromVersion: number): Course[] {
+  if (fromVersion >= 10) return [...courses]
+  return courses.map((c) =>
+    c.type === 'course' && c.durationMonths === 1 && c.monthlyPrice === 0 && c.activeGroups === 0 ? { ...c, durationMonths: 0 } : c,
+  )
 }
 
 // Kurs nomlari takrorlanmasligi kerak (mijoz kursga nom orqali bog'lanadi)
@@ -258,7 +337,11 @@ function uniqueCourseNames(courses: readonly Course[]): Course[] {
 }
 
 // Istalgan (eski yoki buzuq) xom ma'lumotdan joriy sxemaga mos ma'lumot yasaydi
-export function normalizeData(raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown }): LoadResult {
+// fromVersion — ma'lumot qaysi sxema versiyasida yozilgan (versiyaga bog'liq migratsiyalar uchun); noma'lum bo'lsa joriy
+export function normalizeData(
+  raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown },
+  fromVersion: number = SCHEMA_VERSION,
+): LoadResult {
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
   const valid = keepValid(rawTransactions, isTransaction)
@@ -267,7 +350,9 @@ export function normalizeData(raw: { customers: unknown; transactions: unknown; 
   const settings = sanitizeSettings(raw.settings)
   // Kurslar massivi bo'lsa (v6+) — tekshiriladi; bo'lmasa (eski ma'lumot/zaxira) — migratsiya
   const rawCourses = Array.isArray(raw.courses) ? raw.courses : null
-  const courses = rawCourses ? uniqueCourseNames(keepValid(rawCourses, isCourse)) : migrateCourses(raw.settings, customers)
+  const courses = rawCourses
+    ? fixLegacyCourseDuration(uniqueCourseNames(keepValid(rawCourses, isCourse)), fromVersion)
+    : migrateCourses(raw.settings, customers)
   return {
     data: { customers, transactions, courses, settings },
     dropped: rawCustomers.length - customers.length + (rawTransactions.length - valid.length) + (rawCourses ? rawCourses.length - courses.length : 0),
@@ -302,13 +387,13 @@ export function createMockData(): StoredData {
   }
 }
 
-export function readStored(): LoadResult {
+export function readStored(fromVersion: number = SCHEMA_VERSION): LoadResult {
   return normalizeData({
     customers: readJson(STORAGE_KEYS.customers),
     transactions: readJson(STORAGE_KEYS.transactions),
     settings: readJson(STORAGE_KEYS.settings),
     courses: readJson(STORAGE_KEYS.courses),
-  })
+  }, fromVersion)
 }
 
 // ===== Birinchi ishga tushish va demo rejim =====
@@ -328,18 +413,33 @@ export function setDemoMode(demo: boolean): SaveResult {
 
 // Tanlov ekranidan: 'empty' — bo'sh baza, 'demo' — namunaviy ma'lumot.
 // Boshqa tabda allaqachon tanlangan bo'lsa, mavjud ma'lumot ustidan yozilmaydi.
+// Administrator ro'yxatdan o'tishda kiritgan sozlamalar (markaz nomi) saqlanib qoladi.
 export function startFresh(mode: 'empty' | 'demo'): SaveResult {
   if (!isFirstRun()) return { ok: true }
-  const saved = saveAll(mode === 'demo' ? createMockData() : createEmptyData())
+  const data = mode === 'demo' ? createMockData() : createEmptyData()
+  const stored = readJson(STORAGE_KEYS.settings)
+  const saved = saveAll(stored === undefined ? data : { ...data, settings: sanitizeSettings(stored) })
   return combineResults([saved, setDemoMode(mode === 'demo')])
+}
+
+// Sozlash ustasi oxirida: markaz ma'lumotlari, birinchi kurslar (yoki zaxiradan tiklangan ma'lumot) yoziladi.
+// Boshqa tabda allaqachon sozlangan bo'lsa — mavjud ma'lumot ustidan yozilmaydi
+export function completeSetup(data: StoredData): SaveResult {
+  if (!isFirstRun()) return SAVED
+  return combineResults([saveAll(data), setDemoMode(false)])
+}
+
+// Ma'lumotlar paneli hali ochilmagan paytda (ro'yxatdan o'tish ekrani) sozlamani yozish
+export function updateStoredSettings(patch: Partial<Settings>): SaveResult {
+  return setItem(STORAGE_KEYS.settings, { ...sanitizeSettings(readJson(STORAGE_KEYS.settings)), ...patch })
 }
 
 // Eski versiya bo'lsa migratsiya qilinib qayta saqlanadi. Birinchi ishga tushishda hech narsa yozilmaydi —
 // avval foydalanuvchi FirstRunScreen'da tanlov qiladi
 export function loadData(): LoadResult {
   if (isFirstRun()) return { data: createEmptyData(), dropped: 0 }
-  const result = readStored()
   const version = readJson(STORAGE_KEYS.version)
+  const result = readStored(typeof version === 'number' ? version : 1)
   if (version !== SCHEMA_VERSION || result.dropped > 0) {
     const saved = saveAll(result.data)
     if (!saved.ok) return { ...result, saveError: saved.reason }
@@ -371,14 +471,18 @@ export function parseBackup(text: string): BackupParseResult {
   try {
     json = JSON.parse(text)
   } catch {
-    return { ok: false, error: 'Fayl JSON formatida emas yoki buzilgan' }
+    return { ok: false, error: tr('Fayl JSON formatida emas yoki buzilgan') }
   }
   if (!isRecord(json) || !Array.isArray(json.customers) || !Array.isArray(json.transactions)) {
-    return { ok: false, error: `Bu ${APP_NAME} zaxira fayli emas: mijozlar yoki tranzaksiyalar ro'yxati topilmadi` }
+    return { ok: false, error: tr('Bu {0} zaxira fayli emas: mijozlar yoki tranzaksiyalar ro\'yxati topilmadi', { 0: APP_NAME }) }
   }
   if (typeof json.version === 'number' && json.version > SCHEMA_VERSION) {
-    return { ok: false, error: 'Zaxira ilovaning yangiroq versiyasida yaratilgan' }
+    return { ok: false, error: tr('Zaxira ilovaning yangiroq versiyasida yaratilgan') }
   }
-  const { data, dropped } = normalizeData({ customers: json.customers, transactions: json.transactions, settings: json.settings, courses: json.courses })
+  const fromVersion = typeof json.version === 'number' ? json.version : 1
+  const { data, dropped } = normalizeData(
+    { customers: json.customers, transactions: json.transactions, settings: json.settings, courses: json.courses },
+    fromVersion,
+  )
   return { ok: true, data, dropped, exportedAt: typeof json.exportedAt === 'string' ? json.exportedAt : undefined }
 }

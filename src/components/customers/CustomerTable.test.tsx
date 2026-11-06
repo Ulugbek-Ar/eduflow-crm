@@ -43,3 +43,20 @@ describe('Mijozlar jadvali', () => {
     expect(within(journal).getAllByText('Aziza Karimova (o\'chirilgan)')).toHaveLength(2)
   })
 })
+
+describe('Sana filtri', () => {
+  it('kk.oo.yyyy ko\'rinishida; "Filtrlarni tozalash" chala yozilgan sanani ham tozalaydi', async () => {
+    const { user } = await renderSignedIn({ customers })
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
+    const section = await screen.findByRole('region', { name: 'Mijozlar va lidlar' })
+    await user.click(within(section).getByRole('button', { name: 'Jadval' }))
+    await user.type(within(section).getByLabelText('Dan'), '02102026')
+    expect(within(section).getByText('0 ta natija (jami 3)')).toBeTruthy()
+    // Chala sana filtrlamaydi
+    await user.type(within(section).getByLabelText('Gacha'), '01')
+    expect(within(section).getByText('0 ta natija (jami 3)')).toBeTruthy()
+    await user.click(within(section).getAllByRole('button', { name: 'Filtrlarni tozalash' })[0])
+    expect((within(section).getByLabelText('Dan') as HTMLInputElement).value).toBe('')
+    expect((within(section).getByLabelText('Gacha') as HTMLInputElement).value).toBe('')
+  })
+})

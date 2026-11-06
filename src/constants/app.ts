@@ -13,3 +13,4 @@ export const EXPORT_FILE_PREFIX = 'eduflow'
 export function pageTitle(section: string): string {
   return `${section} · ${APP_NAME}`
 }
+

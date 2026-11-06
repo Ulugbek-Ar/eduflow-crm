@@ -1,6 +1,6 @@
 import type { TransactionType } from './finance.types'
 
-export type Section = 'overview' | 'customers' | 'finance' | 'courses' | 'analytics' | 'settings'
+export type Section = 'overview' | 'customers' | 'finance' | 'courses' | 'analytics' | 'admin' | 'settings' | 'help'
 
 export type DateRange = 'today' | '7d' | 'month' | 'year'
 
@@ -18,6 +18,7 @@ export type ModalState =
   | { type: 'customerDetail'; payload: { id: string } }
   | { type: 'transaction'; payload?: { id?: string; kind?: TransactionType; customerId?: string; amount?: number } }
   | { type: 'course'; payload?: { id?: string } }
+  | { type: 'receipt'; payload: { id: string } }
   | null
 
 export type ModalType = NonNullable<ModalState>['type']

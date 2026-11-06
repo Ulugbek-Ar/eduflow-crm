@@ -93,3 +93,19 @@ describe('Kurslar va xizmatlar', () => {
     expect(storedCourses().some((c) => c.name === 'Grafik dizayn')).toBe(false)
   })
 })
+
+describe('Narx yoki muddat kiritilmagan kurslar', () => {
+  it('ogohlantirish va tahrirlash tugmalari; muddatsiz kurs "Muddatsiz" deb ko\'rsatiladi', async () => {
+    const [ielts, frontend] = createMockCourses()
+    const { user } = await openCourses({
+      courses: [{ ...ielts, durationMonths: 0 }, { ...frontend, monthlyPrice: 0 }],
+    })
+    const notice = screen.getByRole('status')
+    expect(notice.textContent).toContain('2 ta kursda narx yoki muddat kiritilmagan')
+    const table = screen.getAllByRole('table')[0]
+    const ieltsRow = within(table).getByRole('button', { name: ielts.name }).closest('tr') as HTMLElement
+    expect(within(ieltsRow).getByText('Muddatsiz')).toBeTruthy()
+    await user.click(within(notice).getByRole('button', { name: frontend.name }))
+    expect(await screen.findByRole('dialog', { name: 'Kursni tahrirlash' })).toBeTruthy()
+  })
+})

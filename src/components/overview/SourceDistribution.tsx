@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { DATE_RANGE_LABELS, SOURCE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import type { CustomerSource } from '../../types/customer.types'
@@ -14,14 +15,14 @@ export function SourceDistribution() {
     <section className="card" aria-labelledby="sources-title">
       <div className="card-head">
         <div>
-          <h2 id="sources-title">Manbalar taqsimoti</h2>
+          <h2 id="sources-title">{tr('Manbalar taqsimoti')}</h2>
           <span className="muted">
-            {DATE_RANGE_LABELS[dateRange]} · {inPeriod.length} ta yangi lid
+            {DATE_RANGE_LABELS[dateRange]} · {inPeriod.length} {tr('ta yangi lid')}
           </span>
         </div>
       </div>
       {inPeriod.length === 0 ? (
-        <p className="muted">Bu davrda yangi lid kelmagan.</p>
+        <p className="muted">{tr('Bu davrda yangi lid kelmagan.')}</p>
       ) : (
         <ul className="progress-list">
           {rows.map((row) => (
@@ -29,13 +30,13 @@ export function SourceDistribution() {
               <div className="progress-meta">
                 <span>{SOURCE_LABELS[row.source]}</span>
                 <span className="muted">
-                  {row.count} ta · {Math.round(row.share)}%
+                  {row.count} {tr('ta ·')} {Math.round(row.share)}%
                 </span>
               </div>
               <div
                 className="progress"
                 role="progressbar"
-                aria-label={`${SOURCE_LABELS[row.source]} ulushi`}
+                aria-label={tr('{0} ulushi', { 0: SOURCE_LABELS[row.source] })}
                 aria-valuenow={Math.round(row.share)}
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -43,7 +44,7 @@ export function SourceDistribution() {
                 <div className="progress-fill" style={{ width: `${row.share}%` }} />
               </div>
               <small className="source-conversion">
-                Konversiya: {row.conversion === null ? '—' : `${Math.round(row.conversion)}%`}
+                {tr('Konversiya:')} {row.conversion === null ? '—' : `${Math.round(row.conversion)}%`}
               </small>
             </li>
           ))}

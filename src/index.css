@@ -1071,6 +1071,19 @@ body.scroll-locked {
   color: var(--warning-text);
 }
 
+.notice-info {
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
+.draft-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
 /* ===== Karta ===== */
 .card {
   min-width: 0;
@@ -1466,6 +1479,15 @@ body.scroll-locked {
 .date-range .input {
   width: 150px;
   height: 38px;
+}
+
+/* Xato yoki izoh matni yorliq ustuniga emas, butun kenglikka */
+.date-range .field > small {
+  grid-column: 1 / -1;
+}
+
+.date-range .date-input {
+  min-width: 0;
 }
 
 /* ===== Jadval ===== */
@@ -2007,6 +2029,43 @@ body.scroll-locked {
 
 .stage-quick {
   display: inline-block;
+}
+
+.date-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-input .input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-picker-btn {
+  position: absolute;
+  right: 3px;
+}
+
+/* Brauzer tanlagichi uchun yashirin maydon (showPicker orqali ochiladi) */
+.date-picker-native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.setup-notice {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .detail-total.is-debt {
@@ -2572,6 +2631,1090 @@ body.scroll-locked {
   color: var(--text);
 }
 
+/* Kirish, ro'yxatdan o'tish va yangi parol ekranlari */
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.login-brand > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Til tanlovi kartaning burchagida — sarlavhani siqmaydi */
+.login-card {
+  position: relative;
+}
+
+.login-lang {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.login-brand {
+  padding-right: 76px;
+}
+
+.lang-switch button {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
+.login-card-wide {
+  width: min(520px, 100%);
+}
+
+.auth-demo {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-home,
+.login-hint a {
+  color: var(--primary-text);
+  font-size: 0.85rem;
+}
+
+.auth-help {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.auth-help summary {
+  width: fit-content;
+  margin: 0 auto;
+  color: var(--primary-text);
+  cursor: pointer;
+}
+
+.auth-help p {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* ===== Sotuvchi paneli ===== */
+.owner {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.owner-main {
+  display: grid;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* ===== Tarif tasmasi ===== */
+.plan-bar {
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.plan-bar.is-warning {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.plan-bar.is-danger {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.plan-card {
+  display: grid;
+  gap: 12px;
+}
+
+/* ===== Demo tasmasi ===== */
+.demo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: 0.85rem;
+}
+
+.demo-bar p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.demo-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input.input-sm {
+  width: auto;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+}
+
+/* ===== Boshqaruv (xodimlar, seanslar, rollar) ===== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.is-active {
+  border-bottom-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.staff-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.role-picker legend {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.role-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.role-option.is-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.role-option input {
+  margin-top: 3px;
+  accent-color: var(--primary);
+}
+
+.role-option strong,
+.role-option small {
+  display: block;
+}
+
+.role-option small {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.role-picker:disabled .role-option {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.copy-field {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.copy-field .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+
+.session-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.session-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.session-info {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.session-info strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.small-note {
+  margin-top: 12px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.role-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.role-card ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.role-card li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.role-card li svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--success-text);
+}
+
+.profile-role-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .demo-bar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 6px 16px;
+  }
+
+  .demo-bar p {
+    flex: 1 1 auto;
+  }
+
+  .session-item {
+    flex-wrap: wrap;
+  }
+}
+
+/* ===== Savatcha va jurnal ===== */
+.tab-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 20px;
+  text-align: center;
+}
+
+.trash-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trash-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.trash-info {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trash-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.toast-action {
+  flex: none;
+  align-self: center;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--primary-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: var(--primary-soft);
+}
+
+/* ===== Atama izohi ("?") ===== */
+.hint {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.hint-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: help;
+}
+
+.hint-btn:hover,
+.hint-btn[aria-expanded='true'] {
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+/* Kattaroq bosish maydoni (telefonda barmoq bilan) */
+.hint-btn::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+.hint-pop strong {
+  display: inline;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.hint-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: -8px;
+  z-index: 30;
+  width: min(280px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  animation: drop-in 150ms var(--ease);
+}
+
+.kpi {
+  position: relative;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.hint-on-dark .hint-btn {
+  border-color: var(--sidebar-muted);
+  background: transparent;
+  color: var(--sidebar-text);
+}
+
+/* Sidebar pastida — izoh yuqoriga ochiladi */
+.hint-on-dark .hint-pop {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 6px);
+  left: -90px;
+}
+
+.kpi-hint {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+/* ===== Header: qo'shish, qidiruv tugmasi; pastki menyu (telefon) ===== */
+.search-toggle,
+.mobile-nav {
+  display: none;
+}
+
+.header-export {
+  height: 38px;
+}
+
+.period-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mobile-nav-item {
+  display: grid;
+  flex: 1 1 0;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mobile-nav-item.is-active {
+  color: var(--primary-text);
+}
+
+.mobile-nav-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.mobile-nav-plus {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.quick-sheet {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.filter-toggle-row {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .filter-toggle-row {
+    display: flex;
+    margin-bottom: 12px;
+  }
+
+  .filter-panel:not(.is-open) {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .export-label {
+    display: none;
+  }
+
+  .header-export {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Bitta qator: sarlavha | qidiruv, bildirishnoma, profil. Qidiruv va davr — kerak bo'lsa alohida qatorda */
+  .header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+
+  .header-title {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .header-title h1 {
+    overflow: hidden;
+    font-size: 1.1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-actions {
+    display: contents;
+  }
+
+  .header-icons,
+  .search-toggle {
+    order: 1;
+  }
+
+  .header-profile {
+    order: 2;
+  }
+
+  .search-toggle {
+    display: inline-grid;
+  }
+
+  .header .search {
+    display: none;
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .header.is-searching .search {
+    display: flex;
+  }
+
+  .header.is-searching .search-toggle {
+    display: none;
+  }
+
+  .period-bar {
+    justify-content: stretch;
+  }
+
+  .period-bar .segmented {
+    flex: 1;
+  }
+
+  .header-add,
+  .header-export-menu,
+  .header .theme-toggle {
+    display: none;
+  }
+
+  .demo-banner {
+    order: 5;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    display: flex;
+    gap: 2px;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--header-bg);
+    backdrop-filter: blur(8px);
+  }
+
+  .main {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .toast-region {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ===== Sozlash ustasi ===== */
+.wizard-page {
+  align-items: start;
+  padding-top: max(16px, 6vh);
+}
+
+.wizard-card {
+  width: min(640px, 100%);
+}
+
+.wizard-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.wizard-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wizard-steps li.is-current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.wizard-step-dot {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 0.75rem;
+}
+
+.wizard-steps li.is-current .wizard-step-dot {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.wizard-steps li.is-done .wizard-step-dot {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.wizard-skip {
+  font-size: 0.85rem;
+}
+
+.wizard-body {
+  display: grid;
+  gap: 14px;
+}
+
+.wizard-body h1 {
+  font-size: 1.3rem;
+  outline: none;
+}
+
+.wizard-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.wizard-inline .field > small {
+  min-height: 0;
+}
+
+.wizard-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.wizard-list li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wizard-list code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.first-run-option.is-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.first-run-option:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ===== Tanishtiruv ===== */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+
+.tour-dim {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+}
+
+.tour-spot {
+  position: absolute;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px var(--overlay);
+  outline: 2px solid var(--primary);
+  transition: left 200ms var(--ease), top 200ms var(--ease), width 200ms var(--ease), height 200ms var(--ease);
+}
+
+.tour-card {
+  position: absolute;
+  display: grid;
+  gap: 6px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: pop-in 200ms var(--ease);
+}
+
+.tour-card:focus {
+  outline: none;
+}
+
+.tour-card h2 {
+  font-size: 1.05rem;
+}
+
+.tour-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.tour-actions .toolbar {
+  flex: none;
+  flex-wrap: nowrap;
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* ===== Boshlash ro'yxati ===== */
+.progress {
+  height: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--success);
+}
+
+.checklist {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.check-dot {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+}
+
+.checklist li.is-done .check-dot {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+}
+
+.checklist-label {
+  flex: 1;
+}
+
+.checklist li.is-done .checklist-label {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* ===== Yordam ===== */
+.help-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.faq {
+  display: grid;
+  margin-top: 8px;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary svg {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 150ms var(--ease);
+}
+
+.faq-item[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.faq-item p {
+  padding-bottom: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.glossary {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+.glossary dt {
+  font-weight: 600;
+}
+
+.glossary dd {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.shortcut-list,
+.contact-list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shortcut-list li,
+.contact-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shortcut-list kbd {
+  min-width: 72px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-sunken);
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .wizard-inline {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .wizard-inline > .field:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .wizard-inline > .btn {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ===== Birinchi ishga tushish ===== */
 .first-run {
   width: min(460px, 100%);
@@ -3001,27 +4144,8 @@ body.scroll-locked {
     animation: fade-in 200ms var(--ease);
   }
 
-  /* Mobilda Header baland (qidiruv, davr, tugmalar) — sticky bo'lsa ekranning uchdan birini egallaydi */
-  .header {
-    position: relative;
-    padding: 12px 16px;
-  }
-
-  .header .menu-btn {
-    display: inline-grid;
-  }
-
-  .header-title {
-    width: 100%;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .search {
-    flex: 1 1 100%;
+  /* Mobil header ixcham (bitta qator) — tepada yopishib turadi */
+  .header .search {
     width: auto;
   }
 
@@ -3029,7 +4153,7 @@ body.scroll-locked {
     flex: 1 1 auto;
   }
 
-  .header-actions > .segmented button {
+  .period-bar .segmented button {
     flex: 1;
     padding: 6px 8px;
   }
@@ -3074,8 +4198,11 @@ body.scroll-locked {
     width: 100%;
   }
 
+  /* Mobilda yorliq maydon ustida — ikkala sana yonma-yon, teng kenglikda */
   .date-range .field {
     flex: 1 1 140px;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
   }
 
   .date-range .input {
@@ -3206,3 +4333,290 @@ body.scroll-locked {
     flex: 1;
   }
 }
+
+/* ===== Chek va mijoz kartasi ===== */
+.receipt-size {
+  margin-bottom: 14px;
+}
+
+.receipt-preview {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+
+.receipt-preview .receipt {
+  padding: 14px;
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+
+.receipt-preview.print-thermal .receipt {
+  width: 300px;
+}
+
+.receipt-preview.print-a4 .receipt {
+  width: 100%;
+}
+
+/* Chek doim oq qog'ozda qora (mavzuga bog'liq emas) */
+.receipt,
+.print-card {
+  background: #fff;
+  color: #111;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.receipt {
+  display: grid;
+  gap: 8px;
+}
+
+.receipt-head,
+.receipt-title {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.receipt-logo {
+  max-width: 48px;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.receipt-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.receipt-org {
+  font-size: 14px;
+}
+
+.receipt-title {
+  padding: 6px 0;
+  border-top: 1px dashed #777;
+  border-bottom: 1px dashed #777;
+}
+
+.receipt-title strong {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.receipt-rows {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.receipt-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.receipt-rows dt {
+  color: #555;
+}
+
+.receipt-rows dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.receipt-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px dashed #777;
+  font-size: 13px;
+}
+
+.receipt-total strong {
+  font-size: 18px;
+}
+
+.receipt-words {
+  font-style: italic;
+}
+
+.receipt-debt {
+  font-weight: 600;
+}
+
+.receipt-stamp {
+  padding: 4px;
+  border: 2px solid #b91c1c;
+  color: #b91c1c;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.1em;
+}
+
+.receipt-foot {
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.receipt-sign {
+  display: grid;
+  gap: 14px;
+}
+
+.receipt-line {
+  display: block;
+  border-bottom: 1px solid #111;
+}
+
+.receipt-thanks {
+  color: #555;
+  text-align: center;
+}
+
+.print-a4 .receipt {
+  max-width: 150mm;
+  margin: 0 auto;
+  font-size: 13px;
+}
+
+.print-a4 .receipt-total strong {
+  font-size: 22px;
+}
+
+.print-card {
+  display: grid;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.print-card h1 {
+  font-size: 20px;
+}
+
+.print-card h2 {
+  font-size: 14px;
+}
+
+.print-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #111;
+}
+
+.print-card-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.print-card-title {
+  text-align: right;
+}
+
+.print-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.print-grid dt {
+  color: #555;
+  font-size: 11px;
+}
+
+.print-grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.print-wide {
+  grid-column: 1 / -1;
+}
+
+.print-summary {
+  display: flex;
+  gap: 24px;
+  padding: 10px 12px;
+  border: 1px solid #999;
+  border-radius: 6px;
+}
+
+.print-summary div {
+  display: grid;
+}
+
+.print-summary strong {
+  font-size: 15px;
+}
+
+.print-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-table th,
+.print-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #ccc;
+  text-align: left;
+}
+
+.print-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.print-table .align-right {
+  text-align: right;
+}
+
+.print-card-foot {
+  display: grid;
+  grid-template-columns: auto 200px;
+  gap: 12px;
+  align-items: end;
+  margin-top: 24px;
+}
+
+@media screen {
+  .print-root {
+    display: none;
+  }
+}
+
+@media print {
+  body.is-printing > :not(.print-root) {
+    display: none !important;
+  }
+
+  body.is-printing {
+    background: #fff;
+  }
+
+  .print-root {
+    display: block;
+  }
+
+  .print-thermal .receipt {
+    width: 74mm;
+    font-size: 11px;
+  }
+}
+

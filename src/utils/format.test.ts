@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmountInput, formatCompact, formatDateWith, formatKilobytes, formatMoney, formatPercent, parseAmount, toInputDate } from './format'
+import { formatAmountInput, formatCompact, formatDateWith, formatDecimal, formatKilobytes, formatMoney, formatNumber, formatPercent, parseAmount, toInputDate } from './format'
 
 // Intl bo'shliq sifatida NBSP qaytarishi mumkin — solishtirishdan oldin oddiy bo'shliqqa keltiramiz
 const plain = (value: string) => value.replace(/\s/g, ' ')
@@ -82,5 +82,21 @@ describe('formatKilobytes', () => {
   it('baytni bir xonali aniqlikdagi KB ga aylantiradi', () => {
     expect(plain(formatKilobytes(0))).toBe('0,0 KB')
     expect(plain(formatKilobytes(12_697))).toBe('12,4 KB')
+  })
+})
+
+describe('brauzerdan mustaqil raqam formati', () => {
+  it('minglik ajratgich — bo\'linmaydigan bo\'shliq, vergul emas', () => {
+    expect(formatNumber(2_150_000)).toBe('2\u00a0150\u00a0000')
+    expect(formatMoney(2_150_000, 'UZS')).not.toContain(',')
+    expect(formatNumber(999)).toBe('999')
+    expect(formatNumber(-1234.6)).toBe('-1\u00a0235')
+  })
+
+  it('kasr vergul bilan, keraksiz nol tashlanadi', () => {
+    expect(formatDecimal(1.5)).toBe('1,5')
+    expect(formatDecimal(2)).toBe('2')
+    expect(formatDecimal(2, true)).toBe('2,0')
+    expect(formatDecimal(12_345.67)).toBe('12\u00a0345,7')
   })
 })

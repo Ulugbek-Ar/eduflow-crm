@@ -1,17 +1,78 @@
+import { tr } from '../../i18n'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useAuth } from '../../hooks/useAuth'
-import { DEFAULT_LOGIN, DEFAULT_PASSWORD, isCryptoAvailable } from '../../services/auth.service'
+import { isCryptoAvailable } from '../../services/auth.service'
 import { formatLockWait, lockRemaining, MAX_ATTEMPTS, readLockState, registerFailure, registerSuccess } from '../../services/loginLock.service'
-import { Button, IconButton } from '../ui/Button'
+import { routeHref } from '../../router'
+import { Button } from '../ui/Button'
+import { LanguageSwitch } from '../ui/LanguageSwitch'
 import { Input } from '../ui/Input'
+import { PasswordInput } from '../ui/PasswordInput'
 import { APP_NAME, pageTitle } from '../../constants/app'
 
-export function LoginScreen() {
-  const { login, usingDefaultPassword } = useAuth()
+export function AuthBrand({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="login-brand">
+      <span className="logo-mark">
+        <Icon name="logo" size={22} />
+      </span>
+      <div>
+        <h1 id="login-title">{title}</h1>
+        <p className="muted">{subtitle}</p>
+      </div>
+      <LanguageSwitch className="login-lang" />
+    </div>
+  )
+}
+
+// Demo — alohida namunaviy markaz: haqiqiy ma'lumotga tegmaydi, chiqishda o'chadi
+export function DemoEntry() {
+  const { enterDemo } = useAuth()
+  return (
+    <div className="auth-demo">
+      <span className="auth-divider">
+        <span>{tr('yoki')}</span>
+      </span>
+      <Button variant="ghost" icon="play" className="btn-block" onClick={() => enterDemo()}>
+        {tr('Demo\'ni ko\'rish')}
+      </Button>
+      <small className="muted">{tr('Namunaviy markaz ochiladi. Sizning ma\'lumotingizga tegmaydi.')}</small>
+      <a className="auth-home" href={routeHref('landing')}>
+        ← {tr('Bosh sahifa')}
+      </a>
+    </div>
+  )
+}
+
+// Bulutli rejimda: email bilan, parol tiklash havolasi emailga, ro'yxatdan o'tish (onSignUp)
+function CloudReset({ initialEmail }: { initialEmail: string }) {
+  const { cloud } = useAuth()
+  const [email, setEmail] = useState(initialEmail)
+  const [notice, setNotice] = useState('')
+  if (!cloud) return null
+  return (
+    <div className="form">
+      <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={async () => {
+          const result = await cloud.sendPasswordReset(email)
+          setNotice(result.ok ? tr('Parolni tiklash havolasi emailingizga yuborildi.') : result.error)
+        }}
+      >
+        {tr('Havolani yuborish')}
+      </Button>
+      {notice && <p role="status">{notice}</p>}
+    </div>
+  )
+}
+
+export function LoginScreen({ onSignUp }: { onSignUp?: () => void }) {
+  const { login, cloud } = useAuth()
   const [form, setForm] = useState({ login: '', password: '' })
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   // Blok holati localStorage'dan: sahifa yangilansa ham saqlanadi
@@ -29,13 +90,13 @@ export function LoginScreen() {
   }, [locked])
 
   useEffect(() => {
-    document.title = pageTitle('Kirish')
+    document.title = pageTitle(tr('Kirish'))
   }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!form.login.trim() || !form.password) {
-      setError('Login va parolni kiriting')
+      setError(tr('Login va parolni kiriting'))
       return
     }
     // Boshqa tabda blok boshlangan bo'lishi mumkin — har safar saqlangan holat o'qiladi
@@ -44,87 +105,91 @@ export function LoginScreen() {
     setNow(Date.now())
     if (lockRemaining(current) > 0) return
     setBusy(true)
-    const ok = await login(form.login, form.password)
+    const result = await login(form.login, form.password)
     setBusy(false)
-    if (ok) {
+    if (result.ok) {
       registerSuccess()
+      return
+    }
+    if (result.reason === 'blocked') {
+      registerSuccess()
+      setError(tr('Hisobingiz bloklangan. Administratorga murojaat qiling.'))
+      setForm((prev) => ({ ...prev, password: '' }))
       return
     }
     const next = registerFailure()
     setLock(next)
     setNow(Date.now())
     const left = MAX_ATTEMPTS - next.failures
-    setError(lockRemaining(next) > 0 ? '' : `Login yoki parol noto'g'ri. Yana ${left} ta urinish qoldi`)
+    setError(lockRemaining(next) > 0 ? '' : tr('Login yoki parol noto\'g\'ri. Yana {0} ta urinish qoldi', { 0: left }))
     setForm((prev) => ({ ...prev, password: '' }))
   }
 
   return (
     <main className="login-page">
-      <form className="login-card" onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
-        <div className="login-brand">
-          <span className="logo-mark">
-            <Icon name="logo" size={22} />
-          </span>
-          <div>
-            <h1 id="login-title">{APP_NAME}</h1>
-            <p className="muted">Boshqaruv paneliga kirish</p>
-          </div>
-        </div>
+      <div className="login-card">
+        <form className="auth-form" onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
+          <AuthBrand title={APP_NAME} subtitle={tr('Boshqaruv paneliga kirish')} />
 
-        {!cryptoReady && (
-          <p className="notice notice-error" role="alert">
-            Brauzer xavfsiz kontekstda emas (HTTPS yoki localhost kerak) — kirish imkonsiz.
-          </p>
-        )}
+          {!cryptoReady && (
+            <p className="notice notice-error" role="alert">
+              {tr('Brauzer xavfsiz kontekstda emas (HTTPS yoki localhost kerak) — kirish imkonsiz.')}
+            </p>
+          )}
 
-        <Input
-          label="Login"
-          autoComplete="username"
-          value={form.login}
-          onChange={(e) => setForm((prev) => ({ ...prev, login: e.target.value }))}
-          data-autofocus
-          autoFocus
-        />
-        <div className="password-field">
           <Input
-            label="Parol"
-            type={showPassword ? 'text' : 'password'}
+            label={cloud ? 'Email' : tr('Login')}
+            type={cloud ? 'email' : 'text'}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={form.login}
+            onChange={(e) => setForm((prev) => ({ ...prev, login: e.target.value }))}
+            data-autofocus
+            autoFocus
+          />
+          <PasswordInput
+            label={tr('Parol')}
             autoComplete="current-password"
             value={form.password}
             onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
           />
-          <IconButton
-            icon={showPassword ? 'eye' : 'lock'}
-            label={showPassword ? 'Parolni yashirish' : 'Parolni ko\'rsatish'}
-            className="password-toggle"
-            aria-pressed={showPassword}
-            onClick={() => setShowPassword((v) => !v)}
-          />
-        </div>
 
-        {locked ? (
-          <p className="notice notice-error" role="alert">
-            Juda ko'p noto'g'ri urinish. Kirish vaqtincha bloklandi.{' '}
-            <span aria-live="off">{formatLockWait(remaining)} dan keyin qayta urinib ko'ring.</span>
-          </p>
-        ) : (
-          error && (
+          {locked ? (
             <p className="notice notice-error" role="alert">
-              {error}
+              {tr('Juda ko\'p noto\'g\'ri urinish. Kirish vaqtincha bloklandi.')}{' '}
+              <span aria-live="off">{formatLockWait(remaining)} {tr('dan keyin qayta urinib ko\'ring.')}</span>
             </p>
-          )
-        )}
+          ) : (
+            error && (
+              <p className="notice notice-error" role="alert">
+                {error}
+              </p>
+            )
+          )}
 
-        <Button type="submit" className="btn-block" disabled={busy || !cryptoReady || locked}>
-          {busy ? 'Tekshirilmoqda...' : 'Kirish'}
-        </Button>
+          <Button type="submit" className="btn-block" disabled={busy || !cryptoReady || locked}>
+            {busy ? tr('Tekshirilmoqda...') : tr('Kirish')}
+          </Button>
 
-        {usingDefaultPassword && (
-          <p className="login-hint">
-            Standart kirish: <code>{DEFAULT_LOGIN}</code> / <code>{DEFAULT_PASSWORD}</code>. Kirgandan so'ng parolni almashtiring.
-          </p>
-        )}
-      </form>
+          <details className="auth-help">
+            <summary>{tr('Parolni unutdingizmi?')}</summary>
+            {cloud ? (
+              <CloudReset initialEmail={form.login} />
+            ) : (
+              <p>
+                {tr('Markaz administratoridan parolni tiklashni so\'rang:')} <strong>{tr('Boshqaruv → Xodimlar → Parolni tiklash')}</strong>{tr('. U sizga vaqtinchalik parol beradi, kirgach o\'zingiz yangisini o\'rnatasiz.')}
+              </p>
+            )}
+          </details>
+          {onSignUp && (
+            <button type="button" className="link-btn auth-signup" onClick={onSignUp}>
+              {tr('Markazingiz hali ro\'yxatdan o\'tmaganmi? Ro\'yxatdan o\'tish')}
+            </button>
+          )}
+        </form>
+        <DemoEntry />
+      </div>
     </main>
   )
 }

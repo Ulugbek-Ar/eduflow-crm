@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { Customer } from '../types/customer.types'
 import type { Section } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
@@ -37,8 +38,8 @@ export function buildNotifications(
     result.push({
       id: `debts:${now.getFullYear()}-${now.getMonth() + 1}:${debts.map((d) => `${d.customer.id}=${d.debt}`).join(',')}`,
       tone: 'warning',
-      title: `${debts.length} ta mijozning shu oy qarzi bor`,
-      description: `Jami qarz: ${money(totalDebt(debts))}`,
+      title: tr('{0} ta mijozning shu oy qarzi bor', { 0: debts.length }),
+      description: tr('Jami qarz: {0}', { 0: money(totalDebt(debts)) }),
       target: 'finance',
     })
   }
@@ -50,7 +51,7 @@ export function buildNotifications(
     result.push({
       id: `stale-leads:${staleLeads.map((c) => c.id).sort().join(',')}`,
       tone: 'warning',
-      title: `${staleLeads.length} ta yangi lid ${STALE_LEAD_DAYS} kundan beri bog'lanilmagan`,
+      title: tr('{0} ta yangi lid {1} kundan beri bog\'lanilmagan', { 0: staleLeads.length, 1: STALE_LEAD_DAYS }),
       description: staleLeads
         .slice(0, 3)
         .map((c) => c.name)
@@ -66,8 +67,8 @@ export function buildNotifications(
     result.push({
       id: `expense-over:${now.getFullYear()}-${now.getMonth() + 1}`,
       tone: 'danger',
-      title: 'Bu oy chiqim kirimdan oshdi',
-      description: `Kirim ${money(income)}, chiqim ${money(expense)}`,
+      title: tr('Bu oy chiqim kirimdan oshdi'),
+      description: tr('Kirim {0}, chiqim {1}', { 0: money(income), 1: money(expense) }),
       target: 'finance',
     })
   }
@@ -76,8 +77,8 @@ export function buildNotifications(
     result.push({
       id: `negative-balance:${dayKey(now)}`,
       tone: 'danger',
-      title: 'Kassa balansi manfiy',
-      description: `Joriy balans: ${money(balance)}`,
+      title: tr('Kassa balansi manfiy'),
+      description: tr('Joriy balans: {0}', { 0: money(balance) }),
       target: 'finance',
     })
   }

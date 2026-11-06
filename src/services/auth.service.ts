@@ -1,13 +1,32 @@
-// DIQQAT: bu faqat frontend darajasidagi himoya. Ma'lumotlar brauzerda saqlanadi va
-// texnik foydalanuvchi uni chetlab o'ta oladi. Haqiqiy xavfsizlik uchun backend kerak.
+// Parol xeshlash va eski (bitta login) formatni o'qish.
+// DIQQAT: lokal rejimda bu faqat frontend darajasidagi himoya — ma'lumotlar brauzerda saqlanadi va
+// texnik foydalanuvchi uni chetlab o'ta oladi. Haqiqiy xavfsizlik — Supabase rejimi (Auth + RLS)
+import { tr } from '../i18n'
 import { isRecord } from '../utils/guards'
+import { readJson } from './storage.service'
 
-const AUTH_KEY = 'apex:auth'
-const SESSION_KEY = 'apex:session'
+// 1–27-bosqichlardagi yagona administrator yozuvi. Endi faqat xodimlar ro'yxatiga ko'chirish uchun o'qiladi
+export const LEGACY_AUTH_KEY = 'apex:auth'
 
-export const DEFAULT_LOGIN = 'admin'
-export const DEFAULT_PASSWORD = 'admin123'
 export const MIN_PASSWORD_LENGTH = 8
+export const MAX_PASSWORD_LENGTH = 128
+
+// Hamma biladigan yoki taxmin qilish oson parollar — qabul qilinmaydi
+const WEAK_PASSWORDS: ReadonlySet<string> = new Set([
+  'admin123',
+  'administrator',
+  'password',
+  'password1',
+  'parol123',
+  'qwerty123',
+  'qwertyui',
+  '12345678',
+  '123456789',
+  '1234567890',
+  '11111111',
+  '00000000',
+  '87654321',
+])
 
 // 'sha256' — eski (1–8-bosqich) format, faqat migratsiya uchun o'qiladi
 export type HashAlgo = 'pbkdf2-sha256' | 'sha256'
@@ -16,19 +35,17 @@ export type HashAlgo = 'pbkdf2-sha256' | 'sha256'
 export const PBKDF2_ITERATIONS = 210_000
 const CURRENT_ALGO: HashAlgo = 'pbkdf2-sha256'
 
-export interface Credentials {
-  login: string
+export interface PasswordHash {
   salt: string
   passwordHash: string
   algo: HashAlgo
   iterations: number
-  // Standart parol hali almashtirilmagan
-  mustChange: boolean
 }
 
-export interface Session {
+export interface Credentials extends PasswordHash {
   login: string
-  startedAt: string
+  // Standart parol hali almashtirilmagan
+  mustChange: boolean
 }
 
 export function isCryptoAvailable(): boolean {
@@ -40,10 +57,10 @@ function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer), (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-function randomSalt(): string {
-  const bytes = new Uint8Array(16)
-  crypto.getRandomValues(bytes)
-  return toHex(bytes.buffer)
+export function randomHex(bytes = 16): string {
+  const data = new Uint8Array(bytes)
+  crypto.getRandomValues(data)
+  return toHex(data.buffer)
 }
 
 // Eski format: SHA-256(salt:parol). Faqat mavjud yozuvlarni tekshirish uchun qoldirilgan
@@ -68,24 +85,36 @@ export function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-async function hashFor(credentials: Credentials, password: string): Promise<string> {
-  return credentials.algo === 'sha256'
-    ? hashPasswordLegacy(password, credentials.salt)
-    : hashPassword(password, credentials.salt, credentials.iterations)
-}
-
-async function checkPassword(credentials: Credentials, password: string): Promise<boolean> {
-  return timingSafeEqual(await hashFor(credentials, password), credentials.passwordHash)
+export async function checkPassword(record: PasswordHash, password: string): Promise<boolean> {
+  const hash = record.algo === 'sha256' ? await hashPasswordLegacy(password, record.salt) : await hashPassword(password, record.salt, record.iterations)
+  return timingSafeEqual(hash, record.passwordHash)
 }
 
 // Eski algoritm yoki kam iteratsiya — keyingi to'g'ri kirishda yangilanadi
-export function needsRehash(credentials: Credentials): boolean {
-  return credentials.algo !== CURRENT_ALGO || credentials.iterations < PBKDF2_ITERATIONS
+export function needsRehash(record: PasswordHash): boolean {
+  return record.algo !== CURRENT_ALGO || record.iterations < PBKDF2_ITERATIONS
 }
 
-async function createHash(password: string): Promise<Pick<Credentials, 'salt' | 'passwordHash' | 'algo' | 'iterations'>> {
-  const salt = randomSalt()
+export async function createHash(password: string): Promise<PasswordHash> {
+  const salt = randomHex()
   return { salt, passwordHash: await hashPassword(password, salt), algo: CURRENT_ALGO, iterations: PBKDF2_ITERATIONS }
+}
+
+// Login topilmaganda ham xuddi shuncha vaqt sarflanadi — javob vaqtidan login borligini bilib bo'lmaydi
+let dummy: Promise<PasswordHash> | null = null
+export async function burnPasswordCheck(password: string): Promise<void> {
+  dummy ??= createHash(randomHex())
+  await checkPassword(await dummy, password)
+}
+
+export function isHashAlgo(value: unknown): value is HashAlgo {
+  return value === 'pbkdf2-sha256' || value === 'sha256'
+}
+
+export function isPasswordHashFields(value: Record<string, unknown>): boolean {
+  if (typeof value.salt !== 'string' || typeof value.passwordHash !== 'string' || !/^[0-9a-f]{64}$/.test(value.passwordHash)) return false
+  if (value.algo === 'sha256') return value.iterations === 1
+  return value.algo === 'pbkdf2-sha256' && Number.isInteger(value.iterations) && (value.iterations as number) > 0
 }
 
 // Ikkala formatni qabul qiladi: yangi (algo + iterations) va eski (bu maydonlarsiz, SHA-256)
@@ -111,111 +140,40 @@ function normalizeCredentials(value: Credentials): Credentials {
   return value
 }
 
-function readCredentials(): Credentials | null {
-  try {
-    const raw = localStorage.getItem(AUTH_KEY)
-    const parsed: unknown = raw ? JSON.parse(raw) : null
-    return isCredentials(parsed) ? normalizeCredentials(parsed) : null
-  } catch {
-    return null
-  }
+// Eski yagona login (bo'lmasa yoki buzilgan bo'lsa null)
+export function readLegacyCredentials(): Credentials | null {
+  const parsed = readJson(LEGACY_AUTH_KEY)
+  return isCredentials(parsed) ? normalizeCredentials(parsed) : null
 }
-
-function writeCredentials(credentials: Credentials): void {
-  try {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(credentials))
-  } catch {
-    // Saqlab bo'lmasa sessiya davomida xotiradagi qiymat ishlatiladi
-  }
-}
-
-let pending: Promise<Credentials> | null = null
-
-// Saqlangan ma'lumot bo'lmasa yoki buzilgan bo'lsa standart admin / admin123 yaratiladi
-export function getCredentials(): Promise<Credentials> {
-  const stored = readCredentials()
-  if (stored) return Promise.resolve(stored)
-  pending ??= (async () => {
-    const credentials: Credentials = { login: DEFAULT_LOGIN, ...(await createHash(DEFAULT_PASSWORD)), mustChange: true }
-    writeCredentials(credentials)
-    pending = null
-    return credentials
-  })()
-  return pending
-}
-
-export async function verifyLogin(login: string, password: string): Promise<boolean> {
-  const credentials = await getCredentials()
-  // Parol login to'g'ri-noto'g'riligidan qat'i nazar tekshiriladi — javob vaqti farq qilmasligi uchun
-  const passwordOk = await checkPassword(credentials, password)
-  const ok = login.trim().toLowerCase() === credentials.login.toLowerCase() && passwordOk
-  // Migratsiya: eski SHA-256 yozuv to'g'ri parol bilan kirilganda PBKDF2 ga yangilanadi
-  if (ok && needsRehash(credentials)) writeCredentials({ ...credentials, ...(await createHash(password)) })
-  return ok
-}
-
-export type ChangeResult = { ok: true; credentials: Credentials } | { ok: false; field: 'current' | 'login' | 'password'; error: string }
 
 export function validateLogin(login: string): string | null {
-  if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(login)) return 'Login 3–32 belgi: lotin harflari, raqam, _ . -'
+  if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(login)) return tr('Login 3–32 belgi: lotin harflari, raqam, _ . -')
   return null
 }
 
-export async function changeCredentials(currentPassword: string, newLogin: string, newPassword: string): Promise<ChangeResult> {
-  const credentials = await getCredentials()
-  if (!(await checkPassword(credentials, currentPassword))) {
-    return { ok: false, field: 'current', error: 'Joriy parol noto\'g\'ri' }
-  }
-  const loginError = validateLogin(newLogin)
-  if (loginError) return { ok: false, field: 'login', error: loginError }
-  if (newPassword && newPassword.length < MIN_PASSWORD_LENGTH) {
-    return { ok: false, field: 'password', error: `Yangi parol kamida ${MIN_PASSWORD_LENGTH} ta belgidan iborat bo'lishi kerak` }
-  }
-  if (newPassword && newPassword === DEFAULT_PASSWORD) {
-    return { ok: false, field: 'password', error: 'Standart paroldan foydalanib bo\'lmaydi' }
-  }
-  // Parol o'zgarmasa ham eski formatdagi xesh joriy parol bilan yangilanadi
-  const hash = newPassword ? await createHash(newPassword) : needsRehash(credentials) ? await createHash(currentPassword) : credentials
-  const next: Credentials = {
-    login: newLogin,
-    salt: hash.salt,
-    passwordHash: hash.passwordHash,
-    algo: hash.algo,
-    iterations: hash.iterations,
-    mustChange: newPassword ? false : credentials.mustChange,
-  }
-  writeCredentials(next)
-  return { ok: true, credentials: next }
+export function validatePassword(password: string, login = ''): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) return tr('Parol kamida {0} ta belgidan iborat bo\'lishi kerak', { 0: MIN_PASSWORD_LENGTH })
+  if (password.length > MAX_PASSWORD_LENGTH) return tr('Parol {0} belgidan oshmasin', { 0: MAX_PASSWORD_LENGTH })
+  const lower = password.toLowerCase()
+  if (WEAK_PASSWORDS.has(lower)) return tr('Bu parolni taxmin qilish juda oson — boshqasini tanlang')
+  if (login && lower === login.trim().toLowerCase()) return tr('Parol login bilan bir xil bo\'lmasin')
+  if (/^(.)\1+$/.test(password)) return tr('Parol bir xil belgilardan iborat bo\'lmasin')
+  return null
 }
 
-// ===== Sessiya (sessionStorage: tab yopilganda tugaydi) =====
+// Vaqtinchalik parol: chalkash belgilar yo'q (0/O, 1/l/I) — og'zaki aytish va qo'lda yozish oson
+const TEMP_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
-export function readSession(): Session | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    const parsed: unknown = raw ? JSON.parse(raw) : null
-    return isRecord(parsed) && typeof parsed.login === 'string' && typeof parsed.startedAt === 'string'
-      ? { login: parsed.login, startedAt: parsed.startedAt }
-      : null
-  } catch {
-    return null
+export function generateTempPassword(length = 10): string {
+  const result: string[] = []
+  const bytes = new Uint8Array(1)
+  // Rad etish usuli: modul tufayli ba'zi belgilar tez-tez chiqib qolmasin
+  const limit = 256 - (256 % TEMP_ALPHABET.length)
+  while (result.length < length) {
+    crypto.getRandomValues(bytes)
+    if (bytes[0] < limit) result.push(TEMP_ALPHABET[bytes[0] % TEMP_ALPHABET.length])
   }
-}
-
-export function startSession(login: string): Session {
-  const session = { login, startedAt: new Date().toISOString() }
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  } catch {
-    // Sessiyani saqlab bo'lmasa, sahifa yangilanguncha ishlaydi
-  }
-  return session
-}
-
-export function endSession(): void {
-  try {
-    sessionStorage.removeItem(SESSION_KEY)
-  } catch {
-    // e'tiborsiz
-  }
+  const password = result.join('')
+  // Juda kam ehtimol, lekin tekshiruvdan o'tmasa qaytadan
+  return validatePassword(password) ? generateTempPassword(length) : password
 }

@@ -22,6 +22,7 @@ export interface DropdownSection {
 
 interface DropdownProps {
   label: string
+  className?: string
   trigger: (props: { onClick: () => void; 'aria-expanded': boolean; 'aria-haspopup': 'menu'; 'aria-controls': string }) => ReactNode
   sections: DropdownSection[]
   align?: 'left' | 'right'
@@ -32,7 +33,7 @@ interface DropdownProps {
   strategy?: 'absolute' | 'fixed'
 }
 
-export function Dropdown({ label, trigger, sections, align = 'right', header, strategy = 'absolute' }: DropdownProps) {
+export function Dropdown({ label, className, trigger, sections, align = 'right', header, strategy = 'absolute' }: DropdownProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -104,7 +105,7 @@ export function Dropdown({ label, trigger, sections, align = 'right', header, st
   }
 
   return (
-    <div className="dropdown" ref={rootRef}>
+    <div className={cx('dropdown', className)} ref={rootRef}>
       {trigger({ onClick: () => setOpen((v) => !v), 'aria-expanded': open, 'aria-haspopup': 'menu', 'aria-controls': menuId })}
       {open && (
         <div

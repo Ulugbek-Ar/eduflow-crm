@@ -1,26 +1,73 @@
 # EduFlow CRM
 
-[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.0.0
+[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.0.0 · ma'lumot sxemasi v10
 
-**Jonli demo:** https://ulugbek-ar.github.io/eduflow-crm/ — kirish `admin` / `admin123`, so'ng "Demo ma'lumot bilan tanishish".
-Sayt `claude/crm-funnel-courses-analytics` branch'iga har push'da avtomatik yangilanadi (`.github/workflows/pages.yml`).
+**O'quv markazlari uchun CRM.** Lidlar va mijozlar, to'lovlar va kassa, qarzdorlar, kurslar, hisobotlar, xodimlar va rollar —
+bitta brauzer ilovasida. Interfeys o'zbek (lotin) va rus tillarida, telefonda ham qulay, yorug' va qorong'i mavzu bor.
 
-**Ta'lim markazlari va kichik biznes uchun CRM boshqaruv paneli.** Mijozlar bazasi, to'lovlar, kassa balansi, hisobotlar va
-analitika — bitta brauzer ilovasida. Interfeys to'liq o'zbek tilida (lotin), mobil qurilmalar va qorong'i mavzu qo'llab-quvvatlanadi.
+| Manzil | Nima |
+| --- | --- |
+| `/` | Landing: imkoniyatlar, tariflar, savol-javob, "Bepul sinab ko'rish" |
+| `/app` | Ilovaning o'zi (kirish, ro'yxatdan o'tish, "Demo'ni ko'rish") |
+| `/app?demo=1` | To'g'ridan-to'g'ri demo markaz (alohida, sizning ma'lumotingizga tegmaydi) |
+| `/owner` | Sotuvchi paneli: markazlar, tariflar, muddatni uzaytirish, to'xtatish |
+| `/privacy`, `/terms` | Maxfiylik siyosati va foydalanish shartlari (namuna — yurist bilan to'ldiring) |
 
-| Yorug' mavzu                                              | Qorong'i mavzu                                         |
-| --------------------------------------------------------- | ------------------------------------------------------ |
-| ![Umumiy ko'rinish](docs/overview-light.jpg)              | ![Umumiy ko'rinish — qorong'i](docs/overview-dark.jpg)  |
-| ![Sotuv voronkasi — Kanban](docs/customers.jpg)           | ![Kanban — qorong'i](docs/kanban-dark.jpg)              |
-| ![Qarzdorliklar](docs/finance-light.jpg)                  | ![Moliya va kassa — qorong'i](docs/finance-dark.jpg)    |
-| ![Kurslar va xizmatlar](docs/courses-light.jpg)           | ![Tahlil va hisobotlar — qorong'i](docs/analytics-dark.jpg) |
-| ![Mobil (390 px)](docs/mobile.jpg)                        | ![Mobil Kanban — qorong'i](docs/mobile-dark.jpg)        |
+- **Asosiy sayt — Vercel** (`vercel.json`): `main` branch'ga har push'da yangilanadi.
+- **Namoyish — GitHub Pages:** https://ulugbek-ar.github.io/eduflow-crm/ — faqat demo (`VITE_DEMO_ONLY=1`), ro'yxatdan
+  o'tish yo'q, "Ro'yxatdan o'tish" asosiy saytga yo'naltiradi (`MAIN_SITE_URL` repozitoriya o'zgaruvchisi).
 
-> Skrinshotlar `docs/` papkasida, demo ma'lumot bilan production build'dan (`npm run preview`) olingan.
+Standart parol yo'q: birinchi ochilishda **sozlash ustasi** markaz nomi va administrator hisobini yaratadi.
+
+| Yorug' mavzu | Qorong'i mavzu |
+| --- | --- |
+| ![Umumiy ko'rinish](docs/overview-light.jpg) | ![Umumiy ko'rinish — qorong'i](docs/overview-dark.jpg) |
+| ![Sotuv voronkasi — Kanban](docs/kanban-light.jpg) | ![Kanban — qorong'i](docs/kanban-dark.jpg) |
+| ![Moliya va qarzdorlar](docs/finance-light.jpg) | ![Moliya va kassa — qorong'i](docs/finance-dark.jpg) |
+| ![Kurslar va xizmatlar](docs/courses-light.jpg) | ![Tahlil va hisobotlar — qorong'i](docs/analytics-dark.jpg) |
+| ![Xodimlar va rollar](docs/admin-light.jpg) | ![Xodimlar — qorong'i](docs/admin-dark.jpg) |
+| ![Mobil (390 px)](docs/mobile-light.jpg) | ![Mobil — qorong'i](docs/mobile-dark.jpg) |
+
+![Landing sahifa](docs/landing.jpg)
+
+> Skrinshotlar demo ma'lumot bilan production build'dan (`npm run preview`) olingan.
 
 ---
 
-## Imkoniyatlar
+## Mahsulot imkoniyatlari (oddiy foydalanuvchi uchun)
+
+- **Sozlash ustasi** (markaz nomi, kurslar, administrator), qisqa **tanishtiruv** va "Boshlash ro'yxati"; har bo'limda
+  bo'sh holat izohi va birinchi qadam tugmasi; **Yordam** bo'limi (savol-javob, qo'llab-quvvatlash kontaktlari).
+- Telefonda **pastki menyu** va katta "Qo'shish" tugmasi; murakkab atamalar yonida oddiy izoh (masalan, "Konversiya — 10
+  lidan nechtasi to'lov qildi").
+- Har o'chirishdan oldin tasdiqlash, o'chirilgan narsa **30 kun savatchada**, toast'da **"Bekor qilish"**.
+- **To'lov cheki** (80 mm termoprinter va A4) va mijoz kartasini chop etish.
+- Formalar: telefon maskasi, takroriy raqamni ogohlantirish, tugallanmagan forma qoralama sifatida saqlanadi.
+- Internet uzilsa — ogohlantirish chizig'i; yangi versiya bo'lagi yuklanmasa — qayta urinish va tushunarli xabar.
+
+## Xodimlar, rollar va tariflar
+
+| Rol | Nima qila oladi |
+| --- | --- |
+| Administrator | Hamma narsa: xodimlar, sozlamalar, zaxira, jurnal, savatcha |
+| Menejer | Mijozlar va lidlar, to'lov qabul qilish |
+| Kassir / Buxgalter | To'lovlar, xarajatlar, tahlil, hisobot yuklab olish |
+| Kuzatuvchi | Faqat ko'rish |
+
+Ruxsatlar jadvali bitta joyda — `src/auth/permissions.ts` (bulutda xuddi shu jadval `has_permission()` SQL funksiyasida).
+Xodimga vaqtinchalik parol beriladi, birinchi kirishda o'zgartirish majburiy. **Amallar jurnali**: kim, qachon, nimani
+o'zgartirdi. Faol seanslar ro'yxati va "Boshqa qurilmalardan chiqarish".
+
+| Tarif | Narx (namuna) | Xodimlar |
+| --- | --- | --- |
+| Sinov | 14 kun bepul | 3 tagacha |
+| Standart | 199 000 so'm / oy | 5 tagacha |
+| Pro | 399 000 so'm / oy | cheksiz |
+
+Narxlar `src/constants/plans.ts` da — **sotuvdan oldin haqiqiy narxlarni yozing**. Lokal rejimda tarif faqat ma'lumot uchun;
+bulutli rejimda muddat tugasa yoki markaz to'xtatilsa ilova **faqat o'qish** rejimiga o'tadi (ma'lumot o'chmaydi).
+
+## Bo'limlar
 
 Bo'limlar (sidebar tartibida): **Umumiy ko'rinish · Mijozlar va lidlar · Moliya va kassa · Kurslar va xizmatlar ·
 Tahlil va hisobotlar · Sozlamalar**. Barcha hisob-kitoblar Header'dagi umumiy davr tanlovi (Bugun / 7 kun / Shu oy / Shu yil)
@@ -86,7 +133,7 @@ bilan sinxron.
 
 **Umumiy**
 
-- Birinchi kirishda tanlov: **Bo'sh boshlash** yoki **Demo ma'lumot bilan tanishish**; demo rejimda Header'da belgi va tozalash
+- Demo markaz alohida xotirada: undan chiqilganda sizning ma'lumotingiz o'z joyida qoladi
 - Saqlash xatosi (xotira to'lgan) haqida aniq ogohlantirish; bir nechta tab orasida sinxronlash
 - Bildirishnomalar: bog'lanilmagan yangi lidlar, joriy oy qarzdorlari, chiqim kirimdan oshishi, manfiy balans
 - Parol PBKDF2-HMAC-SHA256 (210 000 iteratsiya); noto'g'ri urinishlarda o'sib boruvchi blok
@@ -124,8 +171,8 @@ qayta hisoblanadi.
 
 ## Texnologiyalar
 
-React 19 · TypeScript 7 · Vite 8 · React Compiler · Vitest · Testing Library. Runtime bog'liqlik faqat `react` va `react-dom` — router, UI, grafik
-yoki sana kutubxonalari ishlatilmagan. Stillar toza CSS (CSS variables), grafiklar qo'lda yozilgan SVG.
+React 19 · TypeScript 7 · Vite 8 · React Compiler · Vitest · Testing Library · Playwright. Runtime bog'liqliklar: `react`, `react-dom` va
+`@supabase/supabase-js` (alohida bo'lak, faqat bulutli rejimda yuklanadi) — router, UI, grafik yoki sana kutubxonalari ishlatilmagan. Stillar toza CSS (CSS variables), grafiklar qo'lda yozilgan SVG.
 
 ## O'rnatish va ishga tushirish
 
@@ -136,85 +183,92 @@ npm install
 npm run dev
 ```
 
-Brauzerda `http://localhost:5173` ni oching.
+`http://localhost:5173/` — landing, `http://localhost:5173/app` — ilova. Muhit o'zgaruvchilari (hammasi ixtiyoriy) —
+`.env.example` da: Supabase kalitlari, `VITE_SITE_URL`, qo'llab-quvvatlash kontaktlari (`VITE_SUPPORT_TELEGRAM`,
+`VITE_SUPPORT_PHONE`, `VITE_SUPPORT_EMAIL`), sotuvchi paneli paroli xeshi, demo-sayt rejimi.
 
-## Standart kirish
-
-| Login   | Parol      |
-| ------- | ---------- |
-| `admin` | `admin123` |
-
-Birinchi kirishda parolni almashtirish taklif qilinadi (Sozlamalar → Profil va xavfsizlik). Yangi parol kamida 8 ta belgi.
-
-Ketma-ket 5 ta noto'g'ri urinishdan keyin kirish bloklanadi: 30 s → 60 s → 120 s → … (eng ko'pi 15 daqiqa).
-Blok `localStorage`'da saqlanadi — sahifani yangilash uni bekor qilmaydi. To'g'ri kirish hisoblagichni tozalaydi.
-Oxirgi blok tugaganidan 24 soat o'tsa (blok bo'lmagan bo'lsa — oxirgi noto'g'ri urinishdan), hisoblagich va blok tarixi
-nolga tushadi: keyingi blok yana 30 soniyadan boshlanadi.
+Ketma-ket 5 ta noto'g'ri parol urinishidan keyin kirish bloklanadi: 30 s → 60 s → 120 s → … (eng ko'pi 15 daqiqa),
+24 soatdan keyin hisoblagich nolga tushadi.
 
 ## Scriptlar
 
-| Buyruq               | Vazifasi                                               |
-| -------------------- | ------------------------------------------------------ |
-| `npm run dev`        | Ishlab chiqish serveri                                 |
-| `npm run build`      | Tur tekshiruvi va production build (`dist/`)           |
-| `npm run preview`    | Build natijasini lokal ko'rish (prod CSP sarlavhasi bilan) |
-| `npm run lint`       | Oxlint (ogohlantirishlar ham xato hisoblanadi)         |
-| `npm run test`       | Vitest: unit va komponent testlari (bir marta)         |
-| `npm run test:watch` | Testlar kuzatuv rejimida                               |
-| `npm run typecheck`  | Faqat TypeScript tekshiruvi                            |
-| `npm run check`      | typecheck + lint + test + build — deploydan oldin      |
+| Buyruq | Vazifasi |
+| --- | --- |
+| `npm run dev` | Ishlab chiqish serveri |
+| `npm run build` | Tur tekshiruvi va production build (`dist/`) |
+| `npm run preview` | Build natijasini lokal ko'rish (prod CSP sarlavhasi bilan) |
+| `npm run lint` | Oxlint (ogohlantirishlar ham xato hisoblanadi) |
+| `npm run test` / `test:watch` | Vitest: unit va komponent testlari |
+| `npm run typecheck` | Faqat TypeScript tekshiruvi |
+| `npm run check` | typecheck + lint + test + build — deploydan oldin |
+| `npm run e2e` | Playwright e2e (avval `npm run build`; brauzer: `npx playwright install chromium`) |
+| `npm run owner:password "parol"` | Lokal/demo rejimdagi `/owner` paroli uchun `VITE_OWNER_PASSWORD_HASH` |
 
 ## Papkalar tuzilishi
 
 ```
 src/
-├── components/
-│   ├── analytics/     Tahlil va hisobotlar (AOV, manbalar samaradorligi, eksport)
-│   ├── auth/          Kirish ekrani, parol almashtirish taklifi
-│   ├── courses/       Kurslar va xizmatlar ro'yxati, kurs formasi
-│   ├── customers/     Mijozlar jadvali, Kanban (voronka), forma, mijoz kartasi
-│   ├── finance/       To'lovlar jurnali, qarzdorlar, forma, taqsimotlar
-│   ├── layout/        Sidebar (yig'iladigan), Header, profil menyusi, bildirishnomalar, mavzu
-│   ├── onboarding/    Birinchi ishga tushishdagi tanlov ekrani
-│   ├── overview/      KPI, grafik, manbalar, faoliyat, tezkor amallar
-│   ├── settings/      Sozlamalar bo'limlari
-│   └── ui/            Umumiy komponentlar: Button, Input, Select, Modal,
-│                      ConfirmDialog, Dropdown, Combobox, Toast, Pagination ...
-├── constants/         Ilova nomi (app.ts), navigatsiya, ikonlar (inline SVG), yorliqlar, demo ma'lumot
-├── context/           Dashboard, Auth va Theme provayderlari
-├── hooks/             useAuth, useToast, useConfirm, useTheme, useNotifications, useStorageUsage, usePersistentState
-├── services/          storage (versiya, migratsiya, saqlash xatolari), export (CSV/XLS), auth (PBKDF2),
-│                      loginLock (kirish bloki)
-├── test/              Komponent testlari uchun yordamchilar (ma'lumot va sessiyani tayyorlash)
-├── types/             Customer, Course, Transaction, Settings va boshqa turlar
-├── utils/             analytics, debts, courses, customers, format, guards, phone, list, reports ...
-└── index.css          Dizayn tokenlari (yorug'/qorong'i) va barcha stillar
+├── auth/            Rollar va ruxsatlar jadvali
+├── components/      Bo'limlar: overview, customers, finance, courses, analytics, settings, admin (xodimlar, jurnal,
+│                    savatcha), auth, onboarding, help, print (chek), layout, ui (umumiy komponentlar)
+├── constants/       Ilova nomi, navigatsiya, ikonlar, tariflar, demo ma'lumot
+├── context/         Dashboard, Auth (lokal va bulutli), Theme provayderlari
+├── data/            Supabase adapteri: ulanish, mapper'lar, o'zgarishlar farqi (diff), sinxronlash
+├── hooks/           useAuth, useToast, useConfirm, useOnline, useNotifications ...
+├── i18n/            tr(), til almashtirish, rus lug'ati
+├── landing/         Landing va huquqiy sahifalar
+├── owner/           Sotuvchi paneli (/owner)
+├── services/        storage (versiya, migratsiya), auth (PBKDF2), users, sessions, audit, trash, subscription, export
+├── utils/           analytics, debts, courses, format, phone, lazyRetry ...
+├── router.ts        Sahifa marshrutlari (/, /app, /owner, /privacy, /terms)
+└── index.css        Dizayn tokenlari (yorug'/qorong'i) va stillar
+supabase/            Migratsiya (sxema + RLS), seed, staff funksiyasi, RLS testlari
+e2e/                 Playwright testlari
 ```
 
-Testlar tekshirilayotgan fayl yonida joylashgan: unit testlar `*.test.ts`, komponent testlari (Testing Library) `*.test.tsx`.
-Deploy konfiguratsiyasi testlari (`vercel.json` / `netlify.toml` CSP mosligi) — `tests/` papkasida.
+## Tillar
 
-Har bir push va pull request'da GitHub Actions (`.github/workflows/ci.yml`) Node 22 bilan `npm ci && npm run check` ni bajaradi.
+O'zbek (lotin) — asosiy, rus — `src/i18n/ru.ts` (kalit — o'zbekcha matn, lug'at alohida bo'lakda faqat rus tili tanlanganda
+yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `apex:lang` da saqlanadi. Yangi matn qo'shsangiz
+`tr('...')` bilan o'rang: `src/i18n/i18n.test.ts` lug'atda tarjimasi yo'q matnni topib, testni yiqitadi.
 
-Ilova nomi faqat `src/constants/app.ts` da: `index.html` dagi `%APP_NAME%` build paytida almashtiriladi.
+## Sifat: testlar va Lighthouse
+
+- **Unit va komponent testlari** (Vitest + Testing Library): 388 ta test — `npm run test`.
+- **E2E** (Playwright, `e2e/`): landing, demo, ro'yxatdan o'tish → mijoz → to'lov → chek, xodim qo'shish; desktop va
+  Pixel 7 (mobil) da, konsolda xato yo'qligi va gorizontal scroll yo'qligi tekshiriladi — `npm run e2e`.
+- **RLS testlari** oddiy PostgreSQL'da (`supabase/tests/run-local.sh`): bir markaz boshqasining ma'lumotini ko'rmaydi,
+  rollar, savatcha, faqat o'qish rejimi.
+- CI (`.github/workflows/ci.yml`) har push va PR'da uchalasini ham bajaradi.
+
+**Lighthouse (mobil, production build):**
+
+| Sahifa | Performance | Accessibility | Best Practices | SEO |
+| --- | --- | --- | --- | --- |
+| `/` (landing) | 98 | 100 | 100 | 100 |
+| `/app` | 95 | 100 | 100 | 100 |
+| `/privacy` | 99 | 100 | 100 | 100 |
 
 ## Ma'lumotlar qayerda saqlanadi
 
-Backend yo'q — barcha ma'lumot **foydalanuvchi brauzerining `localStorage`'ida** saqlanadi:
+Ikki rejim bor:
 
-| Kalit                                                | Tarkibi                                          |
-| ---------------------------------------------------- | ------------------------------------------------ |
-| `apex:customers`, `apex:transactions`, `apex:courses`, `apex:settings` | Asosiy ma'lumotlar             |
-| `apex:version`                                       | Sxema versiyasi (hozir 9; migratsiyalar uchun)   |
-| `apex:seeded`, `apex:demo`                           | Birinchi tanlov qilingan / demo rejim            |
-| `apex:auth`                                          | Login, tuz va parol xeshi (PBKDF2-SHA256, `algo` va `iterations` bilan) |
-| `apex:login-lock`                                    | Noto'g'ri urinishlar hisoblagichi, blok muddati va oxirgi urinish vaqti |
-| `apex:theme`, `apex:notifications`                   | Mavzu va o'qilgan eslatmalar                     |
-| `apex:sidebar-collapsed`, `apex:customers-view`      | Sidebar holati, mijozlar ko'rinishi (Jadval / Kanban) |
-| `apex:session` (sessionStorage)                      | Joriy sessiya — tab yopilganda tugaydi           |
+- **Lokal** (Supabase kalitlari berilmagan): hamma ma'lumot shu brauzerning `localStorage`'ida.
+- **Bulutli** (Supabase): ma'lumot serverda, markazlar RLS bilan ajratilgan — pastdagi "Bulutli rejim" bo'limi.
 
-Kalitlar `apex:` prefiksi bilan qoldirilgan — avvalgi versiyadagi ma'lumotlar yo'qolmasligi uchun. Eski SHA-256 parol
-xeshi to'g'ri parol bilan birinchi kirishda avtomatik PBKDF2 ga yangilanadi.
+Lokal rejim kalitlari (`apex:` prefiksi eski versiyalar ma'lumoti yo'qolmasligi uchun o'zgartirilmaydi; demo markaz
+xuddi shu kalitlarni `eduflow-demo:` prefiksi ostida alohida saqlaydi):
+
+| Kalit | Tarkibi |
+| --- | --- |
+| `apex:customers`, `apex:transactions`, `apex:courses`, `apex:settings` | Asosiy ma'lumotlar |
+| `apex:version` | Sxema versiyasi (hozir **10**) |
+| `apex:users`, `apex:auth`, `apex:sessions`, `apex:login-lock` | Xodimlar, parol xeshlari (PBKDF2-SHA256), seanslar, kirish bloki |
+| `apex:audit`, `apex:trash` | Amallar jurnali, savatcha (30 kun) |
+| `apex:subscription` | Tarif va sinov muddati |
+| `apex:seeded`, `apex:demo`, `apex:tour` | Birinchi sozlash, demo, tanishtiruv holati |
+| `apex:theme`, `apex:lang`, `apex:notifications`, `apex:sidebar-collapsed`, `apex:customers-view` | Ko'rinish va qulayliklar |
+| `apex:session` (sessionStorage) | Joriy seans — tab yopilganda tugaydi |
 
 ### Sxema versiyalari va migratsiyalar
 
@@ -231,30 +285,103 @@ ham joriy sxemaga ko'chiriladi, buzuq yozuvlar tashlab yuboriladi va soni ko'rsa
 | v7 | To'lov turi, status, marketing manbasi | `payme, click → card`, `bank → transfer`, `cash → cash`; status → `paid` |
 | v8 | Logotip rasmi `settings.logoImage` | `''` (harfli logo) |
 | v9 | "To'lov qildi" sanasi `customer.paidAt` | birinchi to'langan kirim sanasi, bo'lmasa qo'shilgan sana |
+| v10 | Kurs davomiyligi 0 — "muddatsiz" | v6 yaratgan (1 oy, narx 0, 0 guruh) kurslar → muddatsiz |
 
-Birinchi ochilishda hech narsa yozilmaydi — foydalanuvchi bo'sh yoki demo ma'lumotni tanlaydi. Boshqa brauzer yoki qurilmada ma'lumotlar ko'rinmaydi — ko'chirish uchun
+Lokal rejimda boshqa brauzer yoki qurilmada ma'lumotlar ko'rinmaydi — ko'chirish uchun
 **Sozlamalar → Ma'lumotlar → JSON zaxira** dan foydalaning. Brauzer tarixini tozalash ma'lumotlarni ham o'chiradi, shuning uchun
 zaxirani muntazam yuklab oling.
 
+## Bulutli rejim (Supabase)
+
+Kalitlarsiz ilova **lokal rejimda** ishlaydi: ma'lumot shu brauzerda, "Demo'ni ko'rish" — alohida namunaviy markaz.
+`VITE_SUPABASE_URL` va `VITE_SUPABASE_ANON_KEY` berilsa — **bulutli rejim**: email + parol bilan kirish, ma'lumot serverda,
+har markaz RLS bilan ajratilgan, istalgan qurilmadan ishlash, tarif muddati va to'xtatish majburiy.
+
+### Ulash — qadam-baqadam
+
+1. **Loyiha yarating.** [supabase.com](https://supabase.com) → *New project*. Region tanlang (pastdagi "Ma'lumot joylashuvi"ga qarang),
+   kuchli DB parolini saqlab qo'ying.
+2. **Sxemani o'rnating.** Kompyuterda [Supabase CLI](https://supabase.com/docs/guides/cli) o'rnatilgan bo'lsin:
+   ```bash
+   supabase login
+   supabase link --project-ref <loyiha-id>
+   supabase db push
+   ```
+   CLI'siz: Dashboard → *SQL Editor* → `supabase/migrations/20261106000001_init.sql` mazmunini qo'yib *Run*.
+3. **Xodim funksiyasini joylang** (xodim qo'shish va parolini tiklash — service role kaliti faqat serverda qoladi):
+   ```bash
+   supabase functions deploy staff
+   ```
+4. **Auth sozlamalari.** Dashboard → *Authentication → URL Configuration*: *Site URL* = `https://<domeningiz>/app`,
+   *Redirect URLs* ga ham shu manzilni qo'shing (parolni tiklash havolasi shu yerga qaytaradi).
+   *Providers → Email*: yoqilgan. "Confirm email" yoqilgan bo'lsa, ro'yxatdan o'tgan markaz emailni tasdiqlagach yaratiladi.
+5. **Kalitlarni ilovaga bering.** Dashboard → *Project Settings → API*: `Project URL` va `anon public` kalit.
+   Vercel → *Settings → Environment Variables*:
+   ```
+   VITE_SUPABASE_URL=https://<loyiha-id>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<anon kalit>
+   ```
+   Lokal: `.env.example` dan `.env.local` yarating. **`service_role` kalitini hech qachon ilovaga yozmang.**
+6. **Qayta deploy qiling** va `/app` da "Ro'yxatdan o'tish" — markaz 14 kunlik sinov bilan yaratiladi.
+7. **Sotuvchi (super-admin).** O'zingiz `/app` da ro'yxatdan o'ting (yoki Dashboard → *Authentication → Add user*), so'ng
+   *SQL Editor* da:
+   ```sql
+   insert into public.platform_admins (user_id) select id from auth.users where email = 'siz@domen.uz';
+   ```
+   Endi `/owner` da shu email bilan kirasiz: markazlar, tarif, +30 kun, to'xtatish.
+8. **Savatchani avtomatik tozalash** (30 kundan eski o'chirilganlar). Dashboard → *Database → Extensions* → `pg_cron`, so'ng:
+   ```sql
+   select cron.schedule('eduflow-purge-trash', '15 3 * * *', $$select public.purge_trash()$$);
+   ```
+9. **Eski ma'lumotni ko'chirish.** Avval lokal rejimda ishlagan markaz shu brauzerda bulutli rejimga kirsa, Sozlamalar →
+   Ma'lumotlar'da **"Bulutga ko'chirish"** chiqadi (mijozlar, to'lovlar, kurslar, sozlamalar). Boshqa kompyuterdagi ma'lumot —
+   o'sha yerda JSON zaxira olib, bulutda Sozlamalar → Ma'lumotlar → "Zaxirani tiklash".
+
+### Nima qayerda
+
+| Narsa | Joyi |
+| --- | --- |
+| Jadvallar, RLS, RPC, triggerlar | `supabase/migrations/20261106000001_init.sql` |
+| Lokal Supabase uchun namunaviy markaz | `supabase/seed.sql` (`supabase start` → demo@eduflow.uz / DemoParol2026) |
+| Xodim qo'shish / parol tiklash | `supabase/functions/staff/index.ts` |
+| RLS testlari (oddiy PostgreSQL'da) | `supabase/tests/run-local.sh` |
+| Ilovadagi adapter | `src/data/` (`supabase.ts`, `mappers.ts`, `diff.ts`), `src/context/CloudAuthProvider.tsx` |
+
+- Ruxsatlar `has_permission()` da — `src/auth/permissions.ts` dagi jadval bilan bir xil; birini o'zgartirsangiz, ikkinchisini ham.
+- Markaz o'z tarifini, holatini va muddatini o'zgartira olmaydi (ustun huquqlari); buni faqat sotuvchi `owner_update_org` bilan qiladi.
+- Muddat tugasa yoki markaz to'xtatilsa — RLS faqat o'qishga ruxsat beradi, ma'lumot o'chmaydi.
+- O'chirish — `deleted_at` (savatcha, `trash_move` / `trash_restore`), butunlay o'chirish — faqat savatchadan.
+- Amallar jurnali (`audit_log`) server triggerlari bilan yoziladi; ilova faqat kirish, eksport va zaxira hodisalarini yuboradi.
+
+### Ma'lumot joylashuvi (muhim)
+
+O'zbekiston qonunchiligiga ko'ra fuqarolarning shaxsga doir ma'lumotlari O'zbekiston hududidagi serverlarda saqlanishi kerak.
+Supabase'ning bunday regioni yo'q. Bulutli rejimni mijozlarga sotishdan oldin **yurist bilan maslahatlashing**: muqobil — Supabase'ni
+(ochiq kodli) O'zbekistondagi serverda o'zingiz joylashtirish (self-hosted), sxema va ilova o'zgarishsiz ishlaydi.
+
 ## Deploy
 
-### Vercel
+### Vercel (asosiy sayt)
 
-1. Repozitoriyni GitHub'ga yuklang va [vercel.com](https://vercel.com) da **Add New → Project** orqali import qiling.
-2. Sozlamalar `vercel.json` dan avtomatik olinadi (build: `npm run build`, chiqish: `dist`, SPA rewrite, kesh headerlari).
-3. **Deploy** tugmasini bosing.
+1. [vercel.com](https://vercel.com) → **Add New → Project** → shu repozitoriyni import qiling, *Production Branch* — `main`.
+2. Sozlamalar `vercel.json` dan olinadi (build, `dist`, SPA rewrite, kesh va xavfsizlik headerlari).
+3. Bulutli rejim uchun *Settings → Environment Variables* ga `VITE_SUPABASE_URL` va `VITE_SUPABASE_ANON_KEY` qo'shing
+   (pastdagi "Bulutli rejim"). Domen ulasangiz `VITE_SITE_URL` ni ham bering.
 
-### Netlify
+### GitHub Pages (faqat demo)
 
-1. [app.netlify.com](https://app.netlify.com) da **Add new site → Import an existing project** ni tanlang.
-2. Sozlamalar `netlify.toml` dan olinadi (Node 22, `dist`, SPA redirect, kesh headerlari).
-3. **Deploy site** ni bosing.
+`.github/workflows/pages.yml` `main` ga har push'da `npm run check` dan so'ng `--base /eduflow-crm/` va `VITE_DEMO_ONLY=1`
+bilan yig'ib `gh-pages` branch'iga joylaydi. Repozitoriya *Settings → Pages*: manba — `gh-pages` branch. *Settings →
+Secrets and variables → Actions → Variables* ga `MAIN_SITE_URL` (Vercel manzili) qo'shing — demo'dagi "Ro'yxatdan o'tish"
+shu yerga olib boradi.
 
-Deploydan so'ng `index.html` dagi `og:image` ni to'liq manzil bilan almashtiring (masalan, `https://sizning-domen.uz/og-image.jpg`) —
-ijtimoiy tarmoqlardagi ko'rinish uchun.
+### Netlify (ixtiyoriy)
 
-> Parol hashi Web Crypto API orqali hisoblanadi va u faqat **HTTPS** yoki `localhost` da ishlaydi. Vercel va Netlify
-> avtomatik HTTPS beradi.
+`netlify.toml` tayyor (Node 22, `dist`, SPA redirect, headerlar).
+
+`og:url`, `canonical` va to'liq `og:image` build paytida qo'shiladi: Vercel'da avtomatik, boshqa joyda `VITE_SITE_URL` bering.
+
+> Parol xeshi Web Crypto API orqali hisoblanadi — faqat **HTTPS** yoki `localhost` da ishlaydi.
 
 ### Xavfsizlik sarlavhalari
 
@@ -262,7 +389,8 @@ ijtimoiy tarmoqlardagi ko'rinish uchun.
 
 ```
 default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
-font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'
 ```
 
 - Inline skript yo'q: mavzuni oldindan qo'llovchi skript `public/theme-init.js` faylida, shuning uchun hash kerak emas.
@@ -271,28 +399,18 @@ font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-ac
   konsolida CSP xatolari yo'qligiga tekshirish mumkin. CSP o'zgartirilsa, ikkala faylni yangilang: test farqni ushlaydi.
 - Qo'shimcha: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`.
 
-## Xavfsizlik: backend'siz himoyaning cheklovlari
+## Xavfsizlik: lokal rejim cheklovlari
 
-Ochiq aytamiz: **bu ilovadagi kirish — maxfiylik emas, balki tasodifiy foydalanuvchidan himoya.** Backend bo'lmagani uchun:
+Lokal rejimda (Supabase'siz) kirish — **tasodifiy foydalanuvchidan himoya, maxfiylik emas**: ma'lumot `localStorage`'da
+shifrlanmagan, kompyuterga kira oladigan odam DevTools orqali uni o'qiy yoki o'zgartira oladi, kirish va rollar brauzerda
+tekshiriladi, JSON zaxira ham shifrlanmagan. PBKDF2 faqat parolning o'zini himoya qiladi.
 
-- **Ma'lumotlar shifrlanmagan.** Mijozlar, telefonlar va to'lovlar `localStorage`'da ochiq JSON ko'rinishida turadi. Kompyuterga
-  kira oladigan har kim DevTools orqali ularni parolsiz o'qiy, o'zgartira yoki o'chira oladi.
-- **Kirishni chetlab o'tish mumkin.** Tekshiruv brauzerda bajariladi: `sessionStorage`'ga sessiya yozish, `apex:auth` ni
-  o'chirish (standart `admin` / `admin123` qayta yaratiladi) yoki JavaScript'ni o'zgartirish orqali ekran ochiladi.
-- **Urinishlar bloki ham mahalliy.** `apex:login-lock` ni o'chirish yoki boshqa brauzer/profil ochish blokni bekor qiladi.
-  U faqat oddiy parol tanlashni sekinlashtiradi.
-- **PBKDF2 nima beradi:** xesh oqib chiqsa (masalan, zaxira yoki brauzer profili nusxasi), parolni tanlab topish
-  qimmatlashadi va parol boshqa saytlarda qayta ishlatilgan bo'lsa, uni himoya qiladi. Ma'lumotlarning o'zini himoya qilmaydi.
-- **Bitta foydalanuvchi, rollar yo'q, audit jurnali yo'q.** Kim nimani o'zgartirganini bilib bo'lmaydi.
-- **JSON zaxira ham shifrlanmagan** — uni ishonchli joyda saqlang.
-
-Haqiqiy xavfsizlik (server tomonda autentifikatsiya, ma'lumotni shifrlash, rollar, audit) uchun **backend kerak** — pastdagi
-"Keyingi rivojlanish" bo'limiga qarang. Hozirgi holatda ilovani faqat o'zingiz nazorat qiladigan qurilmada ishlating va
-operatsion tizim hisobiga parol qo'ying.
+Haqiqiy himoya — **bulutli rejim**: autentifikatsiya Supabase Auth'da, har markaz ma'lumoti RLS bilan ajratilgan, rollar va
+faqat-o'qish rejimi serverda tekshiriladi, jurnal server triggerlari bilan yoziladi. Pullik mijozlarga bulutli rejimni bering.
 
 ## Cheklovlar
 
-- Ma'lumotlar bitta brauzerga bog'langan, sinxron serverga yozilmaydi. `localStorage` hajmi taxminan 5 MB bilan cheklangan
+- Lokal rejimda ma'lumotlar bitta brauzerga bog'langan. `localStorage` hajmi taxminan 5 MB bilan cheklangan
   (aniq limit brauzerga bog'liq, band joy ko'rsatkichi taxminiy). Xotira to'lsa, yangi o'zgarishlar faqat ochiq tabda qoladi —
   ogohlantirish chiqqanda darhol JSON zaxira oling.
 - Valyutani USD ga o'zgartirish faqat belgini almashtiradi — summalar konvertatsiya qilinmaydi.
@@ -307,8 +425,7 @@ operatsion tizim hisobiga parol qo'ying.
 
 ## Keyingi rivojlanish
 
-- Backend (masalan, Supabase / PostgreSQL): server tomonda autentifikatsiya, bir nechta qurilmada ishlash
-- Ko'p foydalanuvchi va rollar (direktor, administrator, o'qituvchi, buxgalter)
+- Payme / Click: obuna to'lovini avtomatik qabul qilish va to'lovlarni avtomatik qayd etish
 - SMS va Telegram bot orqali eslatmalar (to'lov muddati, dars jadvali)
-- Payme / Click API integratsiyasi: to'lovlarni avtomatik qayd etish
 - Guruhlar, dars jadvali va davomat moduli
+- O'zbekistondagi serverda (self-hosted Supabase) joylashtirish

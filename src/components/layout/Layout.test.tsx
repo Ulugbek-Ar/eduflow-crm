@@ -16,9 +16,22 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
       'Moliya va kassa',
       'Kurslar va xizmatlar',
       'Tahlil va hisobotlar',
+      'Boshqaruv',
       'Sozlamalar',
+      'Yordam',
     ])
     expect(labels).toEqual(NAV_ITEMS.map((item) => item.label))
+  })
+
+  it('kuzatuvchi va menejer menyusida faqat ruxsat berilgan bo\'limlar', async () => {
+    const { unmount } = await renderSignedIn(undefined, { role: 'viewer' })
+    const labels = () => within(screen.getByRole('navigation', { name: 'Bo\'limlar' })).getAllByRole('button').map((b) => b.textContent)
+    expect(labels()).not.toContain('Boshqaruv')
+    expect(labels()).toContain('Tahlil va hisobotlar')
+    unmount()
+    sessionStorage.clear()
+    await renderSignedIn(undefined, { role: 'manager' })
+    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar', 'Yordam'])
   })
 
   it('sidebar yig\'iladi, nomlar tooltip va ekran o\'quvchi uchun qoladi, holat saqlanadi', async () => {
@@ -39,8 +52,9 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     const { user } = await renderSignedIn()
     await user.click(screen.getByRole('button', { name: /^Profil:/ }))
     const menu = screen.getByRole('menu', { name: 'Profil menyusi' })
-    expect(within(menu).getByText('direktor')).toBeTruthy()
-    expect(within(menu).getByText(/Administrator/)).toBeTruthy()
+    expect(within(menu).getByText('Dilshod Karimov')).toBeTruthy()
+    expect(within(menu).getByText('Login: direktor')).toBeTruthy()
+    expect(within(menu).getByText(/Direktor · Administrator/)).toBeTruthy()
 
     await user.click(within(menu).getByRole('menuitem', { name: /Profil/ }))
     expect(await screen.findByRole('region', { name: 'Profil va xavfsizlik' })).toBeTruthy()
@@ -50,16 +64,19 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     expect(await screen.findByRole('button', { name: 'Kirish' })).toBeTruthy()
   })
 
-  it('profil ismi va lavozimi sozlamalarda saqlanadi va menyuda ko\'rinadi', async () => {
+  it('profil ismi va lavozimi xodim yozuvida saqlanadi va menyuda ko\'rinadi', async () => {
     const { user } = await renderSignedIn()
     await user.click(screen.getByRole('button', { name: 'Sozlamalar' }))
     const profile = await screen.findByRole('region', { name: 'Profil va xavfsizlik' })
-    await user.type(within(profile).getByLabelText('To\'liq ism'), 'Dilshod Karimov')
-    await user.clear(within(profile).getByLabelText('Rol / lavozim'))
-    await user.type(within(profile).getByLabelText('Rol / lavozim'), 'Direktor')
-    await user.click(screen.getByRole('button', { name: 'Saqlash' }))
-    expect(screen.getByRole('button', { name: 'Profil: Dilshod Karimov' }).textContent).toContain('DK')
-    expect(JSON.parse(localStorage.getItem('apex:settings') ?? '{}')).toMatchObject({ profileName: 'Dilshod Karimov', profileRole: 'Direktor' })
+    await user.clear(within(profile).getByLabelText(/To'liq ism/))
+    await user.type(within(profile).getByLabelText(/To'liq ism/), 'Aziz Rahimov')
+    await user.clear(within(profile).getByLabelText('Lavozim'))
+    await user.type(within(profile).getByLabelText('Lavozim'), 'Direktor o\'rinbosari')
+    await user.click(within(profile).getByRole('button', { name: 'Profilni saqlash' }))
+    expect(await screen.findByText('Profil saqlandi')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Profil: Aziz Rahimov' }).textContent).toContain('AR')
+    const users = JSON.parse(localStorage.getItem('apex:users') ?? '[]') as Array<{ fullName: string; title: string }>
+    expect(users[0]).toMatchObject({ fullName: 'Aziz Rahimov', title: 'Direktor o\'rinbosari' })
   })
 
   it('mavzu bitta tugma bilan almashadi va saqlanadi, "Tizim" sozlamalarda tanlanadi', async () => {

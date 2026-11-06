@@ -1,21 +1,30 @@
+import { tr } from '../../i18n'
+import { useState } from 'react'
 import { FUNNEL_STAGES, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
 import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuditActor, useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
 import { customerDebt, studyMonthNumber } from '../../utils/debts'
-import { Button } from '../ui/Button'
+import { CustomerCard } from '../print/CustomerCard'
+import { PrintDocument } from '../print/PrintDocument'
+import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate } = useDashboard()
+  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  const actor = useAuditActor()
+  // Chop etish vaqti (bosilgan paytda) — kartada ko'rsatiladi
+  const [printedAt, setPrintedAt] = useState<string | null>(null)
   const customer = getCustomer(customerId)
 
   if (!customer) {
     return (
-      <Modal title="Mijoz topilmadi" onClose={closeModal} variant="drawer">
-        <p className="muted">Bu mijoz o'chirilgan bo'lishi mumkin.</p>
+      <Modal title={tr('Mijoz topilmadi')} onClose={closeModal} variant="drawer">
+        <p className="muted">{tr('Bu mijoz o\'chirilgan bo\'lishi mumkin.')}</p>
       </Modal>
     )
   }
@@ -28,13 +37,13 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const debt = customerDebt(customer, courses, transactions)
   const course = courses.find((c) => c.name === customer.course)
   const studyMonth = customer.status === 'paid' ? studyMonthNumber(customer) : null
-  const finished = course && studyMonth !== null && studyMonth > course.durationMonths
+  const finished = course && course.durationMonths > 0 && studyMonth !== null && studyMonth > course.durationMonths
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: 'Mijozni o\'chirish',
+      title: tr('Mijozni o\'chirish'),
       message: deleteCustomerMessage(customer, transactions, money),
-      confirmLabel: 'O\'chirish',
+      confirmLabel: tr('O\'chirish'),
     })
     if (ok) {
       deleteCustomer(customer.id)
@@ -50,18 +59,27 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
       variant="drawer"
       footer={
         <>
-          <Button variant="danger" icon="trash" onClick={handleDelete}>
-            O'chirish
+          {can('customers.delete') && (
+            <Button variant="danger" icon="trash" onClick={handleDelete}>
+              {tr('O\'chirish')}
+            </Button>
+          )}
+          <Button variant="ghost" icon="fileText" onClick={() => setPrintedAt(new Date().toISOString())}>
+            {tr('Chop etish')}
           </Button>
-          <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
-            Tahrirlash
-          </Button>
-          <Button
-            icon="plus"
-            onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, amount: debt?.debt || undefined } })}
-          >
-            To'lov
-          </Button>
+          {can('customers.edit') && (
+            <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
+              {tr('Tahrirlash')}
+            </Button>
+          )}
+          {can('payments.create') && (
+            <Button
+              icon="plus"
+              onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, amount: debt?.debt || undefined } })}
+            >
+              {tr('To\'lov')}
+            </Button>
+          )}
         </>
       }
     >
@@ -70,11 +88,12 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
         <div>
           {/* Bosqich rangli tanlov ko'rinishida — badge vazifasini ham bajaradi */}
           <label className="stage-quick">
-            <span className="sr-only">Bosqich</span>
+            <span className="sr-only">{tr('Bosqich')}</span>
             <select
             className={`status-select badge-${customer.status}`}
             value={customer.status}
-            aria-label="Bosqichni o'zgartirish"
+            aria-label={tr('Bosqichni o\'zgartirish')}
+            disabled={!can('customers.edit')}
             onChange={(e) => updateCustomer(customer.id, { status: e.target.value as CustomerStatus })}
           >
             {FUNNEL_STAGES.map((stage) => (
@@ -84,72 +103,78 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
             ))}
             </select>
           </label>
-          <p className="muted">{SOURCE_LABELS[customer.source]} orqali kelgan</p>
+          <p className="muted">{SOURCE_LABELS[customer.source]} {tr('orqali kelgan')}</p>
         </div>
       </div>
 
       <dl className="detail-list">
         <div>
-          <dt>Telefon</dt>
+          <dt>{tr('Telefon')}</dt>
           <dd>
             <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
           </dd>
         </div>
         <div>
-          <dt>Email</dt>
+          <dt>{tr('Email')}</dt>
           <dd>{customer.email ? <a href={`mailto:${customer.email}`}>{customer.email}</a> : '—'}</dd>
         </div>
         <div>
-          <dt>Qo'shilgan</dt>
+          <dt>{tr('Qo\'shilgan')}</dt>
           <dd>{formatDate(customer.createdAt)}</dd>
         </div>
         <div>
-          <dt>Yangilangan</dt>
+          <dt>{tr('Yangilangan')}</dt>
           <dd>{customer.updatedAt ? formatDate(customer.updatedAt) : '—'}</dd>
         </div>
         {customer.paidAt && (
           <div>
-            <dt>To'lov qildi</dt>
+            <dt>{tr('To\'lov qildi')}</dt>
             <dd>{formatDate(customer.paidAt)}</dd>
           </div>
         )}
         {course && studyMonth !== null && (
           <div>
-            <dt>O'qish</dt>
-            <dd>{finished ? `Tugagan (${course.durationMonths} oy)` : `${studyMonth}-oy / ${course.durationMonths}`}</dd>
+            <dt>{tr('O\'qish')}</dt>
+            <dd>
+              {finished
+                ? tr('Tugagan ({0} oy)', { 0: course.durationMonths })
+                : course.durationMonths > 0
+                  ? tr('{0}-oy / {1}', { 0: studyMonth, 1: course.durationMonths })
+                  : tr('{0}-oy (muddatsiz)', { 0: studyMonth })}
+            </dd>
           </div>
         )}
         {customer.note && (
           <div className="detail-wide">
-            <dt>Izoh</dt>
+            <dt>{tr('Izoh')}</dt>
             <dd>{customer.note}</dd>
           </div>
         )}
       </dl>
 
       <div className="detail-total">
-        <span>Jami to'lagan</span>
+        <span>{tr('Jami to\'lagan')}</span>
         <strong className="text-success">{money(totalPaid)}</strong>
       </div>
 
       {debt && (
         <div className={debt.debt > 0 ? 'detail-total is-debt' : 'detail-total'}>
           <span>
-            Joriy oy: kutilgan {money(debt.expected)}, to'langan {money(debt.paid)}
+            {tr('Joriy oy: kutilgan')} {money(debt.expected)}{tr(', to\'langan')} {money(debt.paid)}
           </span>
-          <strong className={debt.debt > 0 ? 'text-danger nowrap' : 'text-success nowrap'}>{debt.debt > 0 ? `Qarz: ${money(debt.debt)}` : 'Qarz yo\'q'}</strong>
+          <strong className={debt.debt > 0 ? 'text-danger nowrap' : 'text-success nowrap'}>{debt.debt > 0 ? tr('Qarz: {0}', { 0: money(debt.debt) }) : tr('Qarz yo\'q')}</strong>
         </div>
       )}
 
-      <h3 className="detail-subtitle">To'lovlar tarixi</h3>
+      <h3 className="detail-subtitle">{tr('To\'lovlar tarixi')}</h3>
       {payments.length === 0 ? (
-        <p className="muted">Hali to'lov qayd etilmagan.</p>
+        <p className="muted">{tr('Hali to\'lov qayd etilmagan.')}</p>
       ) : (
         <ul className="payment-list">
           {payments.map((t) => (
             <li key={t.id}>
               <div>
-                <strong>{t.note || 'To\'lov'}</strong>
+                <strong>{t.note || tr('To\'lov')}</strong>
                 <small className="muted">
                   {formatDate(t.date)} · {METHOD_LABELS[t.method]} · {TX_STATUS_LABELS[t.status]}
                 </small>
@@ -158,9 +183,26 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
                 {t.type === 'income' ? '+' : '−'}
                 {money(t.amount)}
               </span>
+              {t.type === 'income' && (
+                <IconButton icon="receipt" label={tr('Chek: {0}, {1}', { 0: formatDate(t.date), 1: money(t.amount) })} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {printedAt && (
+        <PrintDocument size="a4" onDone={() => setPrintedAt(null)}>
+          <CustomerCard
+            customer={customer}
+            payments={payments}
+            debt={debt}
+            totalPaid={totalPaid}
+            settings={settings}
+            money={money}
+            printedBy={actor?.userName ?? ''}
+            printedAt={printedAt}
+          />
+        </PrintDocument>
       )}
     </Modal>
   )

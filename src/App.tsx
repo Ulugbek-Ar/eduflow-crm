@@ -1,6 +1,13 @@
+import { tr } from './i18n'
 import { CustomerTable } from './components/customers/CustomerTable'
+import { DemoBar } from './components/layout/DemoBar'
+import { MobileNav } from './components/layout/MobileNav'
+import { OfflineBanner } from './components/layout/OfflineBanner'
+import { SubscriptionBanner } from './components/layout/SubscriptionBanner'
+import { PeriodBar } from './components/layout/PeriodBar'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
+import { GettingStarted } from './components/overview/GettingStarted'
 import { KpiCards } from './components/overview/KpiCards'
 import { QuickActions } from './components/overview/QuickActions'
 import { RecentActivity } from './components/overview/RecentActivity'
@@ -8,10 +15,14 @@ import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
-import { FirstRunScreen } from './components/onboarding/FirstRunScreen'
-import { PasswordPrompt } from './components/auth/PasswordPrompt'
+import { SetupWizard } from './components/onboarding/SetupWizard'
+import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
+import { SetupAdminScreen } from './components/auth/SetupAdminScreen'
+import { CloudDataGate, CloudLoading, CloudSignUpScreen } from './components/auth/CloudScreens'
+import { DemoOnlyScreen } from './components/auth/DemoOnlyScreen'
+import { isCloudEnabled } from './data/config'
 import { ToastProvider } from './components/ui/Toast'
 import { NAV_ITEMS } from './constants/navigation'
 import { AuthProvider } from './context/AuthContext'
@@ -19,18 +30,23 @@ import { ThemeProvider } from './context/ThemeContext'
 import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
 import { useAuth } from './hooks/useAuth'
-import { isFirstRun } from './services/storage.service'
+import { getStorageNamespace, isFirstRun } from './services/storage.service'
 import { pageTitle } from './constants/app'
 import { cx } from './utils/cx'
-import { scrollToId } from './utils/scroll'
+import { loadWithRetry } from './utils/lazyRetry'
+import { canOpenSection } from './auth/permissions'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
+  const { user } = useAuth()
+  // Ruxsat yo'q bo'lim (masalan, rol o'zgargan) — bosh sahifa ko'rsatiladi
+  const section = canOpenSection(user?.role, activeSection) ? activeSection : 'overview'
 
-  switch (activeSection) {
+  switch (section) {
     case 'overview':
       return (
         <div className="stack">
+          <GettingStarted />
           <KpiCards />
           <div className="overview-grid">
             <RevenueChart />
@@ -54,6 +70,10 @@ function ActiveSection() {
       return <CoursesPanel />
     case 'analytics':
       return <AnalyticsPanel />
+    case 'admin':
+      return <AdminPanel />
+    case 'help':
+      return <HelpPanel />
     case 'settings':
       return <SettingsPanel />
   }
@@ -61,14 +81,17 @@ function ActiveSection() {
 
 
 // Og'irroq bo'limlar va modallar alohida chunk'larda: birinchi ochilishda yuklanadigan JS kamayadi
-const loadTransactionTable = () => import('./components/finance/TransactionTable')
-const loadSettingsPanel = () => import('./components/settings/SettingsPanel')
-const loadCustomerForm = () => import('./components/customers/CustomerFormModal')
-const loadCustomerDetail = () => import('./components/customers/CustomerDetail')
-const loadTransactionForm = () => import('./components/finance/TransactionFormModal')
-const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
-const loadAnalyticsPanel = () => import('./components/analytics/AnalyticsPanel')
-const loadCourseForm = () => import('./components/courses/CourseFormModal')
+const loadTransactionTable = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/finance/TransactionTable'), opts)
+const loadSettingsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/settings/SettingsPanel'), opts)
+const loadCustomerForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/customers/CustomerFormModal'), opts)
+const loadCustomerDetail = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/customers/CustomerDetail'), opts)
+const loadTransactionForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/finance/TransactionFormModal'), opts)
+const loadCoursesPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/courses/CoursesPanel'), opts)
+const loadAnalyticsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/analytics/AnalyticsPanel'), opts)
+const loadCourseForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/courses/CourseFormModal'), opts)
+const loadAdminPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/admin/AdminPanel'), opts)
+const loadReceipt = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/print/ReceiptModal'), opts)
+const loadHelpPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/help/HelpPanel'), opts)
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
@@ -78,11 +101,15 @@ const TransactionFormModal = lazy(() => loadTransactionForm().then((m) => ({ def
 const CoursesPanel = lazy(() => loadCoursesPanel().then((m) => ({ default: m.CoursesPanel })))
 const AnalyticsPanel = lazy(() => loadAnalyticsPanel().then((m) => ({ default: m.AnalyticsPanel })))
 const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.CourseFormModal })))
+const AdminPanel = lazy(() => loadAdminPanel().then((m) => ({ default: m.AdminPanel })))
+const ReceiptModal = lazy(() => loadReceipt().then((m) => ({ default: m.ReceiptModal })))
+const HelpPanel = lazy(() => loadHelpPanel().then((m) => ({ default: m.HelpPanel })))
+const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
   for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel]) {
-    load().catch(() => {
+    load({ reload: false }).catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })
   }
@@ -92,7 +119,7 @@ function SectionFallback() {
   return (
     <div className="section-loading" role="status" aria-live="polite">
       <span className="spinner" aria-hidden="true" />
-      Yuklanmoqda...
+      {tr('Yuklanmoqda...')}
     </div>
   )
 }
@@ -104,9 +131,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 function Shell() {
-  const { modal, activeSection, setActiveSection, openModal, sidebarCollapsed } = useDashboard()
-  const { usingDefaultPassword } = useAuth()
-  const [promptDismissed, setPromptDismissed] = useState(false)
+  const { modal, activeSection, openModal, sidebarCollapsed, tourOpen, endTour } = useDashboard()
+  const { can } = useAuth()
 
   useEffect(() => {
     const timer = window.setTimeout(prefetchChunks, 1200)
@@ -130,30 +156,37 @@ function Shell() {
         return
       }
       const modalOpen = document.querySelector('.modal-overlay') !== null
-      if (event.key.toLowerCase() === 'n' && !event.ctrlKey && !event.metaKey && !event.altKey && !modalOpen && !isTypingTarget(event.target)) {
+      if (
+        event.key.toLowerCase() === 'n' &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !modalOpen &&
+        !isTypingTarget(event.target) &&
+        can('customers.edit')
+      ) {
         event.preventDefault()
         openModal({ type: 'customer' })
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openModal])
-
-  const goToSecurity = () => {
-    setPromptDismissed(true)
-    setActiveSection('settings')
-    scrollToId('profile')
-  }
+  }, [openModal, can])
 
   return (
     <div className={cx('app', sidebarCollapsed && 'is-collapsed')}>
       <a href="#main-content" className="skip-link">
-        Asosiy kontentga o'tish
+        {tr('Asosiy kontentga o\'tish')}
       </a>
       <Sidebar />
+      <MobileNav />
       <div className="content">
+        <DemoBar />
+        <OfflineBanner />
+        <SubscriptionBanner />
         <Header />
         <main className="main" id="main-content" tabIndex={-1}>
+          <PeriodBar />
           <ErrorBoundary key={activeSection} compact>
             <Suspense fallback={<SectionFallback />}>
               <ActiveSection />
@@ -161,13 +194,12 @@ function Shell() {
           </ErrorBoundary>
         </main>
       </div>
-      {usingDefaultPassword && !promptDismissed && !modal && (
-        <PasswordPrompt onChangeNow={goToSecurity} onLater={() => setPromptDismissed(true)} />
-      )}
       <Suspense fallback={null}>
+        {tourOpen && !modal && <ProductTour onClose={endTour} />}
         {modal?.type === 'customer' && <CustomerFormModal key={modal.payload?.id ?? 'new'} customerId={modal.payload?.id} />}
         {modal?.type === 'course' && <CourseFormModal key={modal.payload?.id ?? 'new'} courseId={modal.payload?.id} />}
         {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
+        {modal?.type === 'receipt' && <ReceiptModal key={modal.payload.id} transactionId={modal.payload.id} />}
         {modal?.type === 'transaction' && (
           <TransactionFormModal
             key={modal.payload?.id ?? 'new'}
@@ -183,17 +215,48 @@ function Shell() {
 }
 
 function AuthGate() {
-  const { session } = useAuth()
-  const [firstRun, setFirstRun] = useState(isFirstRun)
-  if (!session) return <LoginScreen />
-  // Ma'lumot avtomatik yozilmaydi: avval "bo'sh" yoki "demo" tanlanadi
-  if (firstRun) return <FirstRunScreen onDone={() => setFirstRun(false)} />
+  const { user, needsSetup, mode, enterDemo, loading, cloud } = useAuth()
+  const [firstRunDone, setFirstRunDone] = useState(false)
+  const [signUp, setSignUp] = useState(false)
+  // Landing'dagi "Demo'ni ko'rish" -> /app?demo=1: kirilmagan bo'lsa demo markaz darhol ochiladi
+  const openDemoFromLink = useEffectEvent(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('demo') !== '1') return
+    window.history.replaceState(null, '', window.location.pathname)
+    if (!user) enterDemo()
+  })
+  useEffect(() => openDemoFromLink(), [])
+  if (loading) return <CloudLoading />
+  if (!user) {
+    if (DEMO_ONLY) return <DemoOnlyScreen />
+    if (cloud && signUp) return <CloudSignUpScreen cloud={cloud} onBack={() => setSignUp(false)} />
+    return needsSetup ? <SetupAdminScreen /> : <LoginScreen onSignUp={cloud ? () => setSignUp(true) : undefined} />
+  }
+  // Vaqtinchalik parol bilan kirilgan — avval yangi parol
+  if (user.mustChange) return <ForcePasswordChange />
+  // Bulutli rejim: ma'lumot serverdan (sozlash ustasi o'rniga — Bosh sahifadagi "Boshlash" ro'yxati)
+  if (cloud) {
+    return (
+      <CloudDataGate key={user.id} cloud={cloud}>
+        <Shell />
+      </CloudDataGate>
+    )
+  }
+  // Birinchi kirish: sozlash ustasi (markaz, kurslar, xodimlar, ma'lumot). Ma'lumot avtomatik yozilmaydi
+  if (!firstRunDone && isFirstRun()) return <SetupWizard onDone={() => setFirstRunDone(true)} />
+  // Rejim yoki xodim almashsa, panel holati (bo'lim, filtrlar) noldan boshlanadi
   return (
-    <DashboardProvider>
+    <DashboardProvider key={`${mode}:${user.id}`}>
       <Shell />
     </DashboardProvider>
   )
 }
+
+// Kalitlar berilgan va tab demo rejimda emas — bulutli (Supabase) rejim; supabase-js faqat shunda yuklanadi
+const CLOUD_MODE = isCloudEnabled() && getStorageNamespace() !== 'demo'
+// Namoyish sayti (GitHub Pages): faqat demo markaz
+const DEMO_ONLY = import.meta.env.VITE_DEMO_ONLY === '1'
+const CloudAuthProvider = lazy(() => loadWithRetry(() => import('./context/CloudAuthProvider')).then((m) => ({ default: m.CloudAuthProvider })))
 
 export default function App() {
   return (
@@ -201,9 +264,17 @@ export default function App() {
       <ThemeProvider>
         <ToastProvider>
           <ConfirmProvider>
-            <AuthProvider>
-              <AuthGate />
-            </AuthProvider>
+            {CLOUD_MODE ? (
+              <Suspense fallback={<CloudLoading />}>
+                <CloudAuthProvider>
+                  <AuthGate />
+                </CloudAuthProvider>
+              </Suspense>
+            ) : (
+              <AuthProvider>
+                <AuthGate />
+              </AuthProvider>
+            )}
           </ConfirmProvider>
         </ToastProvider>
       </ThemeProvider>

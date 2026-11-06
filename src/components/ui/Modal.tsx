@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useId, useRef } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -87,7 +88,7 @@ export function Modal({ title, description, onClose, children, footer, size = 'm
               </p>
             )}
           </div>
-          <IconButton icon="close" label="Yopish" onClick={onClose} />
+          <IconButton icon="close" label={tr('Yopish')} onClick={onClose} />
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-actions">{footer}</div>}

@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey, CustomerStatus } from '../types/customer.types'
 import type { SortState } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
@@ -83,18 +84,18 @@ export type CustomerFormErrors = Partial<Record<'name' | 'phone' | 'email', stri
 
 export function validateCustomer(input: CustomerInput, existing: readonly Customer[], editingId?: string): CustomerFormErrors {
   const errors: CustomerFormErrors = {}
-  if (input.name.trim().length < 2) errors.name = 'Ismni kiriting (kamida 2 ta belgi)'
+  if (input.name.trim().length < 2) errors.name = tr('Ismni kiriting (kamida 2 ta belgi)')
 
   if (!isValidPhone(input.phone)) {
-    errors.phone = 'Telefon +998 XX XXX XX XX formatida bo\'lishi kerak'
+    errors.phone = tr('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')
   } else {
     const digits = phoneDigits(input.phone)
     const duplicate = existing.find((c) => c.id !== editingId && phoneDigits(c.phone) === digits)
-    if (duplicate) errors.phone = `Bu raqam "${duplicate.name}" mijozida mavjud`
+    if (duplicate) errors.phone = tr('Bu raqam "{0}" mijozida mavjud', { 0: duplicate.name })
   }
 
   const email = input.email?.trim() ?? ''
-  if (email && !EMAIL_PATTERN.test(email)) errors.email = 'Email noto\'g\'ri formatda'
+  if (email && !EMAIL_PATTERN.test(email)) errors.email = tr('Email noto\'g\'ri formatda')
   return errors
 }
 
@@ -120,7 +121,7 @@ export function deleteCustomerMessage(customer: Customer, transactions: readonly
     count > 0
       ? `Unga bog'liq ${count} ta to'lov (jami ${money(total)}) jurnalda "${deletedCustomerName(customer.name)}" nomi bilan qoladi.`
       : 'Unga bog\'liq to\'lovlar yo\'q.'
-  return `"${customer.name}" mijozi butunlay o'chiriladi. ${payments} Davom etasizmi?`
+  return `"${customer.name}" savatchaga o'tkaziladi — 30 kun ichida tiklash mumkin. ${payments} Davom etasizmi?`
 }
 
 export function deletedCustomerName(name?: string): string {

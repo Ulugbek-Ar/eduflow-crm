@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useDashboard } from '../../context/useDashboard'
@@ -52,13 +53,13 @@ export function RevenueChart() {
     <section className="card" aria-labelledby="revenue-title">
       <div className="card-head">
         <div>
-          <h2 id="revenue-title">Oylik tushum va xarajatlar</h2>
+          <h2 id="revenue-title">{tr('Oylik tushum va xarajatlar')}</h2>
           <span className="muted">
-            {mode === 'month' ? 'Oxirgi 6 oy' : 'Oxirgi 8 hafta'} · faqat to'langan · kirim <strong className="text-success">{money(totalIncome)}</strong>, chiqim{' '}
+            {mode === 'month' ? tr('Oxirgi 6 oy') : tr('Oxirgi 8 hafta')} {tr('· faqat to\'langan · kirim')} <strong className="text-success">{money(totalIncome)}</strong>{tr(', chiqim')}{' '}
             <strong className="text-danger">{money(totalExpense)}</strong>
           </span>
         </div>
-        <div className="segmented" role="group" aria-label="Guruhlash">
+        <div className="segmented" role="group" aria-label={tr('Guruhlash')}>
           {(['month', 'week'] as const).map((m) => (
             <button
               key={m}
@@ -70,16 +71,16 @@ export function RevenueChart() {
                 setActive(null)
               }}
             >
-              {m === 'month' ? 'Oylik' : 'Haftalik'}
+              {m === 'month' ? tr('Oylik') : tr('Haftalik')}
             </button>
           ))}
         </div>
       </div>
 
       <div className="chart-legend" aria-hidden="true">
-        <span className="legend-item legend-income">Tushum</span>
-        <span className="legend-item legend-expense">Xarajat</span>
-        <span className="legend-note">Tanlangan davr ajratib ko'rsatilgan</span>
+        <span className="legend-item legend-income">{tr('Tushum')}</span>
+        <span className="legend-item legend-expense">{tr('Xarajat')}</span>
+        <span className="legend-note">{tr('Tanlangan davr ajratib ko\'rsatilgan')}</span>
       </div>
 
       <div className="chart-wrap">
@@ -87,7 +88,7 @@ export function RevenueChart() {
           className="chart"
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           role="group"
-          aria-label="Kirim va chiqim grafigi. Ustunlar orasida chap va o'ng strelkalar bilan harakatlaning"
+          aria-label={tr('Kirim va chiqim grafigi. Ustunlar orasida chap va o\'ng strelkalar bilan harakatlaning')}
         >
           {ticks.map((tick) => (
             <g key={tick} aria-hidden="true">
@@ -111,7 +112,7 @@ export function RevenueChart() {
                 className={cx('chart-group', !inRange && 'is-dim', active === i && 'is-active')}
                 tabIndex={i === (active ?? buckets.length - 1) ? 0 : -1}
                 role="img"
-                aria-label={`${b.longLabel}: tushum ${money(b.income)}, xarajat ${money(b.expense)}, sof ${money(b.income - b.expense)}`}
+                aria-label={tr('{0}: tushum {1}, xarajat {2}, sof {3}', { 0: b.longLabel, 1: money(b.income), 2: money(b.expense), 3: money(b.income - b.expense) })}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}
@@ -137,13 +138,13 @@ export function RevenueChart() {
           >
             <strong>{activeBucket.longLabel}</strong>
             <span>
-              <i className="dot dot-income" /> Tushum: {money(activeBucket.income)}
+              <i className="dot dot-income" /> {tr('Tushum:')} {money(activeBucket.income)}
             </span>
             <span>
-              <i className="dot dot-expense" /> Xarajat: {money(activeBucket.expense)}
+              <i className="dot dot-expense" /> {tr('Xarajat:')} {money(activeBucket.expense)}
             </span>
             <span className={activeBucket.income - activeBucket.expense < 0 ? 'text-danger' : 'text-success'}>
-              Sof: {money(activeBucket.income - activeBucket.expense)}
+              {tr('Sof:')} {money(activeBucket.income - activeBucket.expense)}
             </span>
           </div>
         )}

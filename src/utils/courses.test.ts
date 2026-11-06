@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
-import { courseChoices, courseStats, normalizeCourseName, usedByCustomers, validateCourse } from './courses'
+import { courseChoices, courseStats, coursesNeedingSetup, durationLabel, normalizeCourseName, usedByCustomers, validateCourse } from './courses'
 
 const course = (patch: Partial<Course> = {}): Course => ({
   id: 'k1',
@@ -46,7 +46,9 @@ describe('kurslar', () => {
     expect(validateCourse({ ...base, name: ' ielts ' }, [course()]).name).toBe('Bu nomdagi kurs yoki xizmat bor')
     expect(validateCourse({ ...base, name: 'IELTS' }, [course()], 'k1')).toEqual({})
     expect(validateCourse({ ...base, name: 'A' }, []).name).toBeDefined()
-    expect(validateCourse({ ...base, durationMonths: 0 }, []).durationMonths).toBeDefined()
+    expect(validateCourse({ ...base, durationMonths: 0 }, [])).toEqual({}) // 0 — muddatsiz
+    expect(validateCourse({ ...base, durationMonths: -1 }, []).durationMonths).toBeDefined()
+    expect(validateCourse({ ...base, durationMonths: 61 }, []).durationMonths).toBeDefined()
     expect(validateCourse({ ...base, durationMonths: Number.NaN }, []).durationMonths).toBeDefined()
     expect(validateCourse({ ...base, monthlyPrice: -1 }, []).monthlyPrice).toBeDefined()
     expect(validateCourse({ ...base, activeGroups: 1.5 }, []).activeGroups).toBeDefined()
@@ -61,5 +63,14 @@ describe('kurslar', () => {
 
   it('normalizeCourseName ortiqcha bo\'shliqlarni olib tashlaydi', () => {
     expect(normalizeCourseName('  Ingliz   tili ')).toBe('Ingliz tili')
+  })
+})
+
+describe('muddatsiz kurslar', () => {
+  it('davomiylik 0 — "Muddatsiz"; narx yoki muddat kiritilmagan faol kurslar ro\'yxati', () => {
+    expect(durationLabel(0)).toBe('Muddatsiz')
+    expect(durationLabel(6)).toBe('6 oy')
+    const list = [course(), course({ id: 'k2', durationMonths: 0 }), course({ id: 'k3', monthlyPrice: 0 }), course({ id: 'k4', monthlyPrice: 0, status: 'archived' })]
+    expect(coursesNeedingSetup(list).map((c) => c.id)).toEqual(['k2', 'k3'])
   })
 })
