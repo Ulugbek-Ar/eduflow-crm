@@ -9,6 +9,7 @@ import { useToast } from '../hooks/useToast'
 import { logAudit } from '../services/audit.service'
 import type { AuditAction } from '../services/audit.service'
 import { closeDemoWorkspace, openDemoWorkspace } from '../services/demo.service'
+import { computeAccess, loadSubscription, startTrialIfMissing } from '../services/subscription.service'
 import {
   endSession,
   isSessionActive,
@@ -71,9 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState(initial.users)
   const [session, setSession] = useState(initial.session)
   const [sessions, setSessions] = useState(initial.sessions)
+  const [subscription, setSubscription] = useState(loadSubscription)
+  // Muddat tugaganda kun bo'yi qayta hisoblanmasligi uchun — sahifa ochilgan vaqt
+  const [openedAt] = useState(Date.now)
+  const access = computeAccess(subscription, openedAt)
 
   const current = session ? users.find((u) => u.id === session.userId && u.status === 'active') : undefined
-  const allowed = (permission: Permission) => roleCan(current?.role, permission)
+  // Tarif muddati tugagan yoki bloklangan (majburiy rejim) — faqat ko'rish
+  const allowed = (permission: Permission) =>
+    roleCan(current?.role, permission) && (!access.readOnly || permission.endsWith('.view'))
   const actorOf = (user: StaffUser) => ({ userId: user.id, userName: staff.displayName(user), role: user.role })
   const audit = (action: AuditAction, summary: string, entityId?: string, by: StaffUser | undefined = current) =>
     logAudit(by ? actorOf(by) : null, action, summary, entityId)
@@ -86,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (session) endSession(session.id)
     closeDemoWorkspace()
     setMode('main')
+    setSubscription(loadSubscription())
     setUsers(staff.loadUsers())
     setSession(null)
     setSessions(listSessions())
@@ -144,6 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mode,
     needsSetup: mode === 'main' && users.length === 0,
     can: allowed,
+    subscription,
+    access,
     login: async (login, password) => {
       const result = await staff.authenticate(login, password)
       if (!result.ok) {
@@ -165,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setupAdmin: async (input) => {
       const result = await staff.createFirstAdmin(input)
       if (!result.ok) return result
+      startTrialIfMissing()
+      setSubscription(loadSubscription())
       begin(result.user, result.users)
       audit('staff.create', `Birinchi administrator: ${staff.displayName(result.user)}`, result.user.id, result.user)
       return { ok: true }
@@ -191,6 +203,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     users: users.map(staff.toPublicUser),
     addUser: async (input) => {
       if (!allowed('staff.manage')) return DENIED
+      const activeCount = users.filter((u) => u.status === 'active').length
+      if (access.staffLimit !== null && activeCount >= access.staffLimit) {
+        return { ok: false, error: tr('Tarifingizda {0} tagacha xodim. Ko\'proq xodim uchun tarifni almashtiring.', { 0: access.staffLimit }) }
+      }
       const result = await staff.addUser(input)
       if (result.ok) audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
       return fromResult(result)
@@ -253,6 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const demoStaff = openDemoWorkspace()
       const user = demoStaff.find((u) => u.role === role) ?? demoStaff[0]
       setMode('demo')
+      setSubscription(loadSubscription())
       begin(user, demoStaff)
     },
     exitDemo: leaveDemo,

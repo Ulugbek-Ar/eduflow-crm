@@ -2711,6 +2711,42 @@ body.scroll-locked {
   line-height: 1.5;
 }
 
+/* ===== Sotuvchi paneli ===== */
+.owner {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.owner-main {
+  display: grid;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* ===== Tarif tasmasi ===== */
+.plan-bar {
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.plan-bar.is-warning {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.plan-bar.is-danger {
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.plan-card {
+  display: grid;
+  gap: 12px;
+}
+
 /* ===== Demo tasmasi ===== */
 .demo-bar {
   display: flex;

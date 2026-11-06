@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 # Boshqaruv paneli qidiruvda ko'rinmasin
 Disallow: /app
+Disallow: /owner

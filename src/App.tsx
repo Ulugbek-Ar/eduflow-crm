@@ -2,6 +2,7 @@ import { tr } from './i18n'
 import { CustomerTable } from './components/customers/CustomerTable'
 import { DemoBar } from './components/layout/DemoBar'
 import { MobileNav } from './components/layout/MobileNav'
+import { SubscriptionBanner } from './components/layout/SubscriptionBanner'
 import { PeriodBar } from './components/layout/PeriodBar'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
@@ -176,6 +177,7 @@ function Shell() {
       <MobileNav />
       <div className="content">
         <DemoBar />
+        <SubscriptionBanner />
         <Header />
         <main className="main" id="main-content" tabIndex={-1}>
           <PeriodBar />

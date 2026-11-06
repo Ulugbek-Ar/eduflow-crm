@@ -14,6 +14,8 @@ async function loadPage(): Promise<ComponentType> {
   switch (currentRoute()) {
     case 'app':
       return (await import('./App.tsx')).default
+    case 'owner':
+      return (await import('./owner/OwnerConsole.tsx')).OwnerConsole
     case 'privacy':
     case 'terms':
       return (await import('./landing/LegalPage.tsx')).LegalPage

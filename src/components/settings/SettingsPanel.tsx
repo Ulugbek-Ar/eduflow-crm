@@ -17,6 +17,7 @@ import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { DataSettings } from './DataSettings'
 import { LogoUpload } from './LogoUpload'
+import { PlanSettings } from './PlanSettings'
 import { ProfileSettings } from './ProfileSettings'
 import { SecuritySettings } from './SecuritySettings'
 
@@ -46,6 +47,7 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: P
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
+  { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
   { id: 'data', label: tr('Ma\'lumotlar'), icon: 'database', permission: 'data.manage' },
 ]
 
@@ -223,6 +225,12 @@ export function SettingsPanel() {
           <h3 className="settings-subtitle">{tr('Login va parol')}</h3>
           <SecuritySettings />
         </SettingsCard>
+
+        {can('staff.manage') && (
+          <SettingsCard id="plan" title={tr('Tarif')} description={tr('Joriy tarif, muddat va xodimlar chegarasi')}>
+            <PlanSettings />
+          </SettingsCard>
+        )}
 
         {can('data.manage') && (
           <SettingsCard id="data" title={tr('Ma\'lumotlar')} description={tr('Zaxira, tiklash va demo ma\'lumotlar')}>

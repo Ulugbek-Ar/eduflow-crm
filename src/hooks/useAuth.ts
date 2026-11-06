@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { Permission } from '../auth/permissions'
 import type { AuditActor } from '../services/audit.service'
+import type { Access, Subscription } from '../services/subscription.service'
 import type { StorageNamespace } from '../services/storage.service'
 import { displayName } from '../services/users.service'
 import type { NewUserInput, UserField, UserPatch } from '../services/users.service'
@@ -19,6 +20,9 @@ export interface AuthContextValue {
   // Hali birorta xodim yo'q — administrator hisobini yaratish ekrani
   needsSetup: boolean
   can: (permission: Permission) => boolean
+  // Tarif: sinov / faol / tugayapti / tugagan / bloklangan
+  subscription: Subscription
+  access: Access
   login: (login: string, password: string) => Promise<LoginResult>
   logout: () => void
   setupAdmin: (input: Omit<NewUserInput, 'role'>) => Promise<ActionResult>
