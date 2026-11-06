@@ -5,6 +5,7 @@ import { Icon } from '../../constants/navigation'
 import { useAuth } from '../../hooks/useAuth'
 import { isCryptoAvailable } from '../../services/auth.service'
 import { formatLockWait, lockRemaining, MAX_ATTEMPTS, readLockState, registerFailure, registerSuccess } from '../../services/loginLock.service'
+import { routeHref } from '../../router'
 import { Button } from '../ui/Button'
 import { LanguageSwitch } from '../ui/LanguageSwitch'
 import { Input } from '../ui/Input'
@@ -38,6 +39,9 @@ export function DemoEntry() {
         {tr('Demo\'ni ko\'rish')}
       </Button>
       <small className="muted">{tr('Namunaviy markaz ochiladi. Sizning ma\'lumotingizga tegmaydi.')}</small>
+      <a className="auth-home" href={routeHref('landing')}>
+        ← {tr('Bosh sahifa')}
+      </a>
     </div>
   )
 }

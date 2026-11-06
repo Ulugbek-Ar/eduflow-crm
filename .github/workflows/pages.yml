@@ -32,8 +32,10 @@ jobs:
 
       - run: npm run check
 
-      # Nisbiy yo'llar (./assets/...) — sayt /eduflow-crm/ ostida ochiladi
-      - run: npx vite build --base ./ --outDir site && touch site/.nojekyll
+      # Sayt /eduflow-crm/ ostida: /app, /privacy, /terms to'g'ridan-to'g'ri ochilishi uchun 404.html = index.html
+      - run: npx vite build --base /eduflow-crm/ --outDir site && cp site/index.html site/404.html && touch site/.nojekyll
+        env:
+          VITE_SITE_URL: https://ulugbek-ar.github.io/eduflow-crm
 
       - name: gh-pages branch'iga joylash
         env:

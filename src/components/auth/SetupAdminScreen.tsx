@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { isCryptoAvailable, MIN_PASSWORD_LENGTH } from '../../services/auth.service'
 import { updateStoredSettings } from '../../services/storage.service'
 import { getInitials } from '../../utils/customers'
+import { routeHref } from '../../router'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { PasswordInput } from '../ui/PasswordInput'
@@ -139,6 +140,10 @@ export function SetupAdminScreen() {
             {busy ? tr('Yaratilmoqda...') : tr('Hisob yaratish')}
           </Button>
           <p className="login-hint">{tr('Ma\'lumotlar shu brauzerda saqlanadi. Muntazam zaxira olishni unutmang.')}</p>
+          <p className="login-hint">
+            {tr('Hisob yaratib, siz rozilik bildirasiz:')} <a href={routeHref('terms')}>{tr('Foydalanish shartlari')}</a>,{' '}
+            <a href={routeHref('privacy')}>{tr('Maxfiylik siyosati')}</a>
+          </p>
         </form>
         <DemoEntry />
       </div>

@@ -13,7 +13,7 @@ import { RevenueChart } from './components/overview/RevenueChart'
 import { SourceDistribution } from './components/overview/SourceDistribution'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useState } from 'react'
 import { LoginScreen } from './components/auth/LoginScreen'
 import { SetupWizard } from './components/onboarding/SetupWizard'
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
@@ -207,8 +207,16 @@ function Shell() {
 }
 
 function AuthGate() {
-  const { user, needsSetup, mode } = useAuth()
+  const { user, needsSetup, mode, enterDemo } = useAuth()
   const [firstRunDone, setFirstRunDone] = useState(false)
+  // Landing'dagi "Demo'ni ko'rish" -> /app?demo=1: kirilmagan bo'lsa demo markaz darhol ochiladi
+  const openDemoFromLink = useEffectEvent(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('demo') !== '1') return
+    window.history.replaceState(null, '', window.location.pathname)
+    if (!user) enterDemo()
+  })
+  useEffect(() => openDemoFromLink(), [])
   if (!user) return needsSetup ? <SetupAdminScreen /> : <LoginScreen />
   // Vaqtinchalik parol bilan kirilgan — avval yangi parol
   if (user.mustChange) return <ForcePasswordChange />

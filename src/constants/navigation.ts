@@ -6,7 +6,8 @@ import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategor
 
 // Ikonlar: 24x24 viewBox, stroke uslubida chiziladigan path'lar
 export const ICONS = {
-  logo: ['M3 20 12 4l9 16', 'M7.5 14h9'],
+  // Bitiruvchi qalpoqchasi — ta'lim belgisi
+  logo: ['M2 9.5 12 5l10 4.5-10 4.5z', 'M6 11.3V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.7', 'M22 9.5V15'],
   overview: ['M3 3h7v9H3z', 'M14 3h7v5h-7z', 'M14 12h7v9h-7z', 'M3 16h7v5H3z'],
   customers: [
     'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2',

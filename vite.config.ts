@@ -16,11 +16,29 @@ function readCsp(): string {
   return header.value
 }
 
-// index.html dagi %APP_NAME% / %APP_DESCRIPTION% -> src/constants/app.ts dagi qiymatlar
+// Saytning to'liq manzili (og:url, canonical, og:image uchun). Vercel'da avtomatik; boshqa joyda VITE_SITE_URL bilan
+function siteUrl(): string {
+  const explicit = process.env.VITE_SITE_URL?.trim()
+  if (explicit) return explicit.replace(/\/+$/, '')
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()
+  return vercel ? `https://${vercel}` : ''
+}
+
+// index.html dagi %APP_NAME% / %APP_DESCRIPTION% -> src/constants/app.ts dagi qiymatlar; sayt manzili ma'lum bo'lsa —
+// canonical va og:url qo'shiladi, og:image to'liq manzilga aylanadi (ijtimoiy tarmoqlar nisbiy manzilni o'qimaydi)
 function appMeta(): Plugin {
   return {
     name: 'app-meta',
-    transformIndexHtml: (html) => html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION),
+    transformIndexHtml: (html) => {
+      const url = siteUrl()
+      let out = html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION)
+      if (url) {
+        out = out
+          .replace('content="/og-image.jpg"', `content="${url}/og-image.jpg"`)
+          .replace('<meta property="og:type"', `<link rel="canonical" href="${url}/" />\n    <meta property="og:url" content="${url}/" />\n    <meta property="og:type"`)
+      }
+      return out
+    },
   }
 }
 

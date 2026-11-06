@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EduFlow CRM">
   <rect width="64" height="64" rx="14" fill="#4f46e5"/>
-  <path d="M17 47 32 17l15 30M23.5 37h17" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(8 8) scale(2)">
+    <path d="M2 9.5 12 5l10 4.5-10 4.5z"/>
+    <path d="M6 11.3V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.7"/>
+    <path d="M22 9.5V15"/>
+  </g>
 </svg>

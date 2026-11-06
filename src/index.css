@@ -2688,6 +2688,12 @@ body.scroll-locked {
   background: var(--border);
 }
 
+.auth-home,
+.login-hint a {
+  color: var(--primary-text);
+  font-size: 0.85rem;
+}
+
 .auth-help {
   color: var(--text-secondary);
   font-size: 0.85rem;
