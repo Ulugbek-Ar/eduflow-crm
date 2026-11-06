@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { useEffect, useEffectEvent, useState } from 'react'
 import type { ReactNode } from 'react'
 import { can as roleCan, ROLE_LABELS } from '../auth/permissions'
@@ -61,7 +62,7 @@ function initialAuthState() {
   return { mode, users, session, sessions: listSessions() }
 }
 
-const DENIED: ActionResult = { ok: false, error: 'Bu amal uchun ruxsatingiz yo\'q' }
+const DENIED: ActionResult = { ok: false, error: tr('Bu amal uchun ruxsatingiz yo\'q') }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const toast = useToast()
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     endSession()
     setSession(null)
-    toast.info(user?.status === 'blocked' ? 'Hisobingiz bloklandi. Administratorga murojaat qiling.' : 'Seansingiz yopildi. Qaytadan kiring.')
+    toast.info(user?.status === 'blocked' ? tr('Hisobingiz bloklandi. Administratorga murojaat qiling.') : tr('Seansingiz yopildi. Qaytadan kiring.'))
   })
 
   useEffect(() => {

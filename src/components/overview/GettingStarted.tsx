@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useSyncExternalStore } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
@@ -19,18 +20,18 @@ export function GettingStarted() {
   if (hidden || mode === 'demo' || !can('staff.manage')) return null
 
   const steps = [
-    { id: 'course', label: 'Kurs va narxlarni kiriting', done: courses.length > 0, action: () => openModal({ type: 'course' }) },
-    { id: 'customer', label: 'Birinchi mijozni qo\'shing', done: customers.length > 0, action: () => openModal({ type: 'customer' }) },
+    { id: 'course', label: tr('Kurs va narxlarni kiriting'), done: courses.length > 0, action: () => openModal({ type: 'course' }) },
+    { id: 'customer', label: tr('Birinchi mijozni qo\'shing'), done: customers.length > 0, action: () => openModal({ type: 'customer' }) },
     {
       id: 'payment',
-      label: 'Birinchi to\'lovni qabul qiling',
+      label: tr('Birinchi to\'lovni qabul qiling'),
       done: transactions.some((t) => t.type === 'income'),
       action: () => openModal({ type: 'transaction', payload: { kind: 'income' } }),
     },
-    { id: 'staff', label: 'Xodimlarni qo\'shing', done: users.length > 1, action: () => setActiveSection('admin') },
+    { id: 'staff', label: tr('Xodimlarni qo\'shing'), done: users.length > 1, action: () => setActiveSection('admin') },
     {
       id: 'backup',
-      label: 'Birinchi zaxirani oling',
+      label: tr('Birinchi zaxirani oling'),
       done: audit.some((e) => e.action === 'data.backup'),
       action: () => {
         setActiveSection('settings')
@@ -45,16 +46,16 @@ export function GettingStarted() {
     <section className="card getting-started" aria-labelledby="getting-started-title">
       <div className="card-head">
         <div>
-          <h2 id="getting-started-title">Boshlash uchun {steps.length} qadam</h2>
+          <h2 id="getting-started-title">{tr('Boshlash uchun')} {steps.length} {tr('qadam')}</h2>
           <span className="muted">
-            {doneCount} / {steps.length} bajarildi
+            {doneCount} / {steps.length} {tr('bajarildi')}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setHidden(true)}>
-          Yashirish
+          {tr('Yashirish')}
         </Button>
       </div>
-      <div className="progress" role="progressbar" aria-label="Boshlash qadamlari" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={doneCount}>
+      <div className="progress" role="progressbar" aria-label={tr('Boshlash qadamlari')} aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={doneCount}>
         <span style={{ width: `${(doneCount / steps.length) * 100}%` }} />
       </div>
       <ol className="checklist">
@@ -65,11 +66,11 @@ export function GettingStarted() {
             </span>
             <span className="checklist-label">
               {step.label}
-              {step.done && <span className="sr-only"> (bajarildi)</span>}
+              {step.done && <span className="sr-only"> {tr('(bajarildi)')}</span>}
             </span>
             {!step.done && (
               <Button size="sm" variant="ghost" onClick={step.action}>
-                Boshlash
+                {tr('Boshlash')}
               </Button>
             )}
           </li>

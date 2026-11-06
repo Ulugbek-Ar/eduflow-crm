@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useRef } from 'react'
 import { APP_NAME } from '../../constants/app'
 import { Icon, NAV_ITEMS } from '../../constants/navigation'
@@ -27,7 +28,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className={cx('sidebar', sidebarOpen && 'is-open', sidebarCollapsed && 'is-collapsed')} aria-label="Asosiy menyu">
+      <aside className={cx('sidebar', sidebarOpen && 'is-open', sidebarCollapsed && 'is-collapsed')} aria-label={tr('Asosiy menyu')}>
         <div className="sidebar-logo">
           <span className="logo-mark" aria-hidden="true">
             {settings.logoImage ? (
@@ -44,7 +45,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <nav ref={navRef} className="sidebar-nav" aria-label="Bo'limlar">
+        <nav ref={navRef} className="sidebar-nav" aria-label={tr('Bo\'limlar')}>
           {items.map((item) => (
             <button
               key={item.id}
@@ -63,7 +64,7 @@ export function Sidebar() {
 
         <div className="sidebar-balance">
           <small>
-            Kassa balansi <Hint term="balance" className="hint-on-dark" />
+            {tr('Kassa balansi')} <Hint term="balance" className="hint-on-dark" />
           </small>
           <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
         </div>
@@ -73,11 +74,11 @@ export function Sidebar() {
           type="button"
           className="nav-item sidebar-collapse"
           aria-pressed={sidebarCollapsed}
-          data-tooltip={sidebarCollapsed ? 'Menyuni kengaytirish' : 'Menyuni yig\'ish'}
+          data-tooltip={sidebarCollapsed ? tr('Menyuni kengaytirish') : tr('Menyuni yig\'ish')}
           onClick={toggleSidebarCollapsed}
         >
           <Icon name={sidebarCollapsed ? 'chevronRight' : 'chevronLeft'} />
-          <span className="nav-label">{sidebarCollapsed ? 'Menyuni kengaytirish' : 'Menyuni yig\'ish'}</span>
+          <span className="nav-label">{sidebarCollapsed ? tr('Menyuni kengaytirish') : tr('Menyuni yig\'ish')}</span>
         </button>
       </aside>
       {sidebarOpen && <div className="sidebar-backdrop" onClick={toggleSidebar} aria-hidden="true" />}

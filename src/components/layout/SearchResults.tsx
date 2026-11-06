@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import type { KeyboardEvent } from 'react'
 import { Icon, STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
@@ -38,14 +39,14 @@ export function SearchResults({ id, results, onClose }: SearchResultsProps) {
   }
 
   return (
-    <div id={id} className="search-results" role="region" aria-label="Qidiruv natijalari" onKeyDown={handleKeyDown}>
+    <div id={id} className="search-results" role="region" aria-label={tr('Qidiruv natijalari')} onKeyDown={handleKeyDown}>
       {results.total === 0 ? (
-        <p className="search-empty muted">Hech narsa topilmadi</p>
+        <p className="search-empty muted">{tr('Hech narsa topilmadi')}</p>
       ) : (
         <>
           {results.customers.length > 0 && (
             <div className="search-group">
-              <span className="dropdown-heading">Mijozlar</span>
+              <span className="dropdown-heading">{tr('Mijozlar')}</span>
               {results.customers.map((c) => (
                 <button key={c.id} type="button" className="search-result" onClick={() => choose(() => openModal({ type: 'customerDetail', payload: { id: c.id } }))}>
                   <Icon name="user" size={16} />
@@ -61,14 +62,14 @@ export function SearchResults({ id, results, onClose }: SearchResultsProps) {
           )}
           {results.courses.length > 0 && (
             <div className="search-group">
-              <span className="dropdown-heading">Kurslar va xizmatlar</span>
+              <span className="dropdown-heading">{tr('Kurslar va xizmatlar')}</span>
               {results.courses.map((c) => (
                 <button key={c.id} type="button" className="search-result" onClick={() => choose(() => (can('courses.edit') ? openModal({ type: 'course', payload: { id: c.id } }) : setActiveSection('courses')))}>
                   <Icon name="bookOpen" size={16} />
                   <span>
                     {c.name}
                     <small>
-                      {COURSE_TYPE_LABELS[c.type]} · {money(c.monthlyPrice)} / oy
+                      {COURSE_TYPE_LABELS[c.type]} · {money(c.monthlyPrice)} {tr('/ oy')}
                     </small>
                   </span>
                 </button>
@@ -77,7 +78,7 @@ export function SearchResults({ id, results, onClose }: SearchResultsProps) {
           )}
           {results.transactions.length > 0 && (
             <div className="search-group">
-              <span className="dropdown-heading">Tranzaksiyalar</span>
+              <span className="dropdown-heading">{tr('Tranzaksiyalar')}</span>
               {results.transactions.map((t) => (
                 <button key={t.id} type="button" className="search-result" onClick={() => choose(() => (can('payments.manage') ? openModal({ type: 'transaction', payload: { id: t.id } }) : setActiveSection('finance')))}>
                   <Icon name={t.type === 'income' ? 'card' : 'receipt'} size={16} />
@@ -94,7 +95,7 @@ export function SearchResults({ id, results, onClose }: SearchResultsProps) {
           )}
           <button type="button" className="search-result search-all" onClick={() => choose(() => setActiveSection('customers'))}>
             <Icon name="search" size={16} />
-            <span>Mijozlar bo'limida qidirish</span>
+            <span>{tr('Mijozlar bo\'limida qidirish')}</span>
           </button>
         </>
       )}

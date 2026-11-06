@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { CATEGORY_LABELS, EXPENSE_CATEGORIES, METHOD_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import type { PaymentMethod, Transaction } from '../../types/finance.types'
@@ -27,7 +28,7 @@ function BreakdownCard<K extends string>({ title, subtitle, rows, labels, tone }
         </div>
       </div>
       {visible.length === 0 ? (
-        <p className="muted">Bu davrda ma'lumot yo'q</p>
+        <p className="muted">{tr('Bu davrda ma\'lumot yo\'q')}</p>
       ) : (
         <ul className="progress-list">
           {visible.map((row) => (
@@ -66,17 +67,17 @@ export function FinanceSummary({ transactions, periodLabel }: { transactions: Tr
     <>
       <div className="summary-grid">
         <div className="card summary">
-          <small>Umumiy balans (kassa)</small>
+          <small>{tr('Umumiy balans (kassa)')}</small>
           <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
-          <span className="summary-hint">Barcha vaqt · faqat to'langanlar</span>
+          <span className="summary-hint">{tr('Barcha vaqt · faqat to\'langanlar')}</span>
         </div>
         <div className="card summary">
-          <small>Jami kirim · {periodLabel}</small>
+          <small>{tr('Jami kirim ·')} {periodLabel}</small>
           <strong className="text-success">{money(income)}</strong>
-          <span className="summary-hint">Sof natija: {money(income - expense)}</span>
+          <span className="summary-hint">{tr('Sof natija:')} {money(income - expense)}</span>
         </div>
         <div className="card summary">
-          <small>Jami chiqim · {periodLabel}</small>
+          <small>{tr('Jami chiqim ·')} {periodLabel}</small>
           <strong className="text-danger">{money(expense)}</strong>
         </div>
       </div>
@@ -92,15 +93,15 @@ export function FinanceBreakdowns({ transactions }: { transactions: Transaction[
     <>
       <div className="split-grid">
         <BreakdownCard
-          title="To'lov turlari"
-          subtitle="Kirimlar qaysi usulda tushgan"
+          title={tr('To\'lov turlari')}
+          subtitle={tr('Kirimlar qaysi usulda tushgan')}
           rows={breakdown(incomes, METHODS, (t) => t.method)}
           labels={METHOD_LABELS}
           tone="success"
         />
         <BreakdownCard
-          title="Xarajatlar tarkibi"
-          subtitle="Chiqimlar kategoriyalar bo'yicha"
+          title={tr('Xarajatlar tarkibi')}
+          subtitle={tr('Chiqimlar kategoriyalar bo\'yicha')}
           rows={breakdown(expenses, EXPENSE_CATEGORIES, (t) => t.category)}
           labels={CATEGORY_LABELS}
           tone="danger"

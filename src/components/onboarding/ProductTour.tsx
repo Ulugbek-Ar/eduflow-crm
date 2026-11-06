@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
@@ -80,16 +81,16 @@ export function ProductTour({ onClose }: { onClose: () => void }) {
         <p id="tour-text">{step.text}</p>
         <div className="tour-actions">
           <Button variant="ghost" size="sm" onClick={onClose}>
-            O'tkazib yuborish
+            {tr('O\'tkazib yuborish')}
           </Button>
           <span className="toolbar">
             {index > 0 && (
               <Button variant="ghost" size="sm" onClick={() => setIndex((i) => i - 1)}>
-                Orqaga
+                {tr('Orqaga')}
               </Button>
             )}
             <Button size="sm" onClick={() => (last ? onClose() : setIndex((i) => i + 1))}>
-              {last ? 'Tushunarli' : 'Keyingi'}
+              {last ? tr('Tushunarli') : tr('Keyingi')}
             </Button>
           </span>
         </div>

@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useDashboard } from '../../context/useDashboard'
@@ -70,16 +71,16 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
 
   return (
     <Modal
-      title={editing ? 'Kursni tahrirlash' : 'Yangi kurs yoki xizmat'}
-      description={editing ? editing.name : 'Narx qarz va kutilayotgan tushum hisobida ishlatiladi'}
+      title={editing ? tr('Kursni tahrirlash') : tr('Yangi kurs yoki xizmat')}
+      description={editing ? editing.name : tr('Narx qarz va kutilayotgan tushum hisobida ishlatiladi')}
       onClose={closeModal}
       footer={
         <>
           <Button variant="ghost" onClick={closeModal}>
-            Bekor qilish
+            {tr('Bekor qilish')}
           </Button>
           <Button type="submit" form="course-form" icon="check">
-            {editing ? 'Saqlash' : 'Qo\'shish'}
+            {editing ? tr('Saqlash') : tr('Qo\'shish')}
           </Button>
         </>
       }
@@ -87,26 +88,26 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
       <form id="course-form" className="form" onSubmit={handleSubmit} noValidate>
         <Input
           id="course-name"
-          label="Nomi"
+          label={tr('Nomi')}
           required
           value={form.name}
           error={errors.name}
-          hint={editing && affected > 0 ? `Nom o'zgarsa, ${affected} ta mijozdagi kurs nomi ham yangilanadi` : undefined}
+          hint={editing && affected > 0 ? tr('Nom o\'zgarsa, {0} ta mijozdagi kurs nomi ham yangilanadi', { 0: affected }) : undefined}
           onChange={(e) => update('name', e.target.value)}
-          placeholder="Masalan: Ingliz tili (IELTS)"
+          placeholder={tr('Masalan: Ingliz tili (IELTS)')}
           autoComplete="off"
           data-autofocus
         />
         <div className="form-row">
-          <Select label="Turi" value={form.type} onChange={(e) => update('type', e.target.value as CourseType)} options={toOptions(COURSE_TYPE_LABELS)} />
+          <Select label={tr('Turi')} value={form.type} onChange={(e) => update('type', e.target.value as CourseType)} options={toOptions(COURSE_TYPE_LABELS)} />
           <Input
             id="course-durationMonths"
-            label="Davomiyligi (oy)"
+            label={tr('Davomiyligi (oy)')}
             required
             type="number"
             min={0}
             max={60}
-            hint="0 — muddatsiz (tugash sanasi yo'q)"
+            hint={tr('0 — muddatsiz (tugash sanasi yo\'q)')}
             inputMode="numeric"
             value={form.durationMonths}
             error={errors.durationMonths}
@@ -116,17 +117,17 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
         <div className="form-row">
           <Input
             id="course-monthlyPrice"
-            label="Oylik narxi"
+            label={tr('Oylik narxi')}
             inputMode="numeric"
             value={form.monthlyPrice}
             error={errors.monthlyPrice}
-            hint="Bo'sh bo'lsa 0 — keyin kiritish mumkin"
+            hint={tr('Bo\'sh bo\'lsa 0 — keyin kiritish mumkin')}
             onChange={(e) => update('monthlyPrice', formatAmountInput(e.target.value))}
             placeholder="650 000"
           />
           <Input
             id="course-activeGroups"
-            label="Faol guruhlar soni"
+            label={tr('Faol guruhlar soni')}
             type="number"
             min={0}
             inputMode="numeric"
@@ -136,7 +137,7 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
           />
         </div>
         {editing && (
-          <Select label="Holati" value={form.status} onChange={(e) => update('status', e.target.value as CourseStatus)} options={toOptions(COURSE_STATUS_LABELS)} />
+          <Select label={tr('Holati')} value={form.status} onChange={(e) => update('status', e.target.value as CourseStatus)} options={toOptions(COURSE_STATUS_LABELS)} />
         )}
       </form>
     </Modal>

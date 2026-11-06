@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { DateFormat } from '../types/dashboard.types'
 
 // Sana maydoni uchun: foydalanuvchi sozlamadagi formatda yozadi ("15.11.2026"), ichkarida 'YYYY-MM-DD' saqlanadi.
@@ -20,7 +21,7 @@ const LENGTH = { d: 2, m: 2, y: 4 } as const
 // Maydon ichidagi ko'rsatma: "kk.oo.yyyy"
 export function datePlaceholder(format: DateFormat): string {
   const { separator, order } = SPECS[format]
-  const names = { d: 'kk', m: 'oo', y: 'yyyy' }
+  const names = { d: tr('kk'), m: tr('oo'), y: tr('yyyy') }
   return order.map((part) => names[part]).join(separator)
 }
 

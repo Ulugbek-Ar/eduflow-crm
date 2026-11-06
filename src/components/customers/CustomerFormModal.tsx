@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { FUNNEL_STAGES, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
@@ -64,16 +65,16 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
 
   return (
     <Modal
-      title={editing ? 'Mijozni tahrirlash' : 'Yangi mijoz'}
-      description={editing ? editing.name : 'Yangi lid "Yangi" bosqichiga qo\'shiladi'}
+      title={editing ? tr('Mijozni tahrirlash') : tr('Yangi mijoz')}
+      description={editing ? editing.name : tr('Yangi lid "Yangi" bosqichiga qo\'shiladi')}
       onClose={closeModal}
       footer={
         <>
           <Button variant="ghost" onClick={closeModal}>
-            Bekor qilish
+            {tr('Bekor qilish')}
           </Button>
           <Button type="submit" form="customer-form" icon="check">
-            {editing ? 'Saqlash' : 'Qo\'shish'}
+            {editing ? tr('Saqlash') : tr('Qo\'shish')}
           </Button>
         </>
       }
@@ -82,19 +83,19 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
         {restored && <DraftNotice onDiscard={discard} />}
         <Input
           ref={nameRef}
-          label="Ism familiya"
+          label={tr('Ism familiya')}
           required
           value={form.name}
           error={errors.name}
           onChange={(e) => update('name', e.target.value)}
-          placeholder="Masalan: Aziza Karimova"
+          placeholder={tr('Masalan: Aziza Karimova')}
           autoComplete="off"
           data-autofocus
         />
         <div className="form-row">
           <Input
             ref={phoneRef}
-            label="Telefon"
+            label={tr('Telefon')}
             required
             type="tel"
             inputMode="tel"
@@ -104,7 +105,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
             placeholder="+998 90 123 45 67"
           />
           <Select
-            label="Manba"
+            label={tr('Manba')}
             value={form.source}
             onChange={(e) => update('source', e.target.value as CustomerInput['source'])}
             options={toOptions(SOURCE_LABELS)}
@@ -112,22 +113,22 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
         </div>
         <div className="form-row">
           <Select
-            label="Kurs / xizmat"
+            label={tr('Kurs / xizmat')}
             value={form.course}
             onChange={(e) => update('course', e.target.value)}
-            hint={courseOptions.length === 0 ? 'Avval "Kurslar va xizmatlar" bo\'limida kurs qo\'shing' : undefined}
-            options={[{ value: '', label: 'Tanlanmagan' }, ...courseOptions.map((c) => ({ value: c, label: c }))]}
+            hint={courseOptions.length === 0 ? tr('Avval "Kurslar va xizmatlar" bo\'limida kurs qo\'shing') : undefined}
+            options={[{ value: '', label: tr('Tanlanmagan') }, ...courseOptions.map((c) => ({ value: c, label: c }))]}
           />
           {editing && (
             <Select
-              label="Bosqich"
+              label={tr('Bosqich')}
               value={form.status}
               onChange={(e) => update('status', e.target.value as CustomerInput['status'])}
               options={FUNNEL_STAGES.map((stage) => ({ value: stage, label: STATUS_LABELS[stage] }))}
             />
           )}
         </div>
-        <Textarea label="Izoh" rows={3} value={form.note ?? ''} onChange={(e) => update('note', e.target.value)} />
+        <Textarea label={tr('Izoh')} rows={3} value={form.note ?? ''} onChange={(e) => update('note', e.target.value)} />
       </form>
     </Modal>
   )

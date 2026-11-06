@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { DATE_RANGE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import type { DateRange, Section } from '../../types/dashboard.types'
@@ -12,8 +13,8 @@ export function PeriodBar() {
   if (!PERIOD_SECTIONS.includes(activeSection)) return null
   return (
     <div className="period-bar">
-      <span className="muted">Davr:</span>
-      <div className="segmented header-period" role="group" aria-label="Davr">
+      <span className="muted">{tr('Davr:')}</span>
+      <div className="segmented header-period" role="group" aria-label={tr('Davr')}>
         {RANGES.map((range) => (
           <button key={range} type="button" aria-pressed={dateRange === range} className={dateRange === range ? 'is-active' : undefined} onClick={() => setDateRange(range)}>
             {DATE_RANGE_LABELS[range]}

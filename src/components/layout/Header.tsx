@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import { Icon, NAV_ITEMS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
@@ -81,29 +82,29 @@ export function Header() {
   // Faqat ruxsat berilgan hisobotlar: kuzatuvchi va menejer hisobot yuklamaydi, zaxira — faqat administrator
   const exportSections = [
     {
-      label: 'Mijozlar',
+      label: tr('Mijozlar'),
       show: can('reports.export') && can('customers.view'),
       items: [
-        { id: 'customers-csv', label: 'Mijozlar — CSV', icon: 'fileText' as const, onSelect: () => exportCustomers('csv') },
-        { id: 'customers-xls', label: 'Mijozlar — Excel', icon: 'sheet' as const, onSelect: () => exportCustomers('xls') },
+        { id: 'customers-csv', label: tr('Mijozlar — CSV'), icon: 'fileText' as const, onSelect: () => exportCustomers('csv') },
+        { id: 'customers-xls', label: tr('Mijozlar — Excel'), icon: 'sheet' as const, onSelect: () => exportCustomers('xls') },
       ],
     },
     {
-      label: 'Tranzaksiyalar',
+      label: tr('Tranzaksiyalar'),
       show: can('reports.export') && can('payments.view'),
       items: [
-        { id: 'tx-csv', label: 'Tranzaksiyalar — CSV', icon: 'fileText' as const, onSelect: () => exportTransactions('csv') },
-        { id: 'tx-xls', label: 'Tranzaksiyalar — Excel', icon: 'sheet' as const, onSelect: () => exportTransactions('xls') },
+        { id: 'tx-csv', label: tr('Tranzaksiyalar — CSV'), icon: 'fileText' as const, onSelect: () => exportTransactions('csv') },
+        { id: 'tx-xls', label: tr('Tranzaksiyalar — Excel'), icon: 'sheet' as const, onSelect: () => exportTransactions('xls') },
       ],
     },
     {
-      label: 'Zaxira',
+      label: tr('Zaxira'),
       show: can('data.manage'),
       items: [
         {
           id: 'backup',
-          label: 'To\'liq zaxira — JSON',
-          description: 'Barcha ma\'lumot va sozlamalar',
+          label: tr('To\'liq zaxira — JSON'),
+          description: tr('Barcha ma\'lumot va sozlamalar'),
           icon: 'database' as const,
           onSelect: exportBackup,
         },
@@ -115,9 +116,9 @@ export function Header() {
 
   const handleClearDemo = async () => {
     const ok = await confirm({
-      title: 'Demo ma\'lumotni tozalash',
-      message: `Barcha mijozlar (${customers.length}) va tranzaksiyalar (${transactions.length}) o'chiriladi, jumladan demo rejimda o'zingiz qo'shganlari ham. Sozlamalar va kurslar saqlanib qoladi. Davom etasizmi?`,
-      confirmLabel: 'Tozalash',
+      title: tr('Demo ma\'lumotni tozalash'),
+      message: tr('Barcha mijozlar ({0}) va tranzaksiyalar ({1}) o\'chiriladi, jumladan demo rejimda o\'zingiz qo\'shganlari ham. Sozlamalar va kurslar saqlanib qoladi. Davom etasizmi?', { 0: customers.length, 1: transactions.length }),
+      confirmLabel: tr('Tozalash'),
     })
     if (ok) clearDemoData()
   }
@@ -128,10 +129,10 @@ export function Header() {
         <h1>{title}</h1>
         {isDemo && mode === 'main' && can('data.manage') && (
           <span className="demo-banner">
-            <Badge tone="primary">Demo ma'lumot</Badge>
+            <Badge tone="primary">{tr('Demo ma\'lumot')}</Badge>
             <Button variant="ghost" size="sm" icon="trash" onClick={handleClearDemo}>
-              <span className="hide-mobile">Demo ma'lumotni tozalash</span>
-              <span className="show-mobile">Tozalash</span>
+              <span className="hide-mobile">{tr('Demo ma\'lumotni tozalash')}</span>
+              <span className="show-mobile">{tr('Tozalash')}</span>
             </Button>
           </span>
         )}
@@ -147,12 +148,12 @@ export function Header() {
         >
           <Icon name="search" size={16} />
           <label htmlFor="global-search" className="sr-only">
-            Qidiruv
+            {tr('Qidiruv')}
           </label>
           <input
             id="global-search"
             type="search"
-            placeholder="Qidiruv..."
+            placeholder={tr('Qidiruv...')}
             aria-keyshortcuts="Control+K Meta+K"
             aria-controls={showResults ? 'search-results' : undefined}
             value={search}
@@ -184,13 +185,13 @@ export function Header() {
             />
           )}
           <kbd className="search-kbd" aria-hidden="true">
-            Ctrl K
+            {tr('Ctrl K')}
           </kbd>
         </div>
 
         <IconButton
           icon="search"
-          label="Qidirish"
+          label={tr('Qidirish')}
           className="header-icon-btn search-toggle"
           aria-expanded={searching}
           onClick={() => {
@@ -203,15 +204,15 @@ export function Header() {
 
         {quickAdd.length > 0 && (
           <Dropdown
-            label="Qo'shish"
+            label={tr('Qo\'shish')}
             className="header-add"
             trigger={(props) => (
               <Button icon="plus" {...props}>
-                Qo'shish
+                {tr('Qo\'shish')}
                 <Icon name="chevronDown" size={14} />
               </Button>
             )}
-            sections={[{ label: 'Yangi yozuv', items: quickAdd.map((a) => ({ id: a.id, label: a.label, description: a.description, icon: a.icon, onSelect: a.run })) }]}
+            sections={[{ label: tr('Yangi yozuv'), items: quickAdd.map((a) => ({ id: a.id, label: a.label, description: a.description, icon: a.icon, onSelect: a.run })) }]}
           />
         )}
 
@@ -222,11 +223,11 @@ export function Header() {
 
         {exportSections.length > 0 && (
         <Dropdown
-          label="Hisobot yuklash"
+          label={tr('Hisobot yuklash')}
           className="header-export-menu"
           trigger={(props) => (
-            <Button variant="ghost" icon="download" className="header-export" aria-label="Hisobot yuklash" title="Hisobot yuklash" {...props}>
-              <span className="export-label">Yuklab olish</span>
+            <Button variant="ghost" icon="download" className="header-export" aria-label={tr('Hisobot yuklash')} title={tr('Hisobot yuklash')} {...props}>
+              <span className="export-label">{tr('Yuklab olish')}</span>
             </Button>
           )}
           sections={exportSections}

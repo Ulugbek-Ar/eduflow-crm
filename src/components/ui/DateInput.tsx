@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useId, useRef, useState } from 'react'
 import type { Ref } from 'react'
 import { Icon } from '../../constants/navigation'
@@ -39,7 +40,7 @@ export function DateInput({ label, value, onChange, format = 'dd.mm.yyyy', min, 
   }
 
   const invalid = touched && text !== '' && parseDisplayDate(text, format) === null
-  const shownError = error ?? (invalid ? `Sanani ${datePlaceholder(format)} ko'rinishida kiriting` : undefined)
+  const shownError = error ?? (invalid ? tr('Sanani {0} ko\'rinishida kiriting', { 0: datePlaceholder(format) }) : undefined)
 
   const handleText = (next: string) => {
     const masked = maskDate(next, format)
@@ -77,8 +78,8 @@ export function DateInput({ label, value, onChange, format = 'dd.mm.yyyy', min, 
           <button
             type="button"
             className="icon-btn date-picker-btn"
-            aria-label={`${label}: kalendardan tanlash`}
-            title="Kalendardan tanlash"
+            aria-label={tr('{0}: kalendardan tanlash', { 0: label })}
+            title={tr('Kalendardan tanlash')}
             onClick={() => pickerRef.current?.showPicker()}
           >
             <Icon name="calendar" size={16} />

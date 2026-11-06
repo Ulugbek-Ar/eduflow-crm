@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useId, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Icon } from '../../constants/navigation'
@@ -101,7 +102,7 @@ export function Combobox({ label, options, value, onChange, placeholder, emptyTe
           onKeyDown={handleKeyDown}
         />
         {value && (
-          <IconButton icon="close" label="Tanlovni tozalash" className="combobox-clear" onClick={() => onChange('')} />
+          <IconButton icon="close" label={tr('Tanlovni tozalash')} className="combobox-clear" onClick={() => onChange('')} />
         )}
         {open && (
           <ul id={listId} role="listbox" className="combobox-list" aria-label={label}>

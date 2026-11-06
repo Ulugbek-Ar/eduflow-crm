@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { DATE_RANGE_LABELS, FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useCan } from '../../hooks/useAuth'
@@ -58,41 +59,41 @@ export function AnalyticsPanel() {
   const reports: ReportDef[] = [
     {
       id: 'customers',
-      title: 'Mijozlar',
-      description: 'Barcha mijozlar va lidlar',
+      title: tr('Mijozlar'),
+      description: tr('Barcha mijozlar va lidlar'),
       download: (format) => exportRows('mijozlar', customers, customerColumns(formatDate), format, options('Mijozlar')),
     },
     {
       id: 'transactions',
-      title: 'Tranzaksiyalar',
-      description: `${periodLabel} · barcha statuslar`,
+      title: tr('Tranzaksiyalar'),
+      description: tr('{0} · barcha statuslar', { 0: periodLabel }),
       download: (format) => exportRows('tranzaksiyalar', txInPeriod, transactionColumns(formatDate, getCustomerName), format, options('Tranzaksiyalar')),
     },
     {
       id: 'debtors',
-      title: 'Qarzdorlar',
-      description: 'Joriy oy · qarzi kattasidan',
+      title: tr('Qarzdorlar'),
+      description: tr('Joriy oy · qarzi kattasidan'),
       download: (format) => exportRows('qarzdorlar', computeDebts(customers, courses, transactions), debtColumns(), format, options('Qarzdorlar')),
     },
     {
       id: 'sources',
-      title: 'Manbalar hisoboti',
-      description: `${periodLabel} · CPL va ROI`,
+      title: tr('Manbalar hisoboti'),
+      description: tr('{0} · CPL va ROI', { 0: periodLabel }),
       download: (format) => exportRows('manbalar', rows, sourceColumns(), format, options('Manbalar')),
     },
   ]
 
   return (
     <div className="stack">
-      <section className="kpi-grid" aria-label={`Tahlil ko'rsatkichlari: ${periodLabel.toLowerCase()}`}>
+      <section className="kpi-grid" aria-label={tr('Tahlil ko\'rsatkichlari: {0}', { 0: periodLabel.toLowerCase() })}>
         <article className="card kpi">
           <span className="kpi-icon tone-primary">
             <Icon name="receipt" size={20} />
           </span>
           <div className="kpi-body">
-            <h2 className="kpi-title">O'rtacha chek (AOV)</h2>
+            <h2 className="kpi-title">{tr('O\'rtacha chek (AOV)')}</h2>
             <strong>{optionalMoney(aov.value)}</strong>
-            <span className="kpi-foot muted">{aov.count} ta to'langan to'lov</span>
+            <span className="kpi-foot muted">{aov.count} {tr('ta to\'langan to\'lov')}</span>
           </div>
           <Hint term="aov" className="kpi-hint" />
         </article>
@@ -101,7 +102,7 @@ export function AnalyticsPanel() {
             <Icon name="trendUp" size={20} />
           </span>
           <div className="kpi-body">
-            <h2 className="kpi-title">To'langan kirim</h2>
+            <h2 className="kpi-title">{tr('To\'langan kirim')}</h2>
             <strong>{money(aov.total)}</strong>
             <span className="kpi-foot muted">{periodLabel}</span>
           </div>
@@ -111,9 +112,9 @@ export function AnalyticsPanel() {
             <Icon name="activity" size={20} />
           </span>
           <div className="kpi-body">
-            <h2 className="kpi-title">Marketing chiqimi</h2>
+            <h2 className="kpi-title">{tr('Marketing chiqimi')}</h2>
             <strong>{money(marketing)}</strong>
-            <span className="kpi-foot muted">Umumiy CPL: {optionalMoney(overallCpl)}</span>
+            <span className="kpi-foot muted">{tr('Umumiy CPL:')} {optionalMoney(overallCpl)}</span>
           </div>
           <Hint term="cpl" className="kpi-hint" />
         </article>
@@ -122,9 +123,9 @@ export function AnalyticsPanel() {
             <Icon name="percent" size={20} />
           </span>
           <div className="kpi-body">
-            <h2 className="kpi-title">Konversiya</h2>
+            <h2 className="kpi-title">{tr('Konversiya')}</h2>
             <strong>{overallConversion === null ? '—' : `${Math.round(overallConversion)}%`}</strong>
-            <span className="kpi-foot muted">{formatNumber(leadsInPeriod.length)} ta liddan</span>
+            <span className="kpi-foot muted">{formatNumber(leadsInPeriod.length)} {tr('ta liddan')}</span>
           </div>
           <Hint term="conversion" className="kpi-hint" />
         </article>
@@ -135,16 +136,16 @@ export function AnalyticsPanel() {
           <div className="card-head">
             <div>
               <div className="title-row">
-                <h2 id="funnel-title">Sotuv voronkasi</h2>
+                <h2 id="funnel-title">{tr('Sotuv voronkasi')}</h2>
                 <Hint term="funnel" />
               </div>
               <span className="muted">
-                {periodLabel} kelgan {leadsInPeriod.length} ta lid hozir qaysi bosqichda
+                {periodLabel} {tr('kelgan')} {leadsInPeriod.length} {tr('ta lid hozir qaysi bosqichda')}
               </span>
             </div>
           </div>
           {leadsInPeriod.length === 0 ? (
-            <p className="muted">Bu davrda lid kelmagan.</p>
+            <p className="muted">{tr('Bu davrda lid kelmagan.')}</p>
           ) : (
             <ul className="progress-list">
               {funnel.map((row) => (
@@ -154,13 +155,13 @@ export function AnalyticsPanel() {
                       <span className={`stage-dot stage-${row.stage}`} aria-hidden="true" /> {STATUS_LABELS[row.stage]}
                     </span>
                     <span className="muted">
-                      {row.count} ta · {Math.round(row.share)}%
+                      {row.count} {tr('ta ·')} {Math.round(row.share)}%
                     </span>
                   </div>
                   <div
                     className="progress"
                     role="progressbar"
-                    aria-label={`${STATUS_LABELS[row.stage]} ulushi`}
+                    aria-label={tr('{0} ulushi', { 0: STATUS_LABELS[row.stage] })}
                     aria-valuenow={Math.round(row.share)}
                     aria-valuemin={0}
                     aria-valuemax={100}
@@ -176,40 +177,40 @@ export function AnalyticsPanel() {
         <section className="card" aria-labelledby="course-revenue-title">
           <div className="card-head">
             <div>
-              <h2 id="course-revenue-title">Kurslar bo'yicha tushum</h2>
-              <span className="muted">{periodLabel} · to'langan kirimlar</span>
+              <h2 id="course-revenue-title">{tr('Kurslar bo\'yicha tushum')}</h2>
+              <span className="muted">{periodLabel} {tr('· to\'langan kirimlar')}</span>
             </div>
           </div>
           {byCourse.length === 0 ? (
-            <p className="muted">Kurs qo'shilmagan.</p>
+            <p className="muted">{tr('Kurs qo\'shilmagan.')}</p>
           ) : (
             <div className="table-wrap">
-              <table className="table" aria-label="Kurslar bo'yicha tushum">
+              <table className="table" aria-label={tr('Kurslar bo\'yicha tushum')}>
                 <thead>
                   <tr>
-                    <th scope="col">Kurs</th>
+                    <th scope="col">{tr('Kurs')}</th>
                     <th scope="col" className="align-right">
-                      Talabalar
+                      {tr('Talabalar')}
                     </th>
                     <th scope="col" className="align-right">
-                      Tushum
+                      {tr('Tushum')}
                     </th>
                     <th scope="col" className="align-right">
-                      Oylik kutilgan
+                      {tr('Oylik kutilgan')}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {byCourse.map((row) => (
                     <tr key={row.course.id}>
-                      <td data-label="Kurs">{row.course.name}</td>
-                      <td data-label="Talabalar" className="align-right">
+                      <td data-label={tr('Kurs')}>{row.course.name}</td>
+                      <td data-label={tr('Talabalar')} className="align-right">
                         {row.students}
                       </td>
-                      <td data-label="Tushum" className="align-right nowrap strong">
+                      <td data-label={tr('Tushum')} className="align-right nowrap strong">
                         {money(row.revenue)}
                       </td>
-                      <td data-label="Oylik kutilgan" className="align-right nowrap">
+                      <td data-label={tr('Oylik kutilgan')} className="align-right nowrap">
                         {money(row.expectedMonthly)}
                       </td>
                     </tr>
@@ -224,57 +225,57 @@ export function AnalyticsPanel() {
       <section className="card" aria-labelledby="sources-perf-title">
         <div className="card-head">
           <div>
-            <h2 id="sources-perf-title">Manbalar samaradorligi</h2>
-            <span className="muted">{periodLabel} · faqat to'langan tranzaksiyalar</span>
+            <h2 id="sources-perf-title">{tr('Manbalar samaradorligi')}</h2>
+            <span className="muted">{periodLabel} {tr('· faqat to\'langan tranzaksiyalar')}</span>
           </div>
         </div>
         <div className="table-wrap">
-          <table className="table" aria-label="Manbalar samaradorligi">
+          <table className="table" aria-label={tr('Manbalar samaradorligi')}>
             <thead>
               <tr>
-                <th scope="col">Manba</th>
+                <th scope="col">{tr('Manba')}</th>
                 <th scope="col" className="align-right">
-                  Lidlar
+                  {tr('Lidlar')}
                 </th>
                 <th scope="col" className="align-right">
-                  To'lov qildi
+                  {tr('To\'lov qildi')}
                 </th>
                 <th scope="col" className="align-right">
-                  Konversiya
+                  {tr('Konversiya')}
                 </th>
                 <th scope="col" className="align-right">
-                  Marketing chiqimi
+                  {tr('Marketing chiqimi')}
                 </th>
                 <th scope="col" className="align-right">
-                  CPL <Hint term="cpl" />
+                  {tr('CPL')} <Hint term="cpl" />
                 </th>
                 <th scope="col" className="align-right">
-                  ROI <Hint term="roi" />
+                  {tr('ROI')} <Hint term="roi" />
                 </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.source}>
-                  <td data-label="Manba" className="strong">
+                  <td data-label={tr('Manba')} className="strong">
                     {SOURCE_LABELS[row.source]}
                   </td>
-                  <td data-label="Lidlar" className="align-right">
+                  <td data-label={tr('Lidlar')} className="align-right">
                     {row.leads}
                   </td>
-                  <td data-label="To'lov qildi" className="align-right">
+                  <td data-label={tr('To\'lov qildi')} className="align-right">
                     {row.paid}
                   </td>
-                  <td data-label="Konversiya" className="align-right">
+                  <td data-label={tr('Konversiya')} className="align-right">
                     {percent(row.conversion)}
                   </td>
-                  <td data-label="Marketing chiqimi" className="align-right nowrap">
+                  <td data-label={tr('Marketing chiqimi')} className="align-right nowrap">
                     {money(row.spend)}
                   </td>
-                  <td data-label="CPL" className="align-right nowrap">
+                  <td data-label={tr('CPL')} className="align-right nowrap">
                     {optionalMoney(row.cpl)}
                   </td>
-                  <td data-label="ROI" className={`align-right nowrap ${row.roi === null ? '' : row.roi >= 0 ? 'text-success' : 'text-danger'}`}>
+                  <td data-label={tr('ROI')} className={`align-right nowrap ${row.roi === null ? '' : row.roi >= 0 ? 'text-success' : 'text-danger'}`}>
                     {signedPercent(row.roi)}
                   </td>
                 </tr>
@@ -282,25 +283,25 @@ export function AnalyticsPanel() {
             </tbody>
             <tfoot>
               <tr className="table-total">
-                <th scope="row" data-label="Manba">
-                  Jami
+                <th scope="row" data-label={tr('Manba')}>
+                  {tr('Jami')}
                 </th>
-                <td data-label="Lidlar" className="align-right">
+                <td data-label={tr('Lidlar')} className="align-right">
                   {total.leads}
                 </td>
-                <td data-label="To'lov qildi" className="align-right">
+                <td data-label={tr('To\'lov qildi')} className="align-right">
                   {total.paid}
                 </td>
-                <td data-label="Konversiya" className="align-right">
+                <td data-label={tr('Konversiya')} className="align-right">
                   {percent(total.conversion)}
                 </td>
-                <td data-label="Marketing chiqimi" className="align-right nowrap">
+                <td data-label={tr('Marketing chiqimi')} className="align-right nowrap">
                   {money(total.spend)}
                 </td>
-                <td data-label="CPL" className="align-right nowrap">
+                <td data-label={tr('CPL')} className="align-right nowrap">
                   {optionalMoney(total.cpl)}
                 </td>
-                <td data-label="ROI" className="align-right nowrap">
+                <td data-label={tr('ROI')} className="align-right nowrap">
                   {signedPercent(total.roi)}
                 </td>
               </tr>
@@ -309,13 +310,11 @@ export function AnalyticsPanel() {
         </div>
         {unattributed > 0 && (
           <p className="notice notice-warning formula-note">
-            Manbasi ko'rsatilmagan marketing chiqimi: {money(unattributed)} — u jadvaldagi CPL va ROI ga kirmaydi. Xarajatni tahrirlab
-            manbasini tanlang.
+            {tr('Manbasi ko\'rsatilmagan marketing chiqimi:')} {money(unattributed)} {tr('— u jadvaldagi CPL va ROI ga kirmaydi. Xarajatni tahrirlab manbasini tanlang.')}
           </p>
         )}
         <p className="field-hint formula-note">
-          CPL = marketing chiqimi / lidlar soni. ROI = (shu manbadan kelgan mijozlarning kirimi − chiqim) / chiqim × 100.
-          Chiqim 0 bo'lsa "—". Marketing chiqimiga manba Moliya va kassa'da xarajat yozishda tanlanadi.
+          {tr('CPL = marketing chiqimi / lidlar soni. ROI = (shu manbadan kelgan mijozlarning kirimi − chiqim) / chiqim × 100. Chiqim 0 bo\'lsa "—". Marketing chiqimiga manba Moliya va kassa\'da xarajat yozishda tanlanadi.')}
         </p>
       </section>
 
@@ -323,8 +322,8 @@ export function AnalyticsPanel() {
       <section className="card" aria-labelledby="reports-title">
         <div className="card-head">
           <div>
-            <h2 id="reports-title">Hisobotlarni yuklab olish</h2>
-            <span className="muted">CSV (Excel UZ/RU uchun ajratgich Sozlamalarda) yoki Excel (.xls)</span>
+            <h2 id="reports-title">{tr('Hisobotlarni yuklab olish')}</h2>
+            <span className="muted">{tr('CSV (Excel UZ/RU uchun ajratgich Sozlamalarda) yoki Excel (.xls)')}</span>
           </div>
         </div>
         <ul className="report-list">
@@ -339,25 +338,25 @@ export function AnalyticsPanel() {
                   size="sm"
                   variant="ghost"
                   icon="fileText"
-                  aria-label={`${report.title} — CSV`}
+                  aria-label={tr('{0} — CSV', { 0: report.title })}
                   onClick={() => {
                     report.download('csv')
                     logExport(`${report.title} — CSV`)
                   }}
                 >
-                  CSV
+                  {tr('CSV')}
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   icon="sheet"
-                  aria-label={`${report.title} — Excel`}
+                  aria-label={tr('{0} — Excel', { 0: report.title })}
                   onClick={() => {
                     report.download('xls')
                     logExport(`${report.title} — Excel`)
                   }}
                 >
-                  Excel
+                  {tr('Excel')}
                 </Button>
               </div>
             </li>

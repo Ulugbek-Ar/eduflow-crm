@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { METHOD_LABELS } from '../../constants/navigation'
 import type { Settings } from '../../types/dashboard.types'
 import type { Transaction } from '../../types/finance.types'
@@ -7,15 +8,15 @@ import { receiptNumber } from '../../utils/receipt'
 import type { ReceiptData } from '../../utils/receipt'
 
 const TITLES: Record<Transaction['status'], string> = {
-  paid: 'To\'lov cheki',
-  pending: 'To\'lov uchun hisob',
-  cancelled: 'Bekor qilingan to\'lov',
+  paid: tr('To\'lov cheki'),
+  pending: tr('To\'lov uchun hisob'),
+  cancelled: tr('Bekor qilingan to\'lov'),
 }
 
 export function Receipt({ data, settings, money }: { data: ReceiptData; settings: Settings; money: (amount: number) => string }) {
   const { transaction: t, customer } = data
   return (
-    <article className="receipt" aria-label="Chek">
+    <article className="receipt" aria-label={tr('Chek')}>
       <header className="receipt-head">
         {settings.logoImage ? (
           <img src={settings.logoImage} alt="" className="receipt-logo" />
@@ -24,7 +25,7 @@ export function Receipt({ data, settings, money }: { data: ReceiptData; settings
         )}
         <strong className="receipt-org">{settings.orgName}</strong>
         {settings.address && <span>{settings.address}</span>}
-        {settings.phone && <span>Tel: {settings.phone}</span>}
+        {settings.phone && <span>{tr('Tel:')} {settings.phone}</span>}
       </header>
 
       <div className="receipt-title">
@@ -35,51 +36,51 @@ export function Receipt({ data, settings, money }: { data: ReceiptData; settings
 
       <dl className="receipt-rows">
         <div>
-          <dt>To'lovchi</dt>
+          <dt>{tr('To\'lovchi')}</dt>
           <dd>{data.customerName || '—'}</dd>
         </div>
         {customer?.phone && (
           <div>
-            <dt>Telefon</dt>
+            <dt>{tr('Telefon')}</dt>
             <dd>{customer.phone}</dd>
           </div>
         )}
         {customer?.course && (
           <div>
-            <dt>Kurs</dt>
+            <dt>{tr('Kurs')}</dt>
             <dd>{customer.course}</dd>
           </div>
         )}
         <div>
-          <dt>To'lov turi</dt>
+          <dt>{tr('To\'lov turi')}</dt>
           <dd>{METHOD_LABELS[t.method]}</dd>
         </div>
         {t.note && (
           <div>
-            <dt>Izoh</dt>
+            <dt>{tr('Izoh')}</dt>
             <dd>{t.note}</dd>
           </div>
         )}
       </dl>
 
       <div className="receipt-total">
-        <span>Jami</span>
+        <span>{tr('Jami')}</span>
         <strong>{money(t.amount)}</strong>
       </div>
       <p className="receipt-words">{amountInWords(t.amount, settings.currency)}</p>
-      {t.status === 'paid' && data.remainingDebt > 0 && <p className="receipt-debt">Qolgan qarz: {money(data.remainingDebt)}</p>}
-      {t.status === 'cancelled' && <p className="receipt-stamp">BEKOR QILINGAN</p>}
+      {t.status === 'paid' && data.remainingDebt > 0 && <p className="receipt-debt">{tr('Qolgan qarz:')} {money(data.remainingDebt)}</p>}
+      {t.status === 'cancelled' && <p className="receipt-stamp">{tr('BEKOR QILINGAN')}</p>}
 
       <footer className="receipt-foot">
         <div className="receipt-sign">
-          <span>Qabul qildi: {data.cashier || '—'}</span>
+          <span>{tr('Qabul qildi:')} {data.cashier || '—'}</span>
           <span className="receipt-line" aria-hidden="true" />
         </div>
         <div className="receipt-sign">
-          <span>To'lovchi imzosi</span>
+          <span>{tr('To\'lovchi imzosi')}</span>
           <span className="receipt-line" aria-hidden="true" />
         </div>
-        <p className="receipt-thanks">Rahmat! Bilim — eng yaxshi sarmoya.</p>
+        <p className="receipt-thanks">{tr('Rahmat! Bilim — eng yaxshi sarmoya.')}</p>
       </footer>
     </article>
   )

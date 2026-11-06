@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
@@ -33,10 +34,10 @@ const STATUS_TONE: Record<TransactionStatus, string> = { paid: 'paid', pending: 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TransactionCategory[]
 
 const MOBILE_SORTS = [
-  { value: 'date:desc', label: 'Eng yangi' },
-  { value: 'date:asc', label: 'Eng eski' },
-  { value: 'amount:desc', label: 'Summa: kattadan' },
-  { value: 'amount:asc', label: 'Summa: kichikdan' },
+  { value: 'date:desc', label: tr('Eng yangi') },
+  { value: 'date:asc', label: tr('Eng eski') },
+  { value: 'amount:desc', label: tr('Summa: kattadan') },
+  { value: 'amount:asc', label: tr('Summa: kichikdan') },
 ]
 
 export function TransactionTable() {
@@ -103,9 +104,9 @@ export function TransactionTable() {
 
   const handleDelete = async (t: Transaction) => {
     const ok = await confirm({
-      title: 'Tranzaksiyani o\'chirish',
-      message: `${TYPE_LABELS[t.type]}: ${money(t.amount)} (${formatDate(t.date)}) savatchaga o'tkaziladi — 30 kun ichida tiklash mumkin. Davom etasizmi?`,
-      confirmLabel: 'O\'chirish',
+      title: tr('Tranzaksiyani o\'chirish'),
+      message: tr('{0}: {1} ({2}) savatchaga o\'tkaziladi — 30 kun ichida tiklash mumkin. Davom etasizmi?', { 0: TYPE_LABELS[t.type], 1: money(t.amount), 2: formatDate(t.date) }),
+      confirmLabel: tr('O\'chirish'),
     })
     if (ok) deleteTransaction(t.id)
   }
@@ -117,20 +118,20 @@ export function TransactionTable() {
       <section className="card" aria-labelledby="journal-title">
         <div className="card-head">
           <div>
-            <h2 id="journal-title">Tranzaksiyalar jurnali</h2>
+            <h2 id="journal-title">{tr('Tranzaksiyalar jurnali')}</h2>
             <span className="muted">
-              {rows.length} ta yozuv · {periodLabel}
+              {rows.length} {tr('ta yozuv ·')} {periodLabel}
             </span>
           </div>
           <div className="toolbar">
             {canManage && (
               <Button variant="ghost" icon="minus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'expense' } })}>
-                Xarajat
+                {tr('Xarajat')}
               </Button>
             )}
             {canCreate && (
               <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
-                To'lov qabul qilish
+                {tr('To\'lov qabul qilish')}
               </Button>
             )}
           </div>
@@ -138,39 +139,39 @@ export function TransactionTable() {
 
         <FilterPanel activeCount={countActive(filters, EMPTY_TRANSACTION_FILTERS)}>
           <Select
-            label="Turi"
+            label={tr('Turi')}
             hideLabel
             value={filters.type}
             onChange={(e) => setFilter('type', e.target.value as TransactionFilters['type'])}
-            options={[{ value: 'all', label: 'Barcha turlar' }, ...toOptions(TYPE_LABELS)]}
+            options={[{ value: 'all', label: tr('Barcha turlar') }, ...toOptions(TYPE_LABELS)]}
           />
           <Select
-            label="To'lov turi"
+            label={tr('To\'lov turi')}
             hideLabel
             value={filters.method}
             onChange={(e) => setFilter('method', e.target.value as TransactionFilters['method'])}
-            options={[{ value: 'all', label: 'Barcha to\'lov turlari' }, ...toOptions(METHOD_LABELS)]}
+            options={[{ value: 'all', label: tr('Barcha to\'lov turlari') }, ...toOptions(METHOD_LABELS)]}
           />
           <Select
-            label="Status"
+            label={tr('Status')}
             hideLabel
             value={filters.status}
             onChange={(e) => setFilter('status', e.target.value as TransactionFilters['status'])}
-            options={[{ value: 'all', label: 'Barcha statuslar' }, ...toOptions(TX_STATUS_LABELS)]}
+            options={[{ value: 'all', label: tr('Barcha statuslar') }, ...toOptions(TX_STATUS_LABELS)]}
           />
           <Select
-            label="Kategoriya"
+            label={tr('Kategoriya')}
             hideLabel
             value={filters.category}
             onChange={(e) => setFilter('category', e.target.value as TransactionFilters['category'])}
-            options={[{ value: 'all', label: 'Barcha kategoriyalar' }, ...categoryOptions]}
+            options={[{ value: 'all', label: tr('Barcha kategoriyalar') }, ...categoryOptions]}
           />
           <div className="date-range">
-            <DateInput key={`from-${dateResetKey}`} label="Dan" format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(value) => setFilter('from', value)} />
-            <DateInput key={`to-${dateResetKey}`} label="Gacha" format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(value) => setFilter('to', value)} />
+            <DateInput key={`from-${dateResetKey}`} label={tr('Dan')} format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(value) => setFilter('from', value)} />
+            <DateInput key={`to-${dateResetKey}`} label={tr('Gacha')} format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(value) => setFilter('to', value)} />
           </div>
           <Select
-            label="Saralash"
+            label={tr('Saralash')}
             hideLabel
             className="mobile-only"
             value={`${sort.key}:${sort.direction}`}
@@ -182,7 +183,7 @@ export function TransactionTable() {
           />
           {filtersActive && (
             <Button variant="subtle" icon="close" onClick={clearFilters}>
-              Filtrlarni tozalash
+              {tr('Filtrlarni tozalash')}
             </Button>
           )}
         </FilterPanel>
@@ -190,23 +191,23 @@ export function TransactionTable() {
         {current.total === 0 ? (
           <EmptyState
             variant={transactions.length === 0 ? 'empty' : 'search'}
-            title={transactions.length === 0 ? 'Hali tranzaksiya yo\'q' : 'Tranzaksiya topilmadi'}
+            title={transactions.length === 0 ? tr('Hali tranzaksiya yo\'q') : tr('Tranzaksiya topilmadi')}
             description={
               transactions.length === 0
-                ? 'Birinchi to\'lovni qayd eting — kassa balansi avtomatik hisoblanadi.'
-                : 'Davr yoki filtrlarni o\'zgartirib ko\'ring.'
+                ? tr('Birinchi to\'lovni qayd eting — kassa balansi avtomatik hisoblanadi.')
+                : tr('Davr yoki filtrlarni o\'zgartirib ko\'ring.')
             }
             action={
               transactions.length === 0 ? (
                 canCreate && (
                 <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
-                  To'lov qo'shish
+                  {tr('To\'lov qo\'shish')}
                 </Button>
                 )
               ) : (
                 filtersActive && (
                   <Button variant="ghost" icon="close" onClick={clearFilters}>
-                    Filtrlarni tozalash
+                    {tr('Filtrlarni tozalash')}
                   </Button>
                 )
               )
@@ -218,23 +219,23 @@ export function TransactionTable() {
               <table className="table">
                 <thead>
                   <tr>
-                    <SortHeader label="Sana" sortKey="date" sort={sort} onSort={setTransactionSort} />
-                    <th scope="col">Mijoz</th>
-                    <SortHeader label="Summa" sortKey="amount" sort={sort} onSort={setTransactionSort} align="right" />
-                    <th scope="col">To'lov turi</th>
-                    <th scope="col">Status</th>
+                    <SortHeader label={tr('Sana')} sortKey="date" sort={sort} onSort={setTransactionSort} />
+                    <th scope="col">{tr('Mijoz')}</th>
+                    <SortHeader label={tr('Summa')} sortKey="amount" sort={sort} onSort={setTransactionSort} align="right" />
+                    <th scope="col">{tr('To\'lov turi')}</th>
+                    <th scope="col">{tr('Status')}</th>
                     <th scope="col">
-                      <span className="sr-only">Amallar</span>
+                      <span className="sr-only">{tr('Amallar')}</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {current.items.map((t) => (
                     <tr key={t.id}>
-                      <td data-label="Sana" className="nowrap">
+                      <td data-label={tr('Sana')} className="nowrap">
                         {formatDate(t.date)}
                       </td>
-                      <td data-label="Mijoz" className="cell-wide">
+                      <td data-label={tr('Mijoz')} className="cell-wide">
                         {t.customerId && !getCustomer(t.customerId) ? (
                           <span className="muted">{getCustomerName(t.customerId)}</span>
                         ) : t.customerId ? (
@@ -253,18 +254,18 @@ export function TransactionTable() {
                           {t.customerId && t.note ? ` · ${t.note}` : ''}
                         </small>
                       </td>
-                      <td data-label="Summa" className={`align-right nowrap strong ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
+                      <td data-label={tr('Summa')} className={`align-right nowrap strong ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
                         <span className="sr-only">{TYPE_LABELS[t.type]}: </span>
                         {t.type === 'income' ? '+' : '−'}
                         {money(t.amount)}
                       </td>
-                      <td data-label="To'lov turi">{METHOD_LABELS[t.method]}</td>
-                      <td data-label="Status">
+                      <td data-label={tr('To\'lov turi')}>{METHOD_LABELS[t.method]}</td>
+                      <td data-label={tr('Status')}>
                         {canManage ? (
                         <select
                           className={`status-select badge-${STATUS_TONE[t.status]}`}
                           value={t.status}
-                          aria-label={`Status: ${TYPE_LABELS[t.type]} ${money(t.amount)}, ${formatDate(t.date)}`}
+                          aria-label={tr('Status: {0} {1}, {2}', { 0: TYPE_LABELS[t.type], 1: money(t.amount), 2: formatDate(t.date) })}
                           onChange={(e) => updateTransaction(t.id, { status: e.target.value as TransactionStatus })}
                         >
                           {(Object.keys(TX_STATUS_LABELS) as TransactionStatus[]).map((status) => (
@@ -280,16 +281,16 @@ export function TransactionTable() {
                       <td className="cell-actions">
                         <div className="row-actions">
                           {t.type === 'income' && (
-                            <IconButton icon="receipt" label="Chek" onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+                            <IconButton icon="receipt" label={tr('Chek')} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
                           )}
                         {canManage && (
                         <>
                           <IconButton
                             icon="edit"
-                            label="Tranzaksiyani tahrirlash"
+                            label={tr('Tranzaksiyani tahrirlash')}
                             onClick={() => openModal({ type: 'transaction', payload: { id: t.id } })}
                           />
-                          <IconButton icon="trash" tone="danger" label="Tranzaksiyani o'chirish" onClick={() => handleDelete(t)} />
+                          <IconButton icon="trash" tone="danger" label={tr('Tranzaksiyani o\'chirish')} onClick={() => handleDelete(t)} />
                         </>
                         )}
                         </div>

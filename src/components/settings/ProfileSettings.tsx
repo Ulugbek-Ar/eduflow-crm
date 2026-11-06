@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from '../../auth/permissions'
@@ -25,19 +26,19 @@ export function ProfileSettings() {
       return
     }
     setForm({ fullName: form.fullName.trim(), title: form.title.trim() })
-    toast.success('Profil saqlandi')
+    toast.success(tr('Profil saqlandi'))
   }
 
   return (
     <form className="form" onSubmit={handleSubmit} noValidate>
       <p className="profile-role-line">
-        <span className="muted">Rolingiz:</span> <Badge tone="primary">{ROLE_LABELS[user.role]}</Badge>{' '}
+        <span className="muted">{tr('Rolingiz:')}</span> <Badge tone="primary">{ROLE_LABELS[user.role]}</Badge>{' '}
         <small className="muted">{ROLE_DESCRIPTIONS[user.role]}</small>
       </p>
       <div className="form-row">
         <Input
           id="profile-name"
-          label="To'liq ism"
+          label={tr('To\'liq ism')}
           required
           value={form.fullName}
           error={errors.fullName}
@@ -45,14 +46,14 @@ export function ProfileSettings() {
             setForm((prev) => ({ ...prev, fullName: e.target.value }))
             setErrors({})
           }}
-          placeholder="Masalan: Dilshod Karimov"
+          placeholder={tr('Masalan: Dilshod Karimov')}
         />
         <Input
           id="profile-role"
-          label="Lavozim"
+          label={tr('Lavozim')}
           value={form.title}
           error={errors.title}
-          hint="Masalan: Direktor, Sotuv menejeri"
+          hint={tr('Masalan: Direktor, Sotuv menejeri')}
           onChange={(e) => {
             setForm((prev) => ({ ...prev, title: e.target.value }))
             setErrors({})
@@ -61,7 +62,7 @@ export function ProfileSettings() {
       </div>
       <div className="form-actions">
         <Button type="submit" variant="ghost" icon="save" disabled={!dirty}>
-          Profilni saqlash
+          {tr('Profilni saqlash')}
         </Button>
       </div>
     </form>

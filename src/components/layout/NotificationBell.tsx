@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
@@ -23,7 +24,7 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', onPointer)
   }, [open])
 
-  const label = unread > 0 ? `Bildirishnomalar: ${unread} ta o'qilmagan` : 'Bildirishnomalar'
+  const label = unread > 0 ? tr('Bildirishnomalar: {0} ta o\'qilmagan', { 0: unread }) : tr('Bildirishnomalar')
 
   return (
     <div
@@ -54,22 +55,22 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div id={panelId} className="dropdown-menu notification-panel" role="region" aria-label="Bildirishnomalar">
+        <div id={panelId} className="dropdown-menu notification-panel" role="region" aria-label={tr('Bildirishnomalar')}>
           <div className="notification-head">
-            <strong>Bildirishnomalar</strong>
+            <strong>{tr('Bildirishnomalar')}</strong>
             {items.length > 0 && (
               <div className="notification-tools">
                 <button type="button" className="text-btn" onClick={markAllRead} disabled={unread === 0}>
-                  Hammasi o'qildi
+                  {tr('Hammasi o\'qildi')}
                 </button>
                 <button type="button" className="text-btn" onClick={clearAll}>
-                  Tozalash
+                  {tr('Tozalash')}
                 </button>
               </div>
             )}
           </div>
           {items.length === 0 ? (
-            <p className="notification-empty muted">Hozircha eslatma yo'q — hammasi joyida.</p>
+            <p className="notification-empty muted">{tr('Hozircha eslatma yo\'q — hammasi joyida.')}</p>
           ) : (
             <ul className="notification-list">
               {items.map((n) => (
@@ -91,7 +92,7 @@ export function NotificationBell() {
                       <strong>{n.title}</strong>
                       <small>{n.description}</small>
                     </span>
-                    {!n.read && <span className="unread-dot" aria-label="O'qilmagan" />}
+                    {!n.read && <span className="unread-dot" aria-label={tr('O\'qilmagan')} />}
                   </button>
                 </li>
               ))}

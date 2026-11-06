@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Icon } from '../../constants/navigation'
@@ -33,23 +34,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <span className="error-icon">
           <Icon name="alert" size={28} />
         </span>
-        <h2>Kutilmagan xato yuz berdi</h2>
+        <h2>{tr('Kutilmagan xato yuz berdi')}</h2>
         <p className="muted">
-          Sahifaning bir qismi ishlamay qoldi. Ma'lumotlaringiz brauzerda saqlangan — qayta yuklash odatda muammoni hal qiladi.
+          {tr('Sahifaning bir qismi ishlamay qoldi. Ma\'lumotlaringiz brauzerda saqlangan — qayta yuklash odatda muammoni hal qiladi.')}
         </p>
         <details>
-          <summary>Texnik tafsilotlar</summary>
+          <summary>{tr('Texnik tafsilotlar')}</summary>
           <code>{error.message}</code>
         </details>
         <div className="error-actions">
           {this.props.compact && (
             <button type="button" className="btn btn-ghost" onClick={() => this.setState({ error: null })}>
-              Qayta urinish
+              {tr('Qayta urinish')}
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
             <Icon name="refresh" size={16} />
-            Qayta yuklash
+            {tr('Qayta yuklash')}
           </button>
         </div>
       </div>

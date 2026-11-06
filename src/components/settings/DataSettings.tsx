@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useDashboard } from '../../context/useDashboard'
@@ -43,7 +44,7 @@ export function DataSettings() {
     setPreview(null)
     if (!file) return
     if (file.size > MAX_FILE_SIZE) {
-      setError('Fayl hajmi 10 MB dan oshmasligi kerak')
+      setError(tr('Fayl hajmi 10 MB dan oshmasligi kerak'))
       return
     }
     const result = parseBackup(await file.text())
@@ -57,9 +58,9 @@ export function DataSettings() {
   const applyImport = async () => {
     if (!preview) return
     const ok = await confirm({
-      title: 'Zaxirani tiklash',
-      message: `Joriy ma'lumotlar (${customers.length} mijoz, ${transactions.length} tranzaksiya) zaxiradagilar bilan almashtiriladi. Davom etasizmi?`,
-      confirmLabel: 'Almashtirish',
+      title: tr('Zaxirani tiklash'),
+      message: tr('Joriy ma\'lumotlar ({0} mijoz, {1} tranzaksiya) zaxiradagilar bilan almashtiriladi. Davom etasizmi?', { 0: customers.length, 1: transactions.length }),
+      confirmLabel: tr('Almashtirish'),
     })
     if (!ok) return
     replaceData(preview.data)
@@ -68,9 +69,9 @@ export function DataSettings() {
 
   const handleClearAll = async () => {
     const ok = await confirm({
-      title: 'Barcha ma\'lumotni tozalash',
-      message: `${customers.length} ta mijoz, ${transactions.length} ta tranzaksiya va ${courses.length} ta kurs/xizmat butunlay o'chiriladi. Sozlamalar, login va parol saqlanib qoladi. Avval JSON zaxira olishni tavsiya qilamiz. Bu amalni ortga qaytarib bo'lmaydi.`,
-      confirmLabel: 'Hammasini o\'chirish',
+      title: tr('Barcha ma\'lumotni tozalash'),
+      message: tr('{0} ta mijoz, {1} ta tranzaksiya va {2} ta kurs/xizmat butunlay o\'chiriladi. Sozlamalar, login va parol saqlanib qoladi. Avval JSON zaxira olishni tavsiya qilamiz. Bu amalni ortga qaytarib bo\'lmaydi.', { 0: customers.length, 1: transactions.length, 2: courses.length }),
+      confirmLabel: tr('Hammasini o\'chirish'),
     })
     if (!ok) return
     clearAllData()
@@ -79,9 +80,9 @@ export function DataSettings() {
 
   const handleReset = async () => {
     const ok = await confirm({
-      title: 'Demo ma\'lumotlarga qaytarish',
-      message: 'Barcha mijozlar, tranzaksiyalar va sozlamalar o\'chib, demo ma\'lumotlar qaytadi. Bu amalni ortga qaytarib bo\'lmaydi.',
-      confirmLabel: 'Tiklash',
+      title: tr('Demo ma\'lumotlarga qaytarish'),
+      message: tr('Barcha mijozlar, tranzaksiyalar va sozlamalar o\'chib, demo ma\'lumotlar qaytadi. Bu amalni ortga qaytarib bo\'lmaydi.'),
+      confirmLabel: tr('Tiklash'),
     })
     if (!ok) return
     resetData()
@@ -91,14 +92,14 @@ export function DataSettings() {
   return (
     <div className="settings-rows">
       <p className="muted">
-        Brauzerda saqlangan: {customers.length} ta mijoz, {transactions.length} ta tranzaksiya.
+        {tr('Brauzerda saqlangan:')} {customers.length} {tr('ta mijoz,')} {transactions.length} {tr('ta tranzaksiya.')}
       </p>
 
       <div className="storage-usage">
         <div className="progress-meta">
-          <span id="storage-usage-label">Band joy (taxminiy)</span>
+          <span id="storage-usage-label">{tr('Band joy (taxminiy)')}</span>
           <span>
-            {formatKilobytes(storageUsage.bytes)} / ~{LIMIT_MB} MB · {formatPercent(storageUsage.percent)}
+            {formatKilobytes(storageUsage.bytes)} / ~{LIMIT_MB} {tr('MB ·')} {formatPercent(storageUsage.percent)}
           </span>
         </div>
         <div
@@ -115,27 +116,27 @@ export function DataSettings() {
           />
         </div>
         {storageUsage.percent >= USAGE_WARNING_PERCENT && (
-          <p className="notice notice-warning">Brauzer xotirasi deyarli to'lgan — JSON zaxira oling va keraksiz yozuvlarni o'chiring.</p>
+          <p className="notice notice-warning">{tr('Brauzer xotirasi deyarli to\'lgan — JSON zaxira oling va keraksiz yozuvlarni o\'chiring.')}</p>
         )}
       </div>
 
       <div className="setting-row">
         <div>
-          <strong>JSON zaxira</strong>
-          <p className="muted">Barcha ma'lumot va sozlamalarni bitta faylga yuklab olish</p>
+          <strong>{tr('JSON zaxira')}</strong>
+          <p className="muted">{tr('Barcha ma\'lumot va sozlamalarni bitta faylga yuklab olish')}</p>
         </div>
         <Button variant="ghost" icon="download" onClick={handleBackup}>
-          Yuklab olish
+          {tr('Yuklab olish')}
         </Button>
       </div>
 
       <div className="setting-row">
         <div>
-          <strong>Zaxiradan tiklash</strong>
-          <p className="muted">Avval yuklab olingan .json faylni tanlang — oldindan ko'rib, keyin tasdiqlaysiz</p>
+          <strong>{tr('Zaxiradan tiklash')}</strong>
+          <p className="muted">{tr('Avval yuklab olingan .json faylni tanlang — oldindan ko\'rib, keyin tasdiqlaysiz')}</p>
         </div>
         <Button variant="ghost" icon="upload" onClick={() => fileRef.current?.click()}>
-          Faylni tanlash
+          {tr('Faylni tanlash')}
         </Button>
         <input
           ref={fileRef}
@@ -143,7 +144,7 @@ export function DataSettings() {
           accept="application/json,.json"
           className="sr-only"
           tabIndex={-1}
-          aria-label="Zaxira faylini tanlash"
+          aria-label={tr('Zaxira faylini tanlash')}
           onChange={handleFile}
         />
       </div>
@@ -155,19 +156,19 @@ export function DataSettings() {
       )}
 
       {preview && (
-        <div className="import-preview" role="region" aria-label="Import oldindan ko'rish">
+        <div className="import-preview" role="region" aria-label={tr('Import oldindan ko\'rish')}>
           <strong>{preview.fileName}</strong>
           <p>
-            {preview.data.customers.length} mijoz, {preview.data.transactions.length} tranzaksiya, {preview.data.courses.length} kurs/xizmat
-            {preview.exportedAt && ` · ${formatDate(preview.exportedAt)} da yaratilgan`}
+            {preview.data.customers.length} {tr('mijoz,')} {preview.data.transactions.length} {tr('tranzaksiya,')} {preview.data.courses.length} kurs/xizmat
+            {preview.exportedAt && tr(' · {0} da yaratilgan', { 0: formatDate(preview.exportedAt) })}
           </p>
-          {preview.dropped > 0 && <p className="text-danger">{preview.dropped} ta buzuq yozuv tashlab yuboriladi</p>}
+          {preview.dropped > 0 && <p className="text-danger">{preview.dropped} {tr('ta buzuq yozuv tashlab yuboriladi')}</p>}
           <div className="import-actions">
             <Button variant="ghost" onClick={() => setPreview(null)}>
-              Bekor qilish
+              {tr('Bekor qilish')}
             </Button>
             <Button icon="check" onClick={applyImport}>
-              Almashtirish
+              {tr('Almashtirish')}
             </Button>
           </div>
         </div>
@@ -175,21 +176,21 @@ export function DataSettings() {
 
       <div className="setting-row">
         <div>
-          <strong>Demo ma'lumotlarga qaytarish</strong>
-          <p className="muted">Barcha o'zgarishlar o'chadi va demo ma'lumotlar qaytadi</p>
+          <strong>{tr('Demo ma\'lumotlarga qaytarish')}</strong>
+          <p className="muted">{tr('Barcha o\'zgarishlar o\'chadi va demo ma\'lumotlar qaytadi')}</p>
         </div>
         <Button variant="danger" icon="refresh" onClick={handleReset}>
-          Tiklash
+          {tr('Tiklash')}
         </Button>
       </div>
 
       <div className="setting-row">
         <div>
-          <strong>Barcha ma'lumotni tozalash (Reset)</strong>
-          <p className="muted">Mijozlar, tranzaksiyalar va kurslar o'chadi; sozlamalar va login qoladi</p>
+          <strong>{tr('Barcha ma\'lumotni tozalash (Reset)')}</strong>
+          <p className="muted">{tr('Mijozlar, tranzaksiyalar va kurslar o\'chadi; sozlamalar va login qoladi')}</p>
         </div>
         <Button variant="danger" icon="trash" onClick={handleClearAll}>
-          Tozalash
+          {tr('Tozalash')}
         </Button>
       </div>
     </div>

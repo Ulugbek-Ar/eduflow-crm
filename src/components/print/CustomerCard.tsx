@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import type { Customer } from '../../types/customer.types'
 import type { Settings } from '../../types/dashboard.types'
@@ -20,14 +21,14 @@ interface CustomerCardProps {
 export function CustomerCard({ customer, payments, debt, totalPaid, settings, money, printedBy, printedAt }: CustomerCardProps) {
   const date = (iso: string) => formatDateWith(iso, settings.dateFormat)
   return (
-    <article className="print-card" aria-label="Mijoz kartasi">
+    <article className="print-card" aria-label={tr('Mijoz kartasi')}>
       <header className="print-card-head">
         <div>
           <strong className="receipt-org">{settings.orgName}</strong>
           <span>{[settings.address, settings.phone].filter(Boolean).join(' · ')}</span>
         </div>
         <div className="print-card-title">
-          <strong>Mijoz kartasi</strong>
+          <strong>{tr('Mijoz kartasi')}</strong>
           <span>{formatDateTimeWith(printedAt, settings.dateFormat)}</span>
         </div>
       </header>
@@ -35,40 +36,40 @@ export function CustomerCard({ customer, payments, debt, totalPaid, settings, mo
       <h1>{customer.name}</h1>
       <dl className="print-grid">
         <div>
-          <dt>Telefon</dt>
+          <dt>{tr('Telefon')}</dt>
           <dd>{customer.phone}</dd>
         </div>
         <div>
-          <dt>Kurs</dt>
+          <dt>{tr('Kurs')}</dt>
           <dd>{customer.course || '—'}</dd>
         </div>
         <div>
-          <dt>Bosqich</dt>
+          <dt>{tr('Bosqich')}</dt>
           <dd>{STATUS_LABELS[customer.status]}</dd>
         </div>
         <div>
-          <dt>Qayerdan kelgan</dt>
+          <dt>{tr('Qayerdan kelgan')}</dt>
           <dd>{SOURCE_LABELS[customer.source]}</dd>
         </div>
         <div>
-          <dt>Qo'shilgan</dt>
+          <dt>{tr('Qo\'shilgan')}</dt>
           <dd>{date(customer.createdAt)}</dd>
         </div>
         {customer.paidAt && (
           <div>
-            <dt>O'qishni boshlagan</dt>
+            <dt>{tr('O\'qishni boshlagan')}</dt>
             <dd>{date(customer.paidAt)}</dd>
           </div>
         )}
         {customer.email && (
           <div>
-            <dt>Email</dt>
+            <dt>{tr('Email')}</dt>
             <dd>{customer.email}</dd>
           </div>
         )}
         {customer.note && (
           <div className="print-wide">
-            <dt>Izoh</dt>
+            <dt>{tr('Izoh')}</dt>
             <dd>{customer.note}</dd>
           </div>
         )}
@@ -76,36 +77,36 @@ export function CustomerCard({ customer, payments, debt, totalPaid, settings, mo
 
       <div className="print-summary">
         <div>
-          <span>Jami to'lagan</span>
+          <span>{tr('Jami to\'lagan')}</span>
           <strong>{money(totalPaid)}</strong>
         </div>
         {debt && (
           <>
             <div>
-              <span>Shu oygacha kutilgan</span>
+              <span>{tr('Shu oygacha kutilgan')}</span>
               <strong>{money(debt.expected)}</strong>
             </div>
             <div>
-              <span>Qarz</span>
-              <strong>{debt.debt > 0 ? money(debt.debt) : 'Yo\'q'}</strong>
+              <span>{tr('Qarz')}</span>
+              <strong>{debt.debt > 0 ? money(debt.debt) : tr('Yo\'q')}</strong>
             </div>
           </>
         )}
       </div>
 
-      <h2>To'lovlar tarixi</h2>
+      <h2>{tr('To\'lovlar tarixi')}</h2>
       {payments.length === 0 ? (
-        <p>Hali to'lov qayd etilmagan.</p>
+        <p>{tr('Hali to\'lov qayd etilmagan.')}</p>
       ) : (
         <table className="print-table">
           <thead>
             <tr>
-              <th>Sana</th>
-              <th>Turi</th>
-              <th>Izoh</th>
-              <th>To'lov turi</th>
-              <th>Status</th>
-              <th className="align-right">Summa</th>
+              <th>{tr('Sana')}</th>
+              <th>{tr('Turi')}</th>
+              <th>{tr('Izoh')}</th>
+              <th>{tr('To\'lov turi')}</th>
+              <th>{tr('Status')}</th>
+              <th className="align-right">{tr('Summa')}</th>
             </tr>
           </thead>
           <tbody>
@@ -124,7 +125,7 @@ export function CustomerCard({ customer, payments, debt, totalPaid, settings, mo
       )}
 
       <footer className="print-card-foot">
-        <span>Tayyorladi: {printedBy || '—'}</span>
+        <span>{tr('Tayyorladi:')} {printedBy || '—'}</span>
         <span className="receipt-line" aria-hidden="true" />
       </footer>
     </article>

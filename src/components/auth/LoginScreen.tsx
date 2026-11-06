@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Icon } from '../../constants/navigation'
@@ -5,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { isCryptoAvailable } from '../../services/auth.service'
 import { formatLockWait, lockRemaining, MAX_ATTEMPTS, readLockState, registerFailure, registerSuccess } from '../../services/loginLock.service'
 import { Button } from '../ui/Button'
+import { LanguageSwitch } from '../ui/LanguageSwitch'
 import { Input } from '../ui/Input'
 import { PasswordInput } from '../ui/PasswordInput'
 import { APP_NAME, pageTitle } from '../../constants/app'
@@ -19,6 +21,7 @@ export function AuthBrand({ title, subtitle }: { title: string; subtitle: string
         <h1 id="login-title">{title}</h1>
         <p className="muted">{subtitle}</p>
       </div>
+      <LanguageSwitch className="login-lang" />
     </div>
   )
 }
@@ -29,12 +32,12 @@ export function DemoEntry() {
   return (
     <div className="auth-demo">
       <span className="auth-divider">
-        <span>yoki</span>
+        <span>{tr('yoki')}</span>
       </span>
       <Button variant="ghost" icon="play" className="btn-block" onClick={() => enterDemo()}>
-        Demo'ni ko'rish
+        {tr('Demo\'ni ko\'rish')}
       </Button>
-      <small className="muted">Namunaviy markaz ochiladi. Sizning ma'lumotingizga tegmaydi.</small>
+      <small className="muted">{tr('Namunaviy markaz ochiladi. Sizning ma\'lumotingizga tegmaydi.')}</small>
     </div>
   )
 }
@@ -59,13 +62,13 @@ export function LoginScreen() {
   }, [locked])
 
   useEffect(() => {
-    document.title = pageTitle('Kirish')
+    document.title = pageTitle(tr('Kirish'))
   }, [])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!form.login.trim() || !form.password) {
-      setError('Login va parolni kiriting')
+      setError(tr('Login va parolni kiriting'))
       return
     }
     // Boshqa tabda blok boshlangan bo'lishi mumkin — har safar saqlangan holat o'qiladi
@@ -82,7 +85,7 @@ export function LoginScreen() {
     }
     if (result.reason === 'blocked') {
       registerSuccess()
-      setError('Hisobingiz bloklangan. Administratorga murojaat qiling.')
+      setError(tr('Hisobingiz bloklangan. Administratorga murojaat qiling.'))
       setForm((prev) => ({ ...prev, password: '' }))
       return
     }
@@ -90,7 +93,7 @@ export function LoginScreen() {
     setLock(next)
     setNow(Date.now())
     const left = MAX_ATTEMPTS - next.failures
-    setError(lockRemaining(next) > 0 ? '' : `Login yoki parol noto'g'ri. Yana ${left} ta urinish qoldi`)
+    setError(lockRemaining(next) > 0 ? '' : tr('Login yoki parol noto\'g\'ri. Yana {0} ta urinish qoldi', { 0: left }))
     setForm((prev) => ({ ...prev, password: '' }))
   }
 
@@ -98,16 +101,16 @@ export function LoginScreen() {
     <main className="login-page">
       <div className="login-card">
         <form className="auth-form" onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
-          <AuthBrand title={APP_NAME} subtitle="Boshqaruv paneliga kirish" />
+          <AuthBrand title={APP_NAME} subtitle={tr('Boshqaruv paneliga kirish')} />
 
           {!cryptoReady && (
             <p className="notice notice-error" role="alert">
-              Brauzer xavfsiz kontekstda emas (HTTPS yoki localhost kerak) — kirish imkonsiz.
+              {tr('Brauzer xavfsiz kontekstda emas (HTTPS yoki localhost kerak) — kirish imkonsiz.')}
             </p>
           )}
 
           <Input
-            label="Login"
+            label={tr('Login')}
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
@@ -117,7 +120,7 @@ export function LoginScreen() {
             autoFocus
           />
           <PasswordInput
-            label="Parol"
+            label={tr('Parol')}
             autoComplete="current-password"
             value={form.password}
             onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
@@ -125,8 +128,8 @@ export function LoginScreen() {
 
           {locked ? (
             <p className="notice notice-error" role="alert">
-              Juda ko'p noto'g'ri urinish. Kirish vaqtincha bloklandi.{' '}
-              <span aria-live="off">{formatLockWait(remaining)} dan keyin qayta urinib ko'ring.</span>
+              {tr('Juda ko\'p noto\'g\'ri urinish. Kirish vaqtincha bloklandi.')}{' '}
+              <span aria-live="off">{formatLockWait(remaining)} {tr('dan keyin qayta urinib ko\'ring.')}</span>
             </p>
           ) : (
             error && (
@@ -137,14 +140,13 @@ export function LoginScreen() {
           )}
 
           <Button type="submit" className="btn-block" disabled={busy || !cryptoReady || locked}>
-            {busy ? 'Tekshirilmoqda...' : 'Kirish'}
+            {busy ? tr('Tekshirilmoqda...') : tr('Kirish')}
           </Button>
 
           <details className="auth-help">
-            <summary>Parolni unutdingizmi?</summary>
+            <summary>{tr('Parolni unutdingizmi?')}</summary>
             <p>
-              Markaz administratoridan parolni tiklashni so'rang: <strong>Boshqaruv → Xodimlar → Parolni tiklash</strong>. U sizga
-              vaqtinchalik parol beradi, kirgach o'zingiz yangisini o'rnatasiz.
+              {tr('Markaz administratoridan parolni tiklashni so\'rang:')} <strong>{tr('Boshqaruv → Xodimlar → Parolni tiklash')}</strong>{tr('. U sizga vaqtinchalik parol beradi, kirgach o\'zingiz yangisini o\'rnatasiz.')}
             </p>
           </details>
         </form>

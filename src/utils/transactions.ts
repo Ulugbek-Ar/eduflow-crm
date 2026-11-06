@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { DATE_RANGE_LABELS } from '../constants/navigation'
 import type { DateRange, SortState } from '../types/dashboard.types'
 import type { Transaction, TransactionFilters, TransactionSortKey } from '../types/finance.types'
@@ -22,7 +23,7 @@ export function hasTransactionFilters(filters: TransactionFilters): boolean {
 export function transactionPeriod(filters: TransactionFilters, dateRange: DateRange): { period: Period; label: string } {
   const custom = customPeriod(filters.from, filters.to)
   return custom
-    ? { period: custom, label: 'tanlangan oraliq' }
+    ? { period: custom, label: tr('tanlangan oraliq') }
     : { period: getPeriod(dateRange), label: DATE_RANGE_LABELS[dateRange].toLowerCase() }
 }
 

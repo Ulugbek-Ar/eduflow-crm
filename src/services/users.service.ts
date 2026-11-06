@@ -1,5 +1,6 @@
 // Xodimlar (lokal rejim): login, rol, holat va parol xeshi brauzerda (apex:users).
 // Supabase rejimida xodimlar Auth + profiles jadvalida saqlanadi (supabase/migrations)
+import { tr } from '../i18n'
 import type { PublicUser, Role, StaffUser, UserStatus } from '../types/user.types'
 import { createId } from '../utils/format'
 import { isIsoDate, isOptionalString, isRecord, isText, keepValid, oneOf } from '../utils/guards'
@@ -72,7 +73,7 @@ function migrateLegacyAdmin(): StaffUser[] {
     id: createId('u'),
     login: legacy.login,
     fullName: profileName,
-    title: profileRole && profileRole !== 'Administrator' ? profileRole : 'Direktor',
+    title: profileRole && profileRole !== 'Administrator' ? profileRole : tr('Direktor'),
     role: 'admin',
     status: 'active',
     salt: legacy.salt,
@@ -130,16 +131,16 @@ export interface NewUserInput {
 }
 
 function validateProfile(fullName: string, title: string): { field: UserField; error: string } | null {
-  if (fullName.trim().length < 2) return { field: 'fullName', error: 'Ism familiyani kiriting (kamida 2 ta harf)' }
-  if (fullName.trim().length > MAX_NAME_LENGTH) return { field: 'fullName', error: `Ism ${MAX_NAME_LENGTH} belgidan oshmasin` }
-  if (title.trim().length > MAX_TITLE_LENGTH) return { field: 'title', error: `Lavozim ${MAX_TITLE_LENGTH} belgidan oshmasin` }
+  if (fullName.trim().length < 2) return { field: 'fullName', error: tr('Ism familiyani kiriting (kamida 2 ta harf)') }
+  if (fullName.trim().length > MAX_NAME_LENGTH) return { field: 'fullName', error: tr('Ism {0} belgidan oshmasin', { 0: MAX_NAME_LENGTH }) }
+  if (title.trim().length > MAX_TITLE_LENGTH) return { field: 'title', error: tr('Lavozim {0} belgidan oshmasin', { 0: MAX_TITLE_LENGTH }) }
   return null
 }
 
 function validateNewAccount(users: readonly StaffUser[], login: string, password: string): { field: UserField; error: string } | null {
   const loginError = validateLogin(login)
   if (loginError) return { field: 'login', error: loginError }
-  if (users.some((u) => sameLogin(u.login, login))) return { field: 'login', error: 'Bu login band — boshqasini tanlang' }
+  if (users.some((u) => sameLogin(u.login, login))) return { field: 'login', error: tr('Bu login band — boshqasini tanlang') }
   const passwordError = validatePassword(password, login)
   if (passwordError) return { field: 'password', error: passwordError }
   return null
@@ -162,12 +163,12 @@ async function buildUser(input: NewUserInput, mustChange: boolean): Promise<Staf
 // Birinchi ishga tushish: xodim hali yo'q — markaz egasi administrator hisobini o'zi yaratadi
 export async function createFirstAdmin(input: Omit<NewUserInput, 'role'>): Promise<UserResult> {
   const users = loadUsers()
-  if (users.length > 0) return { ok: false, error: 'Administrator allaqachon yaratilgan. Sahifani yangilang.' }
+  if (users.length > 0) return { ok: false, error: tr('Administrator allaqachon yaratilgan. Sahifani yangilang.') }
   const invalid = validateProfile(input.fullName, input.title) ?? validateNewAccount(users, input.login.trim(), input.password)
   if (invalid) return { ok: false, ...invalid }
   // Hisob yaratilishi bilan kirilgan hisoblanadi
   const user: StaffUser = { ...(await buildUser({ ...input, role: 'admin' }, false)), lastLoginAt: new Date().toISOString() }
-  if (!saveUsers([user])) return { ok: false, error: 'Brauzer saqlashni bloklagan — hisob yaratilmadi' }
+  if (!saveUsers([user])) return { ok: false, error: tr('Brauzer saqlashni bloklagan — hisob yaratilmadi') }
   return { ok: true, user, users: [user] }
 }
 
@@ -178,7 +179,7 @@ export async function addUser(input: NewUserInput): Promise<UserResult> {
   if (invalid) return { ok: false, ...invalid }
   const user = await buildUser(input, true)
   const list = [...users, user]
-  if (!saveUsers(list)) return { ok: false, error: 'Brauzer saqlashni bloklagan — xodim qo\'shilmadi' }
+  if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — xodim qo\'shilmadi') }
   return { ok: true, user, users: list }
 }
 
@@ -193,11 +194,11 @@ export interface UserPatch {
 export function updateUser(actorId: string, id: string, patch: UserPatch): UserResult {
   const users = loadUsers()
   const target = users.find((u) => u.id === id)
-  if (!target) return { ok: false, error: 'Xodim topilmadi' }
+  if (!target) return { ok: false, error: tr('Xodim topilmadi') }
   if (id === actorId && patch.role !== undefined && patch.role !== target.role) {
-    return { ok: false, field: 'role', error: 'O\'z rolingizni o\'zgartira olmaysiz — buni boshqa administrator qiladi' }
+    return { ok: false, field: 'role', error: tr('O\'z rolingizni o\'zgartira olmaysiz — buni boshqa administrator qiladi') }
   }
-  if (id === actorId && patch.status === 'blocked') return { ok: false, field: 'status', error: 'O\'zingizni bloklay olmaysiz' }
+  if (id === actorId && patch.status === 'blocked') return { ok: false, field: 'status', error: tr('O\'zingizni bloklay olmaysiz') }
   const next: StaffUser = {
     ...target,
     ...(patch.fullName !== undefined ? { fullName: patch.fullName.trim() } : {}),
@@ -210,9 +211,9 @@ export function updateUser(actorId: string, id: string, patch: UserPatch): UserR
   if (invalid) return { ok: false, ...invalid }
   const list = users.map((u) => (u.id === id ? next : u))
   if (activeAdmins(list).length === 0) {
-    return { ok: false, field: patch.status ? 'status' : 'role', error: 'Kamida bitta faol administrator qolishi kerak' }
+    return { ok: false, field: patch.status ? 'status' : 'role', error: tr('Kamida bitta faol administrator qolishi kerak') }
   }
-  if (!saveUsers(list)) return { ok: false, error: 'Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi' }
+  if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi') }
   return { ok: true, user: next, users: list }
 }
 
@@ -222,11 +223,11 @@ export type ResetResult = { ok: true; user: StaffUser; users: StaffUser[]; passw
 export async function resetPassword(id: string): Promise<ResetResult> {
   const users = loadUsers()
   const target = users.find((u) => u.id === id)
-  if (!target) return { ok: false, error: 'Xodim topilmadi' }
+  if (!target) return { ok: false, error: tr('Xodim topilmadi') }
   const password = generateTempPassword()
   const next: StaffUser = { ...target, ...(await createHash(password)), mustChange: true, updatedAt: new Date().toISOString() }
   const list = users.map((u) => (u.id === id ? next : u))
-  if (!saveUsers(list)) return { ok: false, error: 'Brauzer saqlashni bloklagan — parol tiklanmadi' }
+  if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — parol tiklanmadi') }
   return { ok: true, user: next, users: list, password }
 }
 
@@ -234,12 +235,12 @@ export async function resetPassword(id: string): Promise<ResetResult> {
 export function updateOwnProfile(id: string, fullName: string, title: string): UserResult {
   const users = loadUsers()
   const target = users.find((u) => u.id === id)
-  if (!target) return { ok: false, error: 'Hisob topilmadi' }
+  if (!target) return { ok: false, error: tr('Hisob topilmadi') }
   const invalid = validateProfile(fullName, title)
   if (invalid) return { ok: false, ...invalid }
   const next: StaffUser = { ...target, fullName: fullName.trim(), title: title.trim(), updatedAt: new Date().toISOString() }
   const list = users.map((u) => (u.id === id ? next : u))
-  if (!saveUsers(list)) return { ok: false, error: 'Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi' }
+  if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi') }
   return { ok: true, user: next, users: list }
 }
 
@@ -247,12 +248,12 @@ export function updateOwnProfile(id: string, fullName: string, title: string): U
 export async function changeOwnCredentials(id: string, currentPassword: string, newLogin: string, newPassword: string): Promise<UserResult> {
   const users = loadUsers()
   const target = users.find((u) => u.id === id)
-  if (!target) return { ok: false, error: 'Hisob topilmadi' }
-  if (!(await checkPassword(target, currentPassword))) return { ok: false, field: 'current', error: 'Joriy parol noto\'g\'ri' }
+  if (!target) return { ok: false, error: tr('Hisob topilmadi') }
+  if (!(await checkPassword(target, currentPassword))) return { ok: false, field: 'current', error: tr('Joriy parol noto\'g\'ri') }
   const login = newLogin.trim()
   const loginError = validateLogin(login)
   if (loginError) return { ok: false, field: 'login', error: loginError }
-  if (users.some((u) => u.id !== id && sameLogin(u.login, login))) return { ok: false, field: 'login', error: 'Bu login band — boshqasini tanlang' }
+  if (users.some((u) => u.id !== id && sameLogin(u.login, login))) return { ok: false, field: 'login', error: tr('Bu login band — boshqasini tanlang') }
   if (newPassword) {
     const passwordError = validatePassword(newPassword, login)
     if (passwordError) return { ok: false, field: 'password', error: passwordError }
@@ -261,7 +262,7 @@ export async function changeOwnCredentials(id: string, currentPassword: string, 
   const hash = newPassword ? await createHash(newPassword) : needsRehash(target) ? await createHash(currentPassword) : null
   const next: StaffUser = { ...target, ...hash, login, mustChange: newPassword ? false : target.mustChange, updatedAt: new Date().toISOString() }
   const list = users.map((u) => (u.id === id ? next : u))
-  if (!saveUsers(list)) return { ok: false, error: 'Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi' }
+  if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi') }
   return { ok: true, user: next, users: list }
 }
 
@@ -269,24 +270,24 @@ export async function changeOwnCredentials(id: string, currentPassword: string, 
 export async function completePasswordChange(id: string, newPassword: string): Promise<UserResult> {
   const users = loadUsers()
   const target = users.find((u) => u.id === id)
-  if (!target) return { ok: false, error: 'Hisob topilmadi' }
+  if (!target) return { ok: false, error: tr('Hisob topilmadi') }
   const passwordError = validatePassword(newPassword, target.login)
   if (passwordError) return { ok: false, field: 'password', error: passwordError }
   if (await checkPassword(target, newPassword)) {
-    return { ok: false, field: 'password', error: 'Yangi parol vaqtinchalik paroldan farq qilishi kerak' }
+    return { ok: false, field: 'password', error: tr('Yangi parol vaqtinchalik paroldan farq qilishi kerak') }
   }
   const next: StaffUser = { ...target, ...(await createHash(newPassword)), mustChange: false, updatedAt: new Date().toISOString() }
   const list = users.map((u) => (u.id === id ? next : u))
-  if (!saveUsers(list)) return { ok: false, error: 'Brauzer saqlashni bloklagan — parol saqlanmadi' }
+  if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — parol saqlanmadi') }
   return { ok: true, user: next, users: list }
 }
 
 // Demo xodimlar: parol bilan kirib bo'lmaydi (xesh tasodifiy) — faqat "Demo'ni ko'rish" orqali
 export const DEMO_STAFF: ReadonlyArray<Pick<StaffUser, 'login' | 'fullName' | 'title' | 'role'>> = [
-  { login: 'demo.admin', fullName: 'Dilshod Rahimov', title: 'Direktor', role: 'admin' },
-  { login: 'demo.menejer', fullName: 'Malika Yusupova', title: 'Sotuv menejeri', role: 'manager' },
-  { login: 'demo.kassir', fullName: 'Sardor Qodirov', title: 'Buxgalter', role: 'cashier' },
-  { login: 'demo.kuzatuvchi', fullName: 'Nodira Karimova', title: 'Ta\'sischi', role: 'viewer' },
+  { login: 'demo.admin', fullName: 'Dilshod Rahimov', title: tr('Direktor'), role: 'admin' },
+  { login: 'demo.menejer', fullName: 'Malika Yusupova', title: tr('Sotuv menejeri'), role: 'manager' },
+  { login: 'demo.kassir', fullName: 'Sardor Qodirov', title: tr('Buxgalter'), role: 'cashier' },
+  { login: 'demo.kuzatuvchi', fullName: 'Nodira Karimova', title: tr('Ta\'sischi'), role: 'viewer' },
 ]
 
 export function createDemoStaff(now = new Date()): StaffUser[] {

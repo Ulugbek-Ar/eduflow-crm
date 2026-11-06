@@ -1,5 +1,6 @@
 // Savatcha: o'chirilgan mijoz, tranzaksiya va kurs 30 kun saqlanadi, keyin avtomatik yo'qoladi.
 // Lokal rejimda apex:trash (demo rejimda alohida); Supabase rejimida deleted_at ustuni (soft delete)
+import { tr } from '../i18n'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
@@ -14,9 +15,9 @@ const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 86_400_000
 export type TrashKind = 'customer' | 'transaction' | 'course'
 
 export const TRASH_KIND_LABELS: Record<TrashKind, string> = {
-  customer: 'Mijoz',
-  transaction: 'Tranzaksiya',
-  course: 'Kurs',
+  customer: tr('Mijoz'),
+  transaction: tr('Tranzaksiya'),
+  course: tr('Kurs'),
 }
 
 interface TrashBase {

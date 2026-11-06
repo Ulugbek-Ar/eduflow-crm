@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { createElement } from 'react'
 import type { CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange, Section } from '../types/dashboard.types'
@@ -140,68 +141,68 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'overview', label: 'Umumiy ko\'rinish', icon: 'overview' },
-  { id: 'customers', label: 'Mijozlar va lidlar', icon: 'customers' },
-  { id: 'finance', label: 'Moliya va kassa', icon: 'dollar' },
-  { id: 'courses', label: 'Kurslar va xizmatlar', icon: 'bookOpen' },
-  { id: 'analytics', label: 'Tahlil va hisobotlar', icon: 'barChart' },
-  { id: 'admin', label: 'Boshqaruv', icon: 'shield' },
-  { id: 'settings', label: 'Sozlamalar', icon: 'settings' },
-  { id: 'help', label: 'Yordam', icon: 'info' },
+  { id: 'overview', label: tr('Umumiy ko\'rinish'), icon: 'overview' },
+  { id: 'customers', label: tr('Mijozlar va lidlar'), icon: 'customers' },
+  { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
+  { id: 'courses', label: tr('Kurslar va xizmatlar'), icon: 'bookOpen' },
+  { id: 'analytics', label: tr('Tahlil va hisobotlar'), icon: 'barChart' },
+  { id: 'admin', label: tr('Boshqaruv'), icon: 'shield' },
+  { id: 'settings', label: tr('Sozlamalar'), icon: 'settings' },
+  { id: 'help', label: tr('Yordam'), icon: 'info' },
 ]
 
 // Interfeys yorliqlari
 export const DATE_RANGE_LABELS: Record<DateRange, string> = {
-  today: 'Bugun',
-  '7d': '7 kun',
-  month: 'Shu oy',
-  year: 'Shu yil',
+  today: tr('Bugun'),
+  '7d': tr('7 kun'),
+  month: tr('Shu oy'),
+  year: tr('Shu yil'),
 }
 
 export const STATUS_LABELS: Record<CustomerStatus, string> = {
-  new: 'Yangi',
-  contacted: 'Bog\'lanildi',
-  thinking: 'O\'ylayapti',
-  paid: 'To\'lov qildi',
-  cancelled: 'Bekor qilindi',
+  new: tr('Yangi'),
+  contacted: tr('Bog\'lanildi'),
+  thinking: tr('O\'ylayapti'),
+  paid: tr('To\'lov qildi'),
+  cancelled: tr('Bekor qilindi'),
 }
 
 // Voronka tartibi: Kanban ustunlari, saralash va filtrlar shu tartibda
 export const FUNNEL_STAGES: readonly CustomerStatus[] = ['new', 'contacted', 'thinking', 'paid', 'cancelled']
 
 export const SOURCE_LABELS: Record<CustomerSource, string> = {
-  telegram: 'Telegram',
-  instagram: 'Instagram',
-  website: 'Sayt',
-  referral: 'Tavsiya',
+  telegram: tr('Telegram'),
+  instagram: tr('Instagram'),
+  website: tr('Sayt'),
+  referral: tr('Tavsiya'),
 }
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash: 'Naqd',
-  card: 'Karta',
-  transfer: 'O\'tkazma',
+  cash: tr('Naqd'),
+  card: tr('Karta'),
+  transfer: tr('O\'tkazma'),
 }
 
 export const TX_STATUS_LABELS: Record<TransactionStatus, string> = {
-  paid: 'To\'langan',
-  pending: 'Kutilmoqda',
-  cancelled: 'Bekor qilingan',
+  paid: tr('To\'langan'),
+  pending: tr('Kutilmoqda'),
+  cancelled: tr('Bekor qilingan'),
 }
 
 export const TYPE_LABELS: Record<TransactionType, string> = {
-  income: 'Kirim',
-  expense: 'Chiqim',
+  income: tr('Kirim'),
+  expense: tr('Chiqim'),
 }
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  course_fee: 'Kurs to\'lovi',
-  other_income: 'Boshqa kirim',
-  rent: 'Ijara',
-  salary: 'Maosh',
-  marketing: 'Marketing',
-  equipment: 'Jihozlar',
-  utilities: 'Kommunal xizmatlar',
-  other_expense: 'Boshqa chiqim',
+  course_fee: tr('Kurs to\'lovi'),
+  other_income: tr('Boshqa kirim'),
+  rent: tr('Ijara'),
+  salary: tr('Maosh'),
+  marketing: tr('Marketing'),
+  equipment: tr('Jihozlar'),
+  utilities: tr('Kommunal xizmatlar'),
+  other_expense: tr('Boshqa chiqim'),
 }
 
 export const INCOME_CATEGORIES: readonly IncomeCategory[] = ['course_fee', 'other_income']

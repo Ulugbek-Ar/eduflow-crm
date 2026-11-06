@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { CATEGORY_LABELS, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
 import { ROLE_LABELS } from '../auth/permissions'
 import { AUDIT_ACTION_LABELS, AUDIT_CATEGORY_LABELS, actionCategory } from '../services/audit.service'
@@ -10,14 +11,14 @@ import type { DebtRow } from './debts'
 
 export function customerColumns(formatDate: (iso: string) => string): ExportColumn<Customer>[] {
   return [
-    { header: 'Ism', value: (c) => c.name, width: 160 },
-    { header: 'Telefon', value: (c) => c.phone, width: 130 },
-    { header: 'Email', value: (c) => c.email ?? '', width: 160 },
-    { header: 'Kurs', value: (c) => c.course, width: 150 },
-    { header: 'Bosqich', value: (c) => STATUS_LABELS[c.status], width: 100 },
-    { header: 'Manba', value: (c) => SOURCE_LABELS[c.source], width: 90 },
-    { header: 'Qo\'shilgan sana', value: (c) => formatDate(c.createdAt), width: 100 },
-    { header: 'Izoh', value: (c) => c.note ?? '', width: 200 },
+    { header: tr('Ism'), value: (c) => c.name, width: 160 },
+    { header: tr('Telefon'), value: (c) => c.phone, width: 130 },
+    { header: tr('Email'), value: (c) => c.email ?? '', width: 160 },
+    { header: tr('Kurs'), value: (c) => c.course, width: 150 },
+    { header: tr('Bosqich'), value: (c) => STATUS_LABELS[c.status], width: 100 },
+    { header: tr('Manba'), value: (c) => SOURCE_LABELS[c.source], width: 90 },
+    { header: tr('Qo\'shilgan sana'), value: (c) => formatDate(c.createdAt), width: 100 },
+    { header: tr('Izoh'), value: (c) => c.note ?? '', width: 200 },
   ]
 }
 
@@ -26,27 +27,27 @@ export function transactionColumns(
   getCustomerName: (id?: string) => string,
 ): ExportColumn<Transaction>[] {
   return [
-    { header: 'Sana', value: (t) => formatDate(t.date), width: 90 },
-    { header: 'Turi', value: (t) => TYPE_LABELS[t.type], width: 70 },
-    { header: 'Kategoriya', value: (t) => CATEGORY_LABELS[t.category], width: 130 },
-    { header: 'Summa', value: (t) => (t.type === 'income' ? t.amount : -t.amount), type: 'number', width: 100 },
-    { header: 'To\'lov turi', value: (t) => METHOD_LABELS[t.method], width: 90 },
-    { header: 'Status', value: (t) => TX_STATUS_LABELS[t.status], width: 100 },
-    { header: 'Manba', value: (t) => (t.source ? SOURCE_LABELS[t.source] : ''), width: 90 },
-    { header: 'Mijoz', value: (t) => (t.customerId ? getCustomerName(t.customerId) : ''), width: 160 },
-    { header: 'Izoh', value: (t) => t.note, width: 220 },
+    { header: tr('Sana'), value: (t) => formatDate(t.date), width: 90 },
+    { header: tr('Turi'), value: (t) => TYPE_LABELS[t.type], width: 70 },
+    { header: tr('Kategoriya'), value: (t) => CATEGORY_LABELS[t.category], width: 130 },
+    { header: tr('Summa'), value: (t) => (t.type === 'income' ? t.amount : -t.amount), type: 'number', width: 100 },
+    { header: tr('To\'lov turi'), value: (t) => METHOD_LABELS[t.method], width: 90 },
+    { header: tr('Status'), value: (t) => TX_STATUS_LABELS[t.status], width: 100 },
+    { header: tr('Manba'), value: (t) => (t.source ? SOURCE_LABELS[t.source] : ''), width: 90 },
+    { header: tr('Mijoz'), value: (t) => (t.customerId ? getCustomerName(t.customerId) : ''), width: 160 },
+    { header: tr('Izoh'), value: (t) => t.note, width: 220 },
   ]
 }
 
 export function debtColumns(): ExportColumn<DebtRow>[] {
   return [
-    { header: 'Mijoz', value: (r) => r.customer.name, width: 160 },
-    { header: 'Telefon', value: (r) => r.customer.phone, width: 130 },
-    { header: 'Kurs', value: (r) => r.course.name, width: 150 },
-    { header: 'Kutilgan', value: (r) => r.expected, type: 'number', width: 100 },
-    { header: 'To\'langan', value: (r) => r.paid, type: 'number', width: 100 },
-    { header: 'Qarz', value: (r) => r.debt, type: 'number', width: 100 },
-    { header: 'Kutilmoqda', value: (r) => r.pending, type: 'number', width: 100 },
+    { header: tr('Mijoz'), value: (r) => r.customer.name, width: 160 },
+    { header: tr('Telefon'), value: (r) => r.customer.phone, width: 130 },
+    { header: tr('Kurs'), value: (r) => r.course.name, width: 150 },
+    { header: tr('Kutilgan'), value: (r) => r.expected, type: 'number', width: 100 },
+    { header: tr('To\'langan'), value: (r) => r.paid, type: 'number', width: 100 },
+    { header: tr('Qarz'), value: (r) => r.debt, type: 'number', width: 100 },
+    { header: tr('Kutilmoqda'), value: (r) => r.pending, type: 'number', width: 100 },
   ]
 }
 
@@ -55,24 +56,24 @@ const optionalNumber = (value: number | null) => (value === null ? '' : Math.rou
 
 export function sourceColumns(): ExportColumn<SourcePerformance>[] {
   return [
-    { header: 'Manba', value: (r) => SOURCE_LABELS[r.source], width: 100 },
-    { header: 'Lidlar', value: (r) => r.leads, type: 'number', width: 70 },
-    { header: 'To\'lov qildi', value: (r) => r.paid, type: 'number', width: 80 },
-    { header: 'Konversiya, %', value: (r) => optionalNumber(r.conversion), type: 'number', width: 90 },
-    { header: 'Marketing chiqimi', value: (r) => r.spend, type: 'number', width: 110 },
-    { header: 'CPL', value: (r) => optionalNumber(r.cpl === null ? null : Math.round(r.cpl)), type: 'number', width: 90 },
-    { header: 'Kirim', value: (r) => r.revenue, type: 'number', width: 110 },
-    { header: 'ROI, %', value: (r) => optionalNumber(r.roi), type: 'number', width: 80 },
+    { header: tr('Manba'), value: (r) => SOURCE_LABELS[r.source], width: 100 },
+    { header: tr('Lidlar'), value: (r) => r.leads, type: 'number', width: 70 },
+    { header: tr('To\'lov qildi'), value: (r) => r.paid, type: 'number', width: 80 },
+    { header: tr('Konversiya, %'), value: (r) => optionalNumber(r.conversion), type: 'number', width: 90 },
+    { header: tr('Marketing chiqimi'), value: (r) => r.spend, type: 'number', width: 110 },
+    { header: tr('CPL'), value: (r) => optionalNumber(r.cpl === null ? null : Math.round(r.cpl)), type: 'number', width: 90 },
+    { header: tr('Kirim'), value: (r) => r.revenue, type: 'number', width: 110 },
+    { header: tr('ROI, %'), value: (r) => optionalNumber(r.roi), type: 'number', width: 80 },
   ]
 }
 
 export function auditColumns(formatDateTime: (iso: string) => string): ExportColumn<AuditEntry>[] {
   return [
-    { header: 'Vaqt', value: (e) => formatDateTime(e.at), width: 120 },
-    { header: 'Xodim', value: (e) => e.userName, width: 150 },
-    { header: 'Rol', value: (e) => (e.role ? ROLE_LABELS[e.role] : ''), width: 110 },
-    { header: 'Bo\'lim', value: (e) => AUDIT_CATEGORY_LABELS[actionCategory(e.action)], width: 120 },
-    { header: 'Amal', value: (e) => AUDIT_ACTION_LABELS[e.action], width: 170 },
-    { header: 'Tafsilot', value: (e) => e.summary, width: 280 },
+    { header: tr('Vaqt'), value: (e) => formatDateTime(e.at), width: 120 },
+    { header: tr('Xodim'), value: (e) => e.userName, width: 150 },
+    { header: tr('Rol'), value: (e) => (e.role ? ROLE_LABELS[e.role] : ''), width: 110 },
+    { header: tr('Bo\'lim'), value: (e) => AUDIT_CATEGORY_LABELS[actionCategory(e.action)], width: 120 },
+    { header: tr('Amal'), value: (e) => AUDIT_ACTION_LABELS[e.action], width: 170 },
+    { header: tr('Tafsilot'), value: (e) => e.summary, width: 280 },
   ]
 }

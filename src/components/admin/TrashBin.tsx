@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
@@ -17,39 +18,39 @@ export function TrashBin() {
 
   const purge = async (entry: TrashEntry) => {
     const ok = await confirm({
-      title: 'Butunlay o\'chirish',
-      message: `"${trashTitle(entry, money)}" butunlay o'chiriladi. Buni ortga qaytarib bo'lmaydi.`,
-      confirmLabel: 'Butunlay o\'chirish',
+      title: tr('Butunlay o\'chirish'),
+      message: tr('"{0}" butunlay o\'chiriladi. Buni ortga qaytarib bo\'lmaydi.', { 0: trashTitle(entry, money) }),
+      confirmLabel: tr('Butunlay o\'chirish'),
     })
     if (ok) purgeFromTrash(entry.kind, entry.id)
   }
 
   const purgeAll = async () => {
     const ok = await confirm({
-      title: 'Savatchani tozalash',
-      message: `Savatchadagi ${trash.length} ta yozuv butunlay o'chiriladi. Buni ortga qaytarib bo'lmaydi.`,
-      confirmLabel: 'Hammasini o\'chirish',
+      title: tr('Savatchani tozalash'),
+      message: tr('Savatchadagi {0} ta yozuv butunlay o\'chiriladi. Buni ortga qaytarib bo\'lmaydi.', { 0: trash.length }),
+      confirmLabel: tr('Hammasini o\'chirish'),
     })
     if (ok) emptyTrash()
   }
 
   return (
-    <section className="card" aria-label="Savatcha">
+    <section className="card" aria-label={tr('Savatcha')}>
       <div className="card-head">
         <div>
-          <h2>Savatcha</h2>
-          <span className="muted">O'chirilgan mijoz, to'lov va kurslar {TRASH_RETENTION_DAYS} kun saqlanadi, keyin o'zi yo'qoladi</span>
+          <h2>{tr('Savatcha')}</h2>
+          <span className="muted">{tr('O\'chirilgan mijoz, to\'lov va kurslar')} {TRASH_RETENTION_DAYS} {tr('kun saqlanadi, keyin o\'zi yo\'qoladi')}</span>
         </div>
         {trash.length > 0 && (
           <div className="toolbar">
             <Button variant="danger" icon="trash" onClick={purgeAll}>
-              Savatchani tozalash
+              {tr('Savatchani tozalash')}
             </Button>
           </div>
         )}
       </div>
       {sorted.length === 0 ? (
-        <EmptyState title="Savatcha bo'sh" description="O'chirilgan yozuvlar shu yerga tushadi va 30 kun ichida tiklash mumkin." />
+        <EmptyState title={tr('Savatcha bo\'sh')} description={tr('O\'chirilgan yozuvlar shu yerga tushadi va 30 kun ichida tiklash mumkin.')} />
       ) : (
         <ul className="trash-list">
           {sorted.map((entry) => (
@@ -60,15 +61,15 @@ export function TrashBin() {
                   <strong>{trashTitle(entry, money)}</strong>
                 </span>
                 <small className="muted">
-                  O'chirgan: {entry.deletedBy || '—'} · {formatDateTimeWith(entry.deletedAt, settings.dateFormat)} · {daysLeft(entry, now)} kun qoldi
+                  {tr('O\'chirgan:')} {entry.deletedBy || '—'} · {formatDateTimeWith(entry.deletedAt, settings.dateFormat)} · {daysLeft(entry, now)} {tr('kun qoldi')}
                 </small>
               </span>
               <span className="toolbar">
-                <Button size="sm" icon="refresh" onClick={() => restoreFromTrash(entry.kind, entry.id)} aria-label={`Tiklash: ${trashTitle(entry, money)}`}>
-                  Tiklash
+                <Button size="sm" icon="refresh" onClick={() => restoreFromTrash(entry.kind, entry.id)} aria-label={tr('Tiklash: {0}', { 0: trashTitle(entry, money) })}>
+                  {tr('Tiklash')}
                 </Button>
-                <Button size="sm" variant="ghost" icon="trash" onClick={() => purge(entry)} aria-label={`Butunlay o'chirish: ${trashTitle(entry, money)}`}>
-                  <span className="hide-mobile">O'chirish</span>
+                <Button size="sm" variant="ghost" icon="trash" onClick={() => purge(entry)} aria-label={tr('Butunlay o\'chirish: {0}', { 0: trashTitle(entry, money) })}>
+                  <span className="hide-mobile">{tr('O\'chirish')}</span>
                 </Button>
               </span>
             </li>

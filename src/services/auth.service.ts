@@ -1,6 +1,7 @@
 // Parol xeshlash va eski (bitta login) formatni o'qish.
 // DIQQAT: lokal rejimda bu faqat frontend darajasidagi himoya — ma'lumotlar brauzerda saqlanadi va
 // texnik foydalanuvchi uni chetlab o'ta oladi. Haqiqiy xavfsizlik — Supabase rejimi (Auth + RLS)
+import { tr } from '../i18n'
 import { isRecord } from '../utils/guards'
 import { readJson } from './storage.service'
 
@@ -146,17 +147,17 @@ export function readLegacyCredentials(): Credentials | null {
 }
 
 export function validateLogin(login: string): string | null {
-  if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(login)) return 'Login 3–32 belgi: lotin harflari, raqam, _ . -'
+  if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(login)) return tr('Login 3–32 belgi: lotin harflari, raqam, _ . -')
   return null
 }
 
 export function validatePassword(password: string, login = ''): string | null {
-  if (password.length < MIN_PASSWORD_LENGTH) return `Parol kamida ${MIN_PASSWORD_LENGTH} ta belgidan iborat bo'lishi kerak`
-  if (password.length > MAX_PASSWORD_LENGTH) return `Parol ${MAX_PASSWORD_LENGTH} belgidan oshmasin`
+  if (password.length < MIN_PASSWORD_LENGTH) return tr('Parol kamida {0} ta belgidan iborat bo\'lishi kerak', { 0: MIN_PASSWORD_LENGTH })
+  if (password.length > MAX_PASSWORD_LENGTH) return tr('Parol {0} belgidan oshmasin', { 0: MAX_PASSWORD_LENGTH })
   const lower = password.toLowerCase()
-  if (WEAK_PASSWORDS.has(lower)) return 'Bu parolni taxmin qilish juda oson — boshqasini tanlang'
-  if (login && lower === login.trim().toLowerCase()) return 'Parol login bilan bir xil bo\'lmasin'
-  if (/^(.)\1+$/.test(password)) return 'Parol bir xil belgilardan iborat bo\'lmasin'
+  if (WEAK_PASSWORDS.has(lower)) return tr('Bu parolni taxmin qilish juda oson — boshqasini tanlang')
+  if (login && lower === login.trim().toLowerCase()) return tr('Parol login bilan bir xil bo\'lmasin')
+  if (/^(.)\1+$/.test(password)) return tr('Parol bir xil belgilardan iborat bo\'lmasin')
   return null
 }
 

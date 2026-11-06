@@ -1,5 +1,6 @@
 // Kirish urinishlarini cheklash. Holat localStorage'da saqlanadi — sahifa yangilansa ham blok saqlanib qoladi.
 // DIQQAT: bu ham faqat frontend himoyasi; brauzer ma'lumotini tozalab chetlab o'tish mumkin.
+import { tr } from '../i18n'
 import { isRecord } from '../utils/guards'
 import { readJson, setItem } from './storage.service'
 
@@ -86,6 +87,6 @@ export function formatLockWait(ms: number): string {
   const total = Math.ceil(ms / 1000)
   const minutes = Math.floor(total / 60)
   const seconds = total % 60
-  if (minutes === 0) return `${seconds} soniya`
-  return seconds === 0 ? `${minutes} daqiqa` : `${minutes} daqiqa ${seconds} soniya`
+  if (minutes === 0) return tr('{0} soniya', { 0: seconds })
+  return seconds === 0 ? tr('{0} daqiqa', { 0: minutes }) : tr('{0} daqiqa {1} soniya', { 0: minutes, 1: seconds })
 }

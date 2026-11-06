@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from '../../constants/navigation'
@@ -42,7 +43,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
           {toast.action.label}
         </button>
       )}
-      <IconButton icon="close" label="Yopish" onClick={() => onDismiss(toast.id)} />
+      <IconButton icon="close" label={tr('Yopish')} onClick={() => onDismiss(toast.id)} />
     </div>
   )
 }
@@ -65,7 +66,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext value={api}>
       {children}
-      <div className="toast-region" role="region" aria-live="polite" aria-label="Bildirishnomalar">
+      <div className="toast-region" role="region" aria-live="polite" aria-label={tr('Bildirishnomalar')}>
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismiss} />
         ))}

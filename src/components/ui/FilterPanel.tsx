@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { cx } from '../../utils/cx'
@@ -11,7 +12,7 @@ export function FilterPanel({ activeCount, children }: { activeCount: number; ch
     <>
       <div className="filter-toggle-row">
         <Button variant="ghost" size="sm" icon="filter" className="filter-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
-          {activeCount > 0 ? `Filtrlar (${activeCount})` : 'Filtrlar'}
+          {activeCount > 0 ? tr('Filtrlar ({0})', { 0: activeCount }) : tr('Filtrlar')}
         </Button>
       </div>
       <div id={id} className={cx('filters', 'filter-panel', open && 'is-open')}>

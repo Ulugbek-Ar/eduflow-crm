@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { PERMISSION_LABELS, ROLE_LABELS, ROLE_PERMISSIONS, ROLES } from '../../auth/permissions'
@@ -23,11 +24,11 @@ import { TempPasswordModal } from './TempPasswordModal'
 type Tab = 'staff' | 'audit' | 'trash' | 'sessions' | 'roles'
 
 const TABS: Array<{ id: Tab; label: string; icon: IconName }> = [
-  { id: 'staff', label: 'Xodimlar', icon: 'customers' },
-  { id: 'audit', label: 'Amallar jurnali', icon: 'activity' },
-  { id: 'trash', label: 'Savatcha', icon: 'trash' },
-  { id: 'sessions', label: 'Seanslar', icon: 'monitor' },
-  { id: 'roles', label: 'Rollar va ruxsatlar', icon: 'shield' },
+  { id: 'staff', label: tr('Xodimlar'), icon: 'customers' },
+  { id: 'audit', label: tr('Amallar jurnali'), icon: 'activity' },
+  { id: 'trash', label: tr('Savatcha'), icon: 'trash' },
+  { id: 'sessions', label: tr('Seanslar'), icon: 'monitor' },
+  { id: 'roles', label: tr('Rollar va ruxsatlar'), icon: 'shield' },
 ]
 
 const PERMISSIONS = Object.keys(PERMISSION_LABELS) as Permission[]
@@ -61,39 +62,39 @@ function StaffTab() {
   const toggleBlock = async (user: PublicUser) => {
     const blocking = user.status === 'active'
     const ok = await confirm({
-      title: blocking ? 'Xodimni bloklash' : 'Blokdan chiqarish',
+      title: blocking ? tr('Xodimni bloklash') : tr('Blokdan chiqarish'),
       message: blocking
-        ? `${displayName(user)} tizimga kira olmaydi, ochiq seanslari darhol yopiladi. Ma'lumotlari va kiritgan yozuvlari saqlanib qoladi.`
-        : `${displayName(user)} yana o'z logini va paroli bilan kira oladi.`,
-      confirmLabel: blocking ? 'Bloklash' : 'Blokdan chiqarish',
+        ? tr('{0} tizimga kira olmaydi, ochiq seanslari darhol yopiladi. Ma\'lumotlari va kiritgan yozuvlari saqlanib qoladi.', { 0: displayName(user) })
+        : tr('{0} yana o\'z logini va paroli bilan kira oladi.', { 0: displayName(user) }),
+      confirmLabel: blocking ? tr('Bloklash') : tr('Blokdan chiqarish'),
       tone: blocking ? 'danger' : 'primary',
     })
     if (!ok) return
     const result = updateUser(user.id, { status: blocking ? 'blocked' : 'active' })
-    if (result.ok) toast.success(blocking ? `${displayName(user)} bloklandi` : `${displayName(user)} blokdan chiqarildi`)
+    if (result.ok) toast.success(blocking ? tr('{0} bloklandi', { 0: displayName(user) }) : tr('{0} blokdan chiqarildi', { 0: displayName(user) }))
     else toast.error(result.error)
   }
 
   const reset = async (user: PublicUser) => {
     const ok = await confirm({
-      title: 'Parolni tiklash',
-      message: `${displayName(user)} uchun yangi vaqtinchalik parol yaratiladi. Eski parol ishlamay qoladi, ochiq seanslari yopiladi.`,
-      confirmLabel: 'Yangi parol yaratish',
+      title: tr('Parolni tiklash'),
+      message: tr('{0} uchun yangi vaqtinchalik parol yaratiladi. Eski parol ishlamay qoladi, ochiq seanslari yopiladi.', { 0: displayName(user) }),
+      confirmLabel: tr('Yangi parol yaratish'),
       tone: 'primary',
     })
     if (!ok) return
     const result = await resetPassword(user.id)
     if (!result.ok) return toast.error(result.error)
-    setIssued({ title: 'Yangi vaqtinchalik parol', fullName: displayName(user), login: user.login, password: result.password })
+    setIssued({ title: tr('Yangi vaqtinchalik parol'), fullName: displayName(user), login: user.login, password: result.password })
   }
 
   return (
     <Card
-      title="Xodimlar"
-      description={`${users.filter((u) => u.status === 'active').length} ta faol · har biri o'z logini bilan kiradi`}
+      title={tr('Xodimlar')}
+      description={tr('{0} ta faol · har biri o\'z logini bilan kiradi', { 0: users.filter((u) => u.status === 'active').length })}
       actions={
         <Button icon="userPlus" onClick={() => setEditing('new')}>
-          Xodim qo'shish
+          {tr('Xodim qo\'shish')}
         </Button>
       }
     >
@@ -101,26 +102,26 @@ function StaffTab() {
         <table className="table">
           <thead>
             <tr>
-              <th scope="col">Xodim</th>
-              <th scope="col">Rol</th>
-              <th scope="col">Holat</th>
-              <th scope="col">Oxirgi kirish</th>
+              <th scope="col">{tr('Xodim')}</th>
+              <th scope="col">{tr('Rol')}</th>
+              <th scope="col">{tr('Holat')}</th>
+              <th scope="col">{tr('Oxirgi kirish')}</th>
               <th scope="col">
-                <span className="sr-only">Amallar</span>
+                <span className="sr-only">{tr('Amallar')}</span>
               </th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((u) => (
               <tr key={u.id} className={cx(u.status === 'blocked' && 'is-muted')}>
-                <td data-label="Xodim" className="cell-wide">
+                <td data-label={tr('Xodim')} className="cell-wide">
                   <span className="staff-cell">
                     <span className="avatar avatar-sm" aria-hidden="true">
                       {getInitials(displayName(u))}
                     </span>
                     <span>
                       <strong>{displayName(u)}</strong>
-                      {u.id === me?.id && <span className="muted"> (siz)</span>}
+                      {u.id === me?.id && <span className="muted"> {tr('(siz)')}</span>}
                       <small className="cell-sub">
                         {u.login}
                         {u.title ? ` · ${u.title}` : ''}
@@ -128,31 +129,31 @@ function StaffTab() {
                     </span>
                   </span>
                 </td>
-                <td data-label="Rol">
+                <td data-label={tr('Rol')}>
                   <Badge tone={u.role === 'admin' ? 'primary' : 'neutral'}>{ROLE_LABELS[u.role]}</Badge>
                 </td>
-                <td data-label="Holat">
+                <td data-label={tr('Holat')}>
                   {u.status === 'blocked' ? (
-                    <Badge tone="cancelled">Bloklangan</Badge>
+                    <Badge tone="cancelled">{tr('Bloklangan')}</Badge>
                   ) : u.mustChange ? (
-                    <Badge tone="warning">Parol kutilmoqda</Badge>
+                    <Badge tone="warning">{tr('Parol kutilmoqda')}</Badge>
                   ) : (
-                    <Badge tone="paid">Faol</Badge>
+                    <Badge tone="paid">{tr('Faol')}</Badge>
                   )}
                 </td>
-                <td data-label="Oxirgi kirish" className="nowrap">
-                  {u.lastLoginAt ? formatDateTimeWith(u.lastLoginAt, settings.dateFormat) : <span className="muted">Hali kirmagan</span>}
-                  <small className="cell-sub">Qo'shilgan: {formatDate(u.createdAt)}</small>
+                <td data-label={tr('Oxirgi kirish')} className="nowrap">
+                  {u.lastLoginAt ? formatDateTimeWith(u.lastLoginAt, settings.dateFormat) : <span className="muted">{tr('Hali kirmagan')}</span>}
+                  <small className="cell-sub">{tr('Qo\'shilgan:')} {formatDate(u.createdAt)}</small>
                 </td>
                 <td className="cell-actions">
                   <div className="row-actions">
-                    <IconButton icon="edit" label={`Tahrirlash: ${displayName(u)}`} onClick={() => setEditing(u)} />
-                    <IconButton icon="key" label={`Parolni tiklash: ${displayName(u)}`} onClick={() => reset(u)} />
+                    <IconButton icon="edit" label={tr('Tahrirlash: {0}', { 0: displayName(u) })} onClick={() => setEditing(u)} />
+                    <IconButton icon="key" label={tr('Parolni tiklash: {0}', { 0: displayName(u) })} onClick={() => reset(u)} />
                     {u.id !== me?.id && (
                       <IconButton
                         icon={u.status === 'blocked' ? 'checkCircle' : 'ban'}
                         tone={u.status === 'blocked' ? 'default' : 'danger'}
-                        label={u.status === 'blocked' ? `Blokdan chiqarish: ${displayName(u)}` : `Bloklash: ${displayName(u)}`}
+                        label={u.status === 'blocked' ? tr('Blokdan chiqarish: {0}', { 0: displayName(u) }) : tr('Bloklash: {0}', { 0: displayName(u) })}
                         onClick={() => toggleBlock(u)}
                       />
                     )}
@@ -169,8 +170,8 @@ function StaffTab() {
           editing={editing === 'new' ? undefined : editing}
           onClose={() => setEditing(null)}
           onCreated={(created) => {
-            toast.success(`${created.fullName} qo'shildi`)
-            setIssued({ title: 'Xodim qo\'shildi', ...created })
+            toast.success(tr('{0} qo\'shildi', { 0: created.fullName }))
+            setIssued({ title: tr('Xodim qo\'shildi'), ...created })
           }}
         />
       )}
@@ -187,28 +188,28 @@ function SessionsTab() {
   const others = sessions.filter((s) => s.id !== sessionId)
   const nameOf = (userId: string) => {
     const user = users.find((u) => u.id === userId)
-    return user ? displayName(user) : 'O\'chirilgan xodim'
+    return user ? displayName(user) : tr('O\'chirilgan xodim')
   }
 
   const revokeAll = async () => {
     const ok = await confirm({
-      title: 'Hammani chiqarish',
-      message: `Sizdan boshqa ${others.length} ta ochiq seans yopiladi. Xodimlar qaytadan login va parol bilan kiradi.`,
-      confirmLabel: 'Hammasini yopish',
+      title: tr('Hammani chiqarish'),
+      message: tr('Sizdan boshqa {0} ta ochiq seans yopiladi. Xodimlar qaytadan login va parol bilan kiradi.', { 0: others.length }),
+      confirmLabel: tr('Hammasini yopish'),
     })
     if (!ok) return
     revokeOtherSessions()
-    toast.success('Boshqa barcha seanslar yopildi')
+    toast.success(tr('Boshqa barcha seanslar yopildi'))
   }
 
   return (
     <Card
-      title="Ochiq seanslar"
-      description={mode === 'demo' ? 'Demo: shu brauzerdagi seanslar' : 'Shu brauzerda ochilgan seanslar (oxirgi 30 kun)'}
+      title={tr('Ochiq seanslar')}
+      description={mode === 'demo' ? tr('Demo: shu brauzerdagi seanslar') : tr('Shu brauzerda ochilgan seanslar (oxirgi 30 kun)')}
       actions={
         others.length > 0 && (
           <Button variant="danger" icon="logout" onClick={revokeAll}>
-            Hammani chiqarish
+            {tr('Hammani chiqarish')}
           </Button>
         )
       }
@@ -222,10 +223,10 @@ function SessionsTab() {
             <span className="session-info">
               <strong>
                 {nameOf(s.userId)}
-                {s.id === sessionId && <Badge tone="paid">Shu seans</Badge>}
+                {s.id === sessionId && <Badge tone="paid">{tr('Shu seans')}</Badge>}
               </strong>
               <small className="muted">
-                {s.device} · kirgan: {formatDateTimeWith(s.startedAt, settings.dateFormat)} · faol: {formatDateTimeWith(s.lastSeenAt, settings.dateFormat)}
+                {s.device} {tr('· kirgan:')} {formatDateTimeWith(s.startedAt, settings.dateFormat)} {tr('· faol:')} {formatDateTimeWith(s.lastSeenAt, settings.dateFormat)}
               </small>
             </span>
             {s.id !== sessionId && (
@@ -234,18 +235,17 @@ function SessionsTab() {
                 size="sm"
                 onClick={() => {
                   revokeSession(s.id)
-                  toast.success('Seans yopildi')
+                  toast.success(tr('Seans yopildi'))
                 }}
               >
-                Yopish
+                {tr('Yopish')}
               </Button>
             )}
           </li>
         ))}
       </ul>
       <p className="muted small-note">
-        Lokal rejimda ma'lumot faqat shu brauzerda turadi, shuning uchun bu yerda faqat shu brauzerdagi seanslar ko'rinadi. Bulutli (Supabase)
-        rejimda barcha qurilmalar ko'rinadi.
+        {tr('Lokal rejimda ma\'lumot faqat shu brauzerda turadi, shuning uchun bu yerda faqat shu brauzerdagi seanslar ko\'rinadi. Bulutli (Supabase) rejimda barcha qurilmalar ko\'rinadi.')}
       </p>
     </Card>
   )
@@ -253,7 +253,7 @@ function SessionsTab() {
 
 function RolesTab() {
   return (
-    <Card title="Rollar va ruxsatlar" description="Kim nimani ko'radi va o'zgartiradi">
+    <Card title={tr('Rollar va ruxsatlar')} description={tr('Kim nimani ko\'radi va o\'zgartiradi')}>
       <div className="role-cards">
         {ROLES.map((role) => (
           <div key={role} className="role-card">
@@ -279,7 +279,7 @@ export function AdminPanel() {
 
   return (
     <div className="stack">
-      <div className="tabs" role="tablist" aria-label="Boshqaruv bo'limlari">
+      <div className="tabs" role="tablist" aria-label={tr('Boshqaruv bo\'limlari')}>
         {TABS.map((t) => (
           <button
             key={t.id}

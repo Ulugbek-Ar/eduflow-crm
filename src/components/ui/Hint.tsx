@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useId, useRef, useState } from 'react'
 import { GLOSSARY } from '../../constants/glossary'
 import type { GlossaryKey } from '../../constants/glossary'
@@ -31,7 +32,7 @@ export function Hint({ term, className }: { term: GlossaryKey; className?: strin
       <button
         type="button"
         className="hint-btn"
-        aria-label={`${entry.term} nima?`}
+        aria-label={tr('{0} nima?', { 0: entry.term })}
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={() => setOpen((v) => !v)}

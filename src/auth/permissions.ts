@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { Role } from '../types/user.types'
 import type { Section } from '../types/dashboard.types'
 
@@ -22,35 +23,35 @@ export type Permission =
 export const ROLES: readonly Role[] = ['admin', 'manager', 'cashier', 'viewer']
 
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: 'Administrator',
-  manager: 'Menejer',
-  cashier: 'Kassir / Buxgalter',
-  viewer: 'Kuzatuvchi',
+  admin: tr('Administrator'),
+  manager: tr('Menejer'),
+  cashier: tr('Kassir / Buxgalter'),
+  viewer: tr('Kuzatuvchi'),
 }
 
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  admin: 'Hamma narsa: xodimlar, sozlamalar, zaxira, jurnal',
-  manager: 'Mijozlar va lidlar bilan ishlash, to\'lov qabul qilish',
-  cashier: 'Moliya: to\'lovlar, xarajatlar, hisobotlar',
-  viewer: 'Faqat ko\'rish — hech narsani o\'zgartira olmaydi',
+  admin: tr('Hamma narsa: xodimlar, sozlamalar, zaxira, jurnal'),
+  manager: tr('Mijozlar va lidlar bilan ishlash, to\'lov qabul qilish'),
+  cashier: tr('Moliya: to\'lovlar, xarajatlar, hisobotlar'),
+  viewer: tr('Faqat ko\'rish — hech narsani o\'zgartira olmaydi'),
 }
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
-  'customers.view': 'Mijozlarni ko\'rish',
-  'customers.edit': 'Mijoz qo\'shish va tahrirlash',
-  'customers.delete': 'Mijozni o\'chirish',
-  'payments.view': 'To\'lovlarni ko\'rish',
-  'payments.create': 'To\'lov qabul qilish',
-  'payments.manage': 'Xarajat yozish, to\'lovni tahrirlash va o\'chirish',
-  'courses.view': 'Kurslarni ko\'rish',
-  'courses.edit': 'Kurs va narxlarni o\'zgartirish',
-  'analytics.view': 'Tahlilni ko\'rish',
-  'reports.export': 'Hisobot yuklab olish',
-  'settings.manage': 'Tashkilot sozlamalari',
-  'data.manage': 'Zaxira, tiklash, tozalash',
-  'staff.manage': 'Xodimlarni boshqarish',
-  'audit.view': 'Amallar jurnali',
-  'trash.manage': 'O\'chirilganlar savatchasi',
+  'customers.view': tr('Mijozlarni ko\'rish'),
+  'customers.edit': tr('Mijoz qo\'shish va tahrirlash'),
+  'customers.delete': tr('Mijozni o\'chirish'),
+  'payments.view': tr('To\'lovlarni ko\'rish'),
+  'payments.create': tr('To\'lov qabul qilish'),
+  'payments.manage': tr('Xarajat yozish, to\'lovni tahrirlash va o\'chirish'),
+  'courses.view': tr('Kurslarni ko\'rish'),
+  'courses.edit': tr('Kurs va narxlarni o\'zgartirish'),
+  'analytics.view': tr('Tahlilni ko\'rish'),
+  'reports.export': tr('Hisobot yuklab olish'),
+  'settings.manage': tr('Tashkilot sozlamalari'),
+  'data.manage': tr('Zaxira, tiklash, tozalash'),
+  'staff.manage': tr('Xodimlarni boshqarish'),
+  'audit.view': tr('Amallar jurnali'),
+  'trash.manage': tr('O\'chirilganlar savatchasi'),
 }
 
 const ALL: readonly Permission[] = Object.keys(PERMISSION_LABELS) as Permission[]

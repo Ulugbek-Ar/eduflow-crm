@@ -1,3 +1,4 @@
+import { tr } from './i18n'
 import { CustomerTable } from './components/customers/CustomerTable'
 import { DemoBar } from './components/layout/DemoBar'
 import { MobileNav } from './components/layout/MobileNav'
@@ -112,7 +113,7 @@ function SectionFallback() {
   return (
     <div className="section-loading" role="status" aria-live="polite">
       <span className="spinner" aria-hidden="true" />
-      Yuklanmoqda...
+      {tr('Yuklanmoqda...')}
     </div>
   )
 }
@@ -169,7 +170,7 @@ function Shell() {
   return (
     <div className={cx('app', sidebarCollapsed && 'is-collapsed')}>
       <a href="#main-content" className="skip-link">
-        Asosiy kontentga o'tish
+        {tr('Asosiy kontentga o\'tish')}
       </a>
       <Sidebar />
       <MobileNav />

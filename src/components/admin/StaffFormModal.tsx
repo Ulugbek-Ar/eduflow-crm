@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES } from '../../auth/permissions'
@@ -22,7 +23,7 @@ interface StaffFormModalProps {
 export function RolePicker({ value, onChange, disabled }: { value: Role; onChange: (role: Role) => void; disabled?: boolean }) {
   return (
     <fieldset className="role-picker" disabled={disabled}>
-      <legend>Rol</legend>
+      <legend>{tr('Rol')}</legend>
       {ROLES.map((role) => (
         <label key={role} className={cx('role-option', value === role && 'is-active')}>
           <input type="radio" name="role" value={role} checked={value === role} onChange={() => onChange(role)} />
@@ -73,16 +74,16 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
 
   return (
     <Modal
-      title={editing ? 'Xodimni tahrirlash' : 'Yangi xodim'}
-      description={editing ? undefined : 'Xodim shu login va vaqtinchalik parol bilan kiradi, so\'ng o\'z parolini o\'rnatadi'}
+      title={editing ? tr('Xodimni tahrirlash') : tr('Yangi xodim')}
+      description={editing ? undefined : tr('Xodim shu login va vaqtinchalik parol bilan kiradi, so\'ng o\'z parolini o\'rnatadi')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Bekor qilish
+            {tr('Bekor qilish')}
           </Button>
           <Button type="submit" form="staff-form" icon="check" disabled={busy}>
-            {editing ? 'Saqlash' : 'Qo\'shish'}
+            {editing ? tr('Saqlash') : tr('Qo\'shish')}
           </Button>
         </>
       }
@@ -91,7 +92,7 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
         <div className="form-row">
           <Input
             name="fullName"
-            label="Ism familiya"
+            label={tr('Ism familiya')}
             required
             value={form.fullName}
             error={errors.fullName}
@@ -100,10 +101,10 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
           />
           <Input
             name="title"
-            label="Lavozim"
+            label={tr('Lavozim')}
             value={form.title}
             error={errors.title}
-            placeholder="Masalan: Administrator"
+            placeholder={tr('Masalan: Administrator')}
             onChange={(e) => update('title', e.target.value)}
           />
         </div>
@@ -111,19 +112,19 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
           <div className="form-row">
             <Input
               name="login"
-              label="Login"
+              label={tr('Login')}
               required
               autoComplete="off"
               autoCapitalize="none"
               spellCheck={false}
               value={form.login}
               error={errors.login}
-              hint="Masalan: malika yoki m.yusupova"
+              hint={tr('Masalan: malika yoki m.yusupova')}
               onChange={(e) => update('login', e.target.value)}
             />
             <div className="field">
               <CopyField
-                label="Vaqtinchalik parol"
+                label={tr('Vaqtinchalik parol')}
                 value={form.password}
                 error={errors.password}
                 onRegenerate={() => update('password', generateTempPassword())}
@@ -132,7 +133,7 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
           </div>
         )}
         <RolePicker value={form.role} onChange={(role) => update('role', role)} disabled={self} />
-        {self && <small className="field-hint">O'z rolingizni boshqa administrator o'zgartiradi.</small>}
+        {self && <small className="field-hint">{tr('O\'z rolingizni boshqa administrator o\'zgartiradi.')}</small>}
         {errors.role && (
           <small className="field-error" role="alert">
             {errors.role}

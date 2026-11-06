@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { DATE_RANGE_LABELS, Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
 import type { GlossaryKey } from '../../constants/glossary'
@@ -21,18 +22,18 @@ interface Kpi {
 function TrendBadge({ change, unit }: { change: number | null; unit: Kpi['unit'] }) {
   if (change === null) {
     return (
-      <span className="trend trend-flat" title="Oldingi davrda ma'lumot yo'q">
+      <span className="trend trend-flat" title={tr('Oldingi davrda ma\'lumot yo\'q')}>
         —
       </span>
     )
   }
   const direction = change > 0.05 ? 'up' : change < -0.05 ? 'down' : 'flat'
-  const formatted = unit === '%' ? formatPercent(Math.abs(change)) : `${formatPercent(Math.abs(change)).replace('%', '')} f.b.`
+  const formatted = unit === '%' ? formatPercent(Math.abs(change)) : tr('{0} f.b.', { 0: formatPercent(Math.abs(change)).replace('%', '') })
   const sign = direction === 'up' ? '+' : direction === 'down' ? '−' : ''
   return (
     <span className={cx('trend', `trend-${direction}`)}>
       {direction !== 'flat' && <Icon name={direction === 'up' ? 'arrowUpRight' : 'arrowDownRight'} size={14} />}
-      <span className="sr-only">{direction === 'up' ? 'O\'sish' : direction === 'down' ? 'Pasayish' : 'O\'zgarishsiz'}:</span>
+      <span className="sr-only">{direction === 'up' ? tr('O\'sish') : direction === 'down' ? tr('Pasayish') : tr('O\'zgarishsiz')}:</span>
       {sign}
       {formatted}
     </span>
@@ -45,46 +46,46 @@ export function KpiCards() {
 
   const kpis: Kpi[] = [
     {
-      label: 'Jami tushum',
+      label: tr('Jami tushum'),
       value: money(k.revenue.value),
       change: k.revenue.change,
       unit: '%',
-      hint: 'faqat to\'langan · oldingi davrga nisbatan',
+      hint: tr('faqat to\'langan · oldingi davrga nisbatan'),
       icon: 'trendUp',
       tone: 'success',
     },
     {
-      label: 'Faol mijozlar',
+      label: tr('Faol mijozlar'),
       value: formatNumber(k.active.value),
       change: k.active.change,
       unit: '%',
-      hint: '"To\'lov qildi" bosqichida',
+      hint: tr('"To\'lov qildi" bosqichida'),
       icon: 'userCheck',
       tone: 'primary',
     },
     {
-      label: 'Yangi lidlar',
+      label: tr('Yangi lidlar'),
       value: formatNumber(k.newLeads.value),
       change: k.newLeads.change,
       unit: '%',
-      hint: 'davrda kelgan · oldingi davrga nisbatan',
+      hint: tr('davrda kelgan · oldingi davrga nisbatan'),
       icon: 'userPlus',
       tone: 'primary',
       glossary: 'lead',
     },
     {
-      label: 'Konversiya',
+      label: tr('Konversiya'),
       value: k.conversion.value === null ? '—' : `${Math.round(k.conversion.value)}%`,
       change: k.conversion.change,
       unit: 'p.b.',
-      hint: 'davr lidlaridan → to\'lov qildi',
+      hint: tr('davr lidlaridan → to\'lov qildi'),
       icon: 'percent',
       tone: 'success',
       glossary: 'conversion',
     },
   ]
   return (
-    <section className="kpi-grid" aria-label={`Asosiy ko'rsatkichlar: ${DATE_RANGE_LABELS[dateRange].toLowerCase()}`}>
+    <section className="kpi-grid" aria-label={tr('Asosiy ko\'rsatkichlar: {0}', { 0: DATE_RANGE_LABELS[dateRange].toLowerCase() })}>
       {kpis.map((kpi) => (
         <article key={kpi.label} className="card kpi">
           <span className={`kpi-icon tone-${kpi.tone}`}>

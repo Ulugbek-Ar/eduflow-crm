@@ -2637,6 +2637,31 @@ body.scroll-locked {
   gap: 16px;
 }
 
+.login-brand > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Til tanlovi kartaning burchagida — sarlavhani siqmaydi */
+.login-card {
+  position: relative;
+}
+
+.login-lang {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.login-brand {
+  padding-right: 76px;
+}
+
+.lang-switch button {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
 .login-card-wide {
   width: min(520px, 100%);
 }

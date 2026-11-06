@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import { canOpenSection } from '../../auth/permissions'
 import { Icon } from '../../constants/navigation'
@@ -10,9 +11,9 @@ import { cx } from '../../utils/cx'
 import { Modal } from '../ui/Modal'
 
 const ITEMS: Array<{ id: Section; label: string; icon: IconName }> = [
-  { id: 'overview', label: 'Asosiy', icon: 'overview' },
-  { id: 'customers', label: 'Mijozlar', icon: 'customers' },
-  { id: 'finance', label: 'Moliya', icon: 'dollar' },
+  { id: 'overview', label: tr('Asosiy'), icon: 'overview' },
+  { id: 'customers', label: tr('Mijozlar'), icon: 'customers' },
+  { id: 'finance', label: tr('Moliya'), icon: 'dollar' },
 ]
 
 // Telefonda pastki menyu: eng ko'p ishlatiladigan bo'limlar, "Qo'shish" va to'liq menyu — bosh barmoq yetadigan joyda
@@ -39,7 +40,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="mobile-nav" aria-label="Pastki menyu">
+      <nav className="mobile-nav" aria-label={tr('Pastki menyu')}>
         {first && navButton(first)}
         {rest[0] && navButton(rest[0])}
         {actions.length > 0 && (
@@ -47,17 +48,17 @@ export function MobileNav() {
             <span className="mobile-nav-plus" aria-hidden="true">
               <Icon name="plus" size={22} />
             </span>
-            <span>Qo'shish</span>
+            <span>{tr('Qo\'shish')}</span>
           </button>
         )}
         {rest.slice(1).map(navButton)}
         <button type="button" className="mobile-nav-item" aria-expanded={sidebarOpen} onClick={toggleSidebar}>
           <Icon name="menu" size={20} />
-          <span>Menyu</span>
+          <span>{tr('Menyu')}</span>
         </button>
       </nav>
       {sheetOpen && (
-        <Modal title="Nima qo'shamiz?" onClose={() => setSheetOpen(false)} size="sm">
+        <Modal title={tr('Nima qo\'shamiz?')} onClose={() => setSheetOpen(false)} size="sm">
           <div className="quick-actions quick-sheet">
             {actions.map((action) => (
               <button

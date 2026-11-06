@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
@@ -30,10 +31,10 @@ export function SecuritySettings() {
     e.preventDefault()
     const next: Partial<Record<Field, string>> = {}
     const loginChanged = form.login.trim() !== user?.login
-    if (!form.current) next.current = 'Joriy parolni kiriting'
-    if (!loginChanged && !form.password) next.password = 'Yangi parol yoki yangi login kiriting'
-    if (form.password && form.password.length < MIN_PASSWORD_LENGTH) next.password = `Kamida ${MIN_PASSWORD_LENGTH} ta belgi`
-    if (form.password && form.password !== form.confirm) next.confirm = 'Parollar mos kelmadi'
+    if (!form.current) next.current = tr('Joriy parolni kiriting')
+    if (!loginChanged && !form.password) next.password = tr('Yangi parol yoki yangi login kiriting')
+    if (form.password && form.password.length < MIN_PASSWORD_LENGTH) next.password = tr('Kamida {0} ta belgi', { 0: MIN_PASSWORD_LENGTH })
+    if (form.password && form.password !== form.confirm) next.confirm = tr('Parollar mos kelmadi')
     setErrors(next)
     const first = ORDER.find((f) => next[f])
     if (first) return focus(first)
@@ -48,18 +49,18 @@ export function SecuritySettings() {
       return
     }
     setForm({ current: '', login: form.login.trim(), password: '', confirm: '' })
-    toast.success(form.password ? 'Parol muvaffaqiyatli almashtirildi' : 'Login yangilandi')
+    toast.success(form.password ? tr('Parol muvaffaqiyatli almashtirildi') : tr('Login yangilandi'))
   }
 
   if (mode === 'demo') {
-    return <p className="notice notice-warning">Demo rejimda login va parol o'zgartirilmaydi.</p>
+    return <p className="notice notice-warning">{tr('Demo rejimda login va parol o\'zgartirilmaydi.')}</p>
   }
 
   return (
     <form ref={formRef} className="form" onSubmit={handleSubmit} noValidate>
       <PasswordInput
         name="current"
-        label="Joriy parol"
+        label={tr('Joriy parol')}
         autoComplete="current-password"
         required
         value={form.current}
@@ -68,29 +69,29 @@ export function SecuritySettings() {
       />
       <Input
         name="login"
-        label="Login"
+        label={tr('Login')}
         autoComplete="username"
         autoCapitalize="none"
         spellCheck={false}
         value={form.login}
         error={errors.login}
-        hint="3–32 belgi: lotin harflari, raqam, _ . -"
+        hint={tr('3–32 belgi: lotin harflari, raqam, _ . -')}
         onChange={(e) => update('login', e.target.value)}
       />
       <div className="form-row">
         <Input
           name="password"
-          label="Yangi parol"
+          label={tr('Yangi parol')}
           type="password"
           autoComplete="new-password"
           value={form.password}
           error={errors.password}
-          hint={`Kamida ${MIN_PASSWORD_LENGTH} ta belgi`}
+          hint={tr('Kamida {0} ta belgi', { 0: MIN_PASSWORD_LENGTH })}
           onChange={(e) => update('password', e.target.value)}
         />
         <Input
           name="confirm"
-          label="Parolni tasdiqlang"
+          label={tr('Parolni tasdiqlang')}
           type="password"
           autoComplete="new-password"
           value={form.confirm}
@@ -105,14 +106,14 @@ export function SecuritySettings() {
             icon="logout"
             onClick={() => {
               revokeOtherSessions()
-              toast.success('Boshqa seanslar yopildi')
+              toast.success(tr('Boshqa seanslar yopildi'))
             }}
           >
-            Boshqa seanslarni yopish ({otherSessions})
+            {tr('Boshqa seanslarni yopish (')}{otherSessions})
           </Button>
         )}
         <Button type="submit" icon="lock" disabled={busy}>
-          {busy ? 'Saqlanmoqda...' : 'Yangilash'}
+          {busy ? tr('Saqlanmoqda...') : tr('Yangilash')}
         </Button>
       </div>
     </form>

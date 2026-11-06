@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { ROLE_LABELS, ROLES } from '../../auth/permissions'
@@ -23,7 +24,7 @@ const STEPS = ['Markaz', 'Kurslar', 'Xodimlar', 'Ma\'lumot'] as const
 
 const COURSE_TEMPLATES = ['Ingliz tili', 'Matematika', 'Rus tili', 'IT / Dasturlash', 'Koreys tili', 'Abituriyent tayyorlov']
 
-const CURRENCIES: Record<Currency, string> = { UZS: 'So\'m (UZS)', USD: 'Dollar (USD)' }
+const CURRENCIES: Record<Currency, string> = { UZS: tr('So\'m (UZS)'), USD: tr('Dollar (USD)') }
 
 const MAX_BACKUP_SIZE = 10 * 1024 * 1024
 
@@ -37,7 +38,7 @@ interface IssuedStaff {
 
 function StepHeader({ step }: { step: number }) {
   return (
-    <ol className="wizard-steps" aria-label="Sozlash qadamlari">
+    <ol className="wizard-steps" aria-label={tr('Sozlash qadamlari')}>
       {STEPS.map((label, index) => (
         <li key={label} className={cx(index === step && 'is-current', index < step && 'is-done')} aria-current={index === step ? 'step' : undefined}>
           <span className="wizard-step-dot" aria-hidden="true">
@@ -70,7 +71,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    document.title = pageTitle('Markazni sozlash')
+    document.title = pageTitle(tr('Markazni sozlash'))
   }, [])
 
   // Har qadamda fokus sarlavhaga — ekran o'quvchi yangi qadamni e'lon qiladi
@@ -80,9 +81,9 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
 
   const validateOrg = (): boolean => {
     const next: typeof orgErrors = {}
-    if (org.orgName.trim().length < 2) next.orgName = 'Markaz nomini kiriting'
+    if (org.orgName.trim().length < 2) next.orgName = tr('Markaz nomini kiriting')
     const digits = phoneDigits(org.phone)
-    if (digits.length > 0 && digits.length !== 9) next.phone = 'Telefon +998 XX XXX XX XX ko\'rinishida'
+    if (digits.length > 0 && digits.length !== 9) next.phone = tr('Telefon +998 XX XXX XX XX ko\'rinishida')
     setOrgErrors(next)
     return !next.orgName && !next.phone
   }
@@ -155,7 +156,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
     event.target.value = ''
     setError('')
     if (!file) return
-    if (file.size > MAX_BACKUP_SIZE) return setError('Fayl hajmi 10 MB dan oshmasligi kerak')
+    if (file.size > MAX_BACKUP_SIZE) return setError(tr('Fayl hajmi 10 MB dan oshmasligi kerak'))
     const result = parseBackup(await file.text())
     if (!result.ok) return setError(result.error)
     setBackup({ fileName: file.name, data: result.data, dropped: result.dropped })
@@ -168,18 +169,18 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         <div className="wizard-top">
           <StepHeader step={step} />
           <button type="button" className="link-btn wizard-skip" onClick={() => finish('empty')}>
-            Keyinroq sozlayman
+            {tr('Keyinroq sozlayman')}
           </button>
         </div>
 
         {step === 0 && (
           <div className="wizard-body">
             <h1 id="wizard-title" ref={headingRef} tabIndex={-1}>
-              Markaz haqida
+              {tr('Markaz haqida')}
             </h1>
-            <p className="muted">Bu ma'lumotlar menyuda, cheklarda va hisobotlarda ko'rinadi. Keyin Sozlamalarda o'zgartirish mumkin.</p>
+            <p className="muted">{tr('Bu ma\'lumotlar menyuda, cheklarda va hisobotlarda ko\'rinadi. Keyin Sozlamalarda o\'zgartirish mumkin.')}</p>
             <Input
-              label="O'quv markazi nomi"
+              label={tr('O\'quv markazi nomi')}
               required
               value={org.orgName}
               error={orgErrors.orgName}
@@ -190,7 +191,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
             />
             <div className="form-row">
               <Input
-                label="Telefon"
+                label={tr('Telefon')}
                 type="tel"
                 value={org.phone}
                 error={orgErrors.phone}
@@ -201,23 +202,23 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                 }}
               />
               <Select
-                label="Asosiy valyuta"
+                label={tr('Asosiy valyuta')}
                 value={org.currency}
                 onChange={(e) => setOrg((prev) => ({ ...prev, currency: e.target.value as Currency }))}
                 options={(Object.keys(CURRENCIES) as Currency[]).map((c) => ({ value: c, label: CURRENCIES[c] }))}
               />
             </div>
-            <Input label="Manzil" value={org.address} placeholder="Masalan: Toshkent, Chilonzor 9" onChange={(e) => setOrg((prev) => ({ ...prev, address: e.target.value }))} />
+            <Input label={tr('Manzil')} value={org.address} placeholder={tr('Masalan: Toshkent, Chilonzor 9')} onChange={(e) => setOrg((prev) => ({ ...prev, address: e.target.value }))} />
           </div>
         )}
 
         {step === 1 && (
           <div className="wizard-body">
             <h1 id="wizard-title" ref={headingRef} tabIndex={-1}>
-              Qaysi kurslar bor?
+              {tr('Qaysi kurslar bor?')}
             </h1>
-            <p className="muted">Narx va muddat bo'yicha qarzdorlar va kutilayotgan tushum avtomatik hisoblanadi. Hozir 1–2 tasini qo'shing — qolganini keyin.</p>
-            <div className="chip-row" aria-label="Tayyor nomlar">
+            <p className="muted">{tr('Narx va muddat bo\'yicha qarzdorlar va kutilayotgan tushum avtomatik hisoblanadi. Hozir 1–2 tasini qo\'shing — qolganini keyin.')}</p>
+            <div className="chip-row" aria-label={tr('Tayyor nomlar')}>
               {COURSE_TEMPLATES.map((name) => (
                 <button key={name} type="button" className="chip" onClick={() => setCourseForm((prev) => ({ ...prev, name }))}>
                   {name}
@@ -225,22 +226,22 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
               ))}
             </div>
             <form className="wizard-inline" onSubmit={addCourse} noValidate>
-              <Input label="Kurs nomi" value={courseForm.name} onChange={(e) => setCourseForm((prev) => ({ ...prev, name: e.target.value }))} />
+              <Input label={tr('Kurs nomi')} value={courseForm.name} onChange={(e) => setCourseForm((prev) => ({ ...prev, name: e.target.value }))} />
               <Input
-                label="Oylik narx"
+                label={tr('Oylik narx')}
                 inputMode="numeric"
                 placeholder="650 000"
                 value={courseForm.price}
                 onChange={(e) => setCourseForm((prev) => ({ ...prev, price: formatAmountInput(e.target.value) }))}
               />
               <Input
-                label="Necha oy (0 — muddatsiz)"
+                label={tr('Necha oy (0 — muddatsiz)')}
                 inputMode="numeric"
                 value={courseForm.months}
                 onChange={(e) => setCourseForm((prev) => ({ ...prev, months: e.target.value.replace(/\D/g, '').slice(0, 2) }))}
               />
               <Button type="submit" icon="plus" variant="ghost">
-                Qo'shish
+                {tr('Qo\'shish')}
               </Button>
             </form>
             {courseError && (
@@ -249,17 +250,17 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
               </p>
             )}
             {courses.length > 0 && (
-              <ul className="wizard-list" aria-label="Qo'shilgan kurslar">
+              <ul className="wizard-list" aria-label={tr('Qo\'shilgan kurslar')}>
                 {courses.map((c) => (
                   <li key={c.id}>
                     <span>
                       <strong>{c.name}</strong>
                       <small className="muted">
-                        {c.monthlyPrice > 0 ? `${formatAmountInput(String(c.monthlyPrice))} / oy` : 'Narx keyin kiritiladi'} ·{' '}
-                        {c.durationMonths > 0 ? `${c.durationMonths} oy` : 'muddatsiz'}
+                        {c.monthlyPrice > 0 ? tr('{0} / oy', { 0: formatAmountInput(String(c.monthlyPrice)) }) : tr('Narx keyin kiritiladi')} ·{' '}
+                        {c.durationMonths > 0 ? tr('{0} oy', { 0: c.durationMonths }) : tr('muddatsiz')}
                       </small>
                     </span>
-                    <IconButton icon="close" label={`${c.name}ni olib tashlash`} onClick={() => setCourses((list) => list.filter((x) => x.id !== c.id))} />
+                    <IconButton icon="close" label={tr('{0}ni olib tashlash', { 0: c.name })} onClick={() => setCourses((list) => list.filter((x) => x.id !== c.id))} />
                   </li>
                 ))}
               </ul>
@@ -270,28 +271,28 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         {step === 2 && (
           <div className="wizard-body">
             <h1 id="wizard-title" ref={headingRef} tabIndex={-1}>
-              Xodimlarni qo'shing
+              {tr('Xodimlarni qo\'shing')}
             </h1>
             <p className="muted">
-              Har bir xodim o'z logini bilan kiradi va faqat roliga mos bo'limlarni ko'radi. Yolg'iz ishlasangiz — bu qadamni o'tkazib yuboring.
+              {tr('Har bir xodim o\'z logini bilan kiradi va faqat roliga mos bo\'limlarni ko\'radi. Yolg\'iz ishlasangiz — bu qadamni o\'tkazib yuboring.')}
             </p>
             <form className="wizard-inline" onSubmit={addStaff} noValidate>
-              <Input label="Ism familiya" value={staffForm.fullName} onChange={(e) => setStaffForm((prev) => ({ ...prev, fullName: e.target.value }))} />
+              <Input label={tr('Ism familiya')} value={staffForm.fullName} onChange={(e) => setStaffForm((prev) => ({ ...prev, fullName: e.target.value }))} />
               <Input
-                label="Login"
+                label={tr('Login')}
                 autoCapitalize="none"
                 spellCheck={false}
                 value={staffForm.login}
                 onChange={(e) => setStaffForm((prev) => ({ ...prev, login: e.target.value }))}
               />
               <Select
-                label="Rol"
+                label={tr('Rol')}
                 value={staffForm.role}
                 onChange={(e) => setStaffForm((prev) => ({ ...prev, role: e.target.value as Role }))}
                 options={ROLES.filter((r) => r !== 'admin').map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
               />
               <Button type="submit" icon="userPlus" variant="ghost" disabled={staffBusy}>
-                Qo'shish
+                {tr('Qo\'shish')}
               </Button>
             </form>
             {staffError && (
@@ -301,14 +302,14 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
             )}
             {issued.length > 0 && (
               <>
-                <p className="notice notice-warning">Vaqtinchalik parollarni hozir yozib oling yoki xodimga yuboring — keyin ko'rinmaydi.</p>
-                <ul className="wizard-list" aria-label="Qo'shilgan xodimlar">
+                <p className="notice notice-warning">{tr('Vaqtinchalik parollarni hozir yozib oling yoki xodimga yuboring — keyin ko\'rinmaydi.')}</p>
+                <ul className="wizard-list" aria-label={tr('Qo\'shilgan xodimlar')}>
                   {issued.map((s) => (
                     <li key={s.id}>
                       <span>
                         <strong>{s.fullName}</strong>
                         <small className="muted">
-                          {ROLE_LABELS[s.role]} · login: <code>{s.login}</code> · parol: <code className="mono">{s.password}</code>
+                          {ROLE_LABELS[s.role]} {tr('· login:')} <code>{s.login}</code> {tr('· parol:')} <code className="mono">{s.password}</code>
                         </small>
                       </span>
                     </li>
@@ -322,16 +323,16 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         {step === 3 && (
           <div className="wizard-body">
             <h1 id="wizard-title" ref={headingRef} tabIndex={-1}>
-              Qanday boshlaymiz?
+              {tr('Qanday boshlaymiz?')}
             </h1>
-            <div className="first-run-options" role="radiogroup" aria-label="Boshlang'ich ma'lumot">
+            <div className="first-run-options" role="radiogroup" aria-label={tr('Boshlang\'ich ma\'lumot')}>
               <button type="button" role="radio" aria-checked={source === 'empty'} className={cx('first-run-option', source === 'empty' && 'is-active')} onClick={() => setSource('empty')}>
                 <span className="first-run-icon">
                   <Icon name="plus" size={20} />
                 </span>
                 <span>
-                  <strong>Bo'sh boshlash</strong>
-                  <small className="muted">Mijozlarni o'zim kiritaman (kiritilgan kurslar saqlanadi)</small>
+                  <strong>{tr('Bo\'sh boshlash')}</strong>
+                  <small className="muted">{tr('Mijozlarni o\'zim kiritaman (kiritilgan kurslar saqlanadi)')}</small>
                 </span>
               </button>
               <label className={cx('first-run-option', source === 'backup' && 'is-active')}>
@@ -339,17 +340,17 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                   <Icon name="upload" size={20} />
                 </span>
                 <span>
-                  <strong>Zaxiradan tiklash</strong>
+                  <strong>{tr('Zaxiradan tiklash')}</strong>
                   <small className="muted">
                     {backup
-                      ? `${backup.fileName}: ${backup.data.customers.length} mijoz, ${backup.data.transactions.length} tranzaksiya, ${backup.data.courses.length} kurs`
-                      : 'Oldin EduFlow\'dan olingan .json fayl'}
+                      ? tr('{0}: {1} mijoz, {2} tranzaksiya, {3} kurs', { 0: backup.fileName, 1: backup.data.customers.length, 2: backup.data.transactions.length, 3: backup.data.courses.length })
+                      : tr('Oldin EduFlow\'dan olingan .json fayl')}
                   </small>
                 </span>
-                <input type="file" accept="application/json,.json" className="sr-only" aria-label="Zaxira faylini tanlash" onChange={handleFile} />
+                <input type="file" accept="application/json,.json" className="sr-only" aria-label={tr('Zaxira faylini tanlash')} onChange={handleFile} />
               </label>
             </div>
-            {backup && backup.dropped > 0 && <p className="notice notice-warning">{backup.dropped} ta buzuq yozuv o'tkazib yuboriladi.</p>}
+            {backup && backup.dropped > 0 && <p className="notice notice-warning">{backup.dropped} {tr('ta buzuq yozuv o\'tkazib yuboriladi.')}</p>}
           </div>
         )}
 
@@ -362,17 +363,17 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         <div className="wizard-actions">
           {step > 0 && (
             <Button variant="ghost" icon="chevronLeft" onClick={() => setStep((s) => s - 1)}>
-              Orqaga
+              {tr('Orqaga')}
             </Button>
           )}
           {step < STEPS.length - 1 ? (
             <Button onClick={next}>
-              {step === 1 && courses.length === 0 ? 'O\'tkazib yuborish' : step === 2 && issued.length === 0 ? 'O\'tkazib yuborish' : 'Keyingi'}
+              {step === 1 && courses.length === 0 ? tr('O\'tkazib yuborish') : step === 2 && issued.length === 0 ? tr('O\'tkazib yuborish') : tr('Keyingi')}
               <Icon name="chevronRight" size={16} />
             </Button>
           ) : (
             <Button icon="check" onClick={() => finish(source === 'backup' && backup ? 'backup' : 'empty')}>
-              Boshlash
+              {tr('Boshlash')}
             </Button>
           )}
         </div>

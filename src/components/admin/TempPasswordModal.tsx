@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useId, useState } from 'react'
 import { useToast } from '../../hooks/useToast'
 import { Button, IconButton } from '../ui/Button'
@@ -21,13 +22,13 @@ export function CopyField({ label, value, error, onRegenerate }: { label: string
       <label htmlFor={id}>{label}</label>
       <div className="copy-field">
         <input id={id} className="input mono" readOnly value={value} aria-invalid={error ? true : undefined} onFocus={(e) => e.target.select()} />
-        {onRegenerate && <IconButton icon="refresh" label="Boshqa parol yaratish" onClick={onRegenerate} />}
+        {onRegenerate && <IconButton icon="refresh" label={tr('Boshqa parol yaratish')} onClick={onRegenerate} />}
         <IconButton
           icon="copy"
-          label={`${label}: nusxa olish`}
+          label={tr('{0}: nusxa olish', { 0: label })}
           onClick={async () => {
-            if (await copyText(value)) toast.success('Nusxa olindi')
-            else toast.error('Nusxa olib bo\'lmadi — matnni belgilab o\'zingiz ko\'chiring')
+            if (await copyText(value)) toast.success(tr('Nusxa olindi'))
+            else toast.error(tr('Nusxa olib bo\'lmadi — matnni belgilab o\'zingiz ko\'chiring'))
           }}
         />
       </div>
@@ -52,7 +53,7 @@ interface TempPasswordModalProps {
 export function TempPasswordModal({ title, fullName, login, password, onClose }: TempPasswordModalProps) {
   const toast = useToast()
   const [copied, setCopied] = useState(false)
-  const message = `${fullName}, EduFlow'ga kirish uchun:\nLogin: ${login}\nVaqtinchalik parol: ${password}\nBirinchi kirishda o'z parolingizni o'rnatasiz.`
+  const message = tr('{0}, EduFlow\'ga kirish uchun:\nLogin: {1}\nVaqtinchalik parol: {2}\nBirinchi kirishda o\'z parolingizni o\'rnatasiz.', { 0: fullName, 1: login, 2: password })
 
   return (
     <Modal
@@ -67,27 +68,27 @@ export function TempPasswordModal({ title, fullName, login, password, onClose }:
             onClick={async () => {
               const ok = await copyText(message)
               setCopied(ok)
-              if (ok) toast.success('Xabar nusxalandi — xodimga yuboring')
-              else toast.error('Nusxa olib bo\'lmadi — matnni o\'zingiz ko\'chiring')
+              if (ok) toast.success(tr('Xabar nusxalandi — xodimga yuboring'))
+              else toast.error(tr('Nusxa olib bo\'lmadi — matnni o\'zingiz ko\'chiring'))
             }}
           >
-            {copied ? 'Nusxalandi' : 'Xabarni nusxalash'}
+            {copied ? tr('Nusxalandi') : tr('Xabarni nusxalash')}
           </Button>
           <Button icon="check" onClick={onClose} data-autofocus>
-            Tayyor
+            {tr('Tayyor')}
           </Button>
         </>
       }
     >
       <div className="form">
-        <p className="notice notice-warning">Bu parolni hozir xodimga bering. Oyna yopilgach, uni qayta ko'rib bo'lmaydi.</p>
+        <p className="notice notice-warning">{tr('Bu parolni hozir xodimga bering. Oyna yopilgach, uni qayta ko\'rib bo\'lmaydi.')}</p>
         <div className="field">
-          <CopyField label="Login" value={login} />
+          <CopyField label={tr('Login')} value={login} />
         </div>
         <div className="field">
-          <CopyField label="Vaqtinchalik parol" value={password} />
+          <CopyField label={tr('Vaqtinchalik parol')} value={password} />
         </div>
-        <small className="field-hint">Xodim birinchi kirishda o'z parolini o'rnatadi.</small>
+        <small className="field-hint">{tr('Xodim birinchi kirishda o\'z parolini o\'rnatadi.')}</small>
       </div>
     </Modal>
   )

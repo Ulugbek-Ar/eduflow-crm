@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState, useSyncExternalStore } from 'react'
 import { ROLE_LABELS } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
@@ -66,45 +67,45 @@ export function AuditLog() {
   }
 
   return (
-    <section className="card" aria-label="Amallar jurnali">
+    <section className="card" aria-label={tr('Amallar jurnali')}>
       <div className="card-head">
         <div>
-          <h2>Amallar jurnali</h2>
-          <span className="muted">Kim, qachon va nima qilgani · {rows.length} ta yozuv · oxirgi 1 yil</span>
+          <h2>{tr('Amallar jurnali')}</h2>
+          <span className="muted">{tr('Kim, qachon va nima qilgani ·')} {rows.length} {tr('ta yozuv · oxirgi 1 yil')}</span>
         </div>
         <div className="toolbar">
           <Button variant="ghost" size="sm" icon="fileText" disabled={rows.length === 0} onClick={() => download('csv')}>
-            CSV
+            {tr('CSV')}
           </Button>
           <Button variant="ghost" size="sm" icon="sheet" disabled={rows.length === 0} onClick={() => download('xls')}>
-            Excel
+            {tr('Excel')}
           </Button>
         </div>
       </div>
 
       <div className="filters">
         <Input
-          label="Jurnaldan qidirish"
+          label={tr('Jurnaldan qidirish')}
           type="search"
           value={filters.query}
-          placeholder="Ism, mijoz yoki summa"
+          placeholder={tr('Ism, mijoz yoki summa')}
           onChange={(e) => setFilter('query', e.target.value)}
         />
         <Select
-          label="Xodim"
+          label={tr('Xodim')}
           value={filters.userId}
           onChange={(e) => setFilter('userId', e.target.value)}
-          options={[{ value: 'all', label: 'Barcha xodimlar' }, ...Array.from(people, ([value, label]) => ({ value, label }))]}
+          options={[{ value: 'all', label: tr('Barcha xodimlar') }, ...Array.from(people, ([value, label]) => ({ value, label }))]}
         />
         <Select
-          label="Bo'lim"
+          label={tr('Bo\'lim')}
           value={filters.category}
           onChange={(e) => setFilter('category', e.target.value as AuditFilters['category'])}
-          options={[{ value: 'all', label: 'Barcha bo\'limlar' }, ...toOptions(AUDIT_CATEGORY_LABELS)]}
+          options={[{ value: 'all', label: tr('Barcha bo\'limlar') }, ...toOptions(AUDIT_CATEGORY_LABELS)]}
         />
         <div className="date-range">
-          <DateInput key={`from-${resetKey}`} label="Dan" format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(v) => setFilter('from', v)} />
-          <DateInput key={`to-${resetKey}`} label="Gacha" format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(v) => setFilter('to', v)} />
+          <DateInput key={`from-${resetKey}`} label={tr('Dan')} format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(v) => setFilter('from', v)} />
+          <DateInput key={`to-${resetKey}`} label={tr('Gacha')} format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(v) => setFilter('to', v)} />
         </div>
         {active && (
           <Button
@@ -116,7 +117,7 @@ export function AuditLog() {
               setPage(1)
             }}
           >
-            Filtrlarni tozalash
+            {tr('Filtrlarni tozalash')}
           </Button>
         )}
       </div>
@@ -124,8 +125,8 @@ export function AuditLog() {
       {current.total === 0 ? (
         <EmptyState
           variant={entries.length === 0 ? 'empty' : 'search'}
-          title={entries.length === 0 ? 'Jurnal hali bo\'sh' : 'Hech narsa topilmadi'}
-          description={entries.length === 0 ? 'Xodimlar mijoz qo\'shsa, to\'lov yozsa yoki tizimga kirsa — shu yerda ko\'rinadi.' : 'Filtrlarni o\'zgartirib ko\'ring.'}
+          title={entries.length === 0 ? tr('Jurnal hali bo\'sh') : tr('Hech narsa topilmadi')}
+          description={entries.length === 0 ? tr('Xodimlar mijoz qo\'shsa, to\'lov yozsa yoki tizimga kirsa — shu yerda ko\'rinadi.') : tr('Filtrlarni o\'zgartirib ko\'ring.')}
         />
       ) : (
         <>
@@ -133,26 +134,26 @@ export function AuditLog() {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Vaqt</th>
-                  <th scope="col">Xodim</th>
-                  <th scope="col">Amal</th>
-                  <th scope="col">Tafsilot</th>
+                  <th scope="col">{tr('Vaqt')}</th>
+                  <th scope="col">{tr('Xodim')}</th>
+                  <th scope="col">{tr('Amal')}</th>
+                  <th scope="col">{tr('Tafsilot')}</th>
                 </tr>
               </thead>
               <tbody>
                 {current.items.map((e) => (
                   <tr key={e.id}>
-                    <td data-label="Vaqt" className="nowrap">
+                    <td data-label={tr('Vaqt')} className="nowrap">
                       {formatDateTime(e.at)}
                     </td>
-                    <td data-label="Xodim">
+                    <td data-label={tr('Xodim')}>
                       {e.userName}
                       {e.role && <small className="cell-sub">{ROLE_LABELS[e.role]}</small>}
                     </td>
-                    <td data-label="Amal">
+                    <td data-label={tr('Amal')}>
                       <Badge tone={e.action === 'auth.failed' ? 'cancelled' : CATEGORY_TONE[actionCategory(e.action)]}>{AUDIT_ACTION_LABELS[e.action]}</Badge>
                     </td>
-                    <td data-label="Tafsilot" className="cell-wide">
+                    <td data-label={tr('Tafsilot')} className="cell-wide">
                       {e.summary || '—'}
                     </td>
                   </tr>

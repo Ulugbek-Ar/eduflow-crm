@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { createMockCourses, createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Course } from '../types/course.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
@@ -161,8 +162,8 @@ export function combineResults(results: readonly SaveResult[]): SaveResult {
 
 export function saveErrorMessage(reason: SaveFailure): string {
   return reason === 'quota'
-    ? 'Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.'
-    : 'Ma\'lumot saqlanmadi: brauzer saqlashni bloklagan. JSON zaxira oling.'
+    ? tr('Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.')
+    : tr('Ma\'lumot saqlanmadi: brauzer saqlashni bloklagan. JSON zaxira oling.')
 }
 
 // ===== Band joy (taxminiy) =====
@@ -469,13 +470,13 @@ export function parseBackup(text: string): BackupParseResult {
   try {
     json = JSON.parse(text)
   } catch {
-    return { ok: false, error: 'Fayl JSON formatida emas yoki buzilgan' }
+    return { ok: false, error: tr('Fayl JSON formatida emas yoki buzilgan') }
   }
   if (!isRecord(json) || !Array.isArray(json.customers) || !Array.isArray(json.transactions)) {
-    return { ok: false, error: `Bu ${APP_NAME} zaxira fayli emas: mijozlar yoki tranzaksiyalar ro'yxati topilmadi` }
+    return { ok: false, error: tr('Bu {0} zaxira fayli emas: mijozlar yoki tranzaksiyalar ro\'yxati topilmadi', { 0: APP_NAME }) }
   }
   if (typeof json.version === 'number' && json.version > SCHEMA_VERSION) {
-    return { ok: false, error: 'Zaxira ilovaning yangiroq versiyasida yaratilgan' }
+    return { ok: false, error: tr('Zaxira ilovaning yangiroq versiyasida yaratilgan') }
   }
   const fromVersion = typeof json.version === 'number' ? json.version : 1
   const { data, dropped } = normalizeData(

@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { SECTION_PERMISSION } from '../auth/permissions'
@@ -72,7 +73,7 @@ function withPaidAt(before: Customer, after: Customer, now: string): Customer {
 
 export const SIDEBAR_COLLAPSED_KEY = 'apex:sidebar-collapsed'
 
-export const DENIED_MESSAGE = 'Bu amal uchun ruxsatingiz yo\'q. Administratorga murojaat qiling.'
+const DENIED_MESSAGE = tr('Bu amal uchun ruxsatingiz yo\'q. Administratorga murojaat qiling.')
 
 // Oyna ochish uchun kerakli ruxsat
 function modalPermission(modal: NonNullable<ModalState>): Permission {
@@ -134,7 +135,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (initial.dropped > 0 && !startupNoticeRef.current) {
       startupNoticeRef.current = true
-      toast.info(`${initial.dropped} ta buzuq yozuv topildi va tashlab yuborildi`)
+      toast.info(tr('{0} ta buzuq yozuv topildi va tashlab yuborildi', { 0: initial.dropped }))
     }
   }, [initial.dropped, toast])
 
@@ -214,12 +215,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       case 'customer':
         setCustomers((list) => (list.some((c) => c.id === entry.id) ? list : [entry.item, ...list]))
         audit('customer.restore', entry.item.name, entry.id)
-        toast.success(`"${entry.item.name}" tiklandi`)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
         break
       case 'transaction':
         setTransactions((list) => (list.some((t) => t.id === entry.id) ? list : [entry.item, ...list]))
         audit('payment.restore', txSummary(entry.item), entry.id)
-        toast.success('Tranzaksiya tiklandi')
+        toast.success(tr('Tranzaksiya tiklandi'))
         break
       case 'course':
         setCourses((list) => {
@@ -229,12 +230,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           return [...list, taken ? { ...entry.item, name: `${entry.item.name} (tiklangan)` } : entry.item]
         })
         audit('course.restore', entry.item.name, entry.id)
-        toast.success(`"${entry.item.name}" tiklandi`)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
         break
     }
   }
 
-  const undo = (entry: TrashEntry) => ({ action: { label: 'Bekor qilish', onClick: () => restoreEntry(entry) } })
+  const undo = (entry: TrashEntry) => ({ action: { label: tr('Bekor qilish'), onClick: () => restoreEntry(entry) } })
 
   const trashed = <K extends TrashKind>(kind: K, id: string, item: Extract<TrashEntry, { kind: K }>['item']) =>
     ({ kind, id, item, deletedAt: new Date().toISOString(), deletedBy: actor?.userName ?? '' }) as TrashEntry
@@ -277,9 +278,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       }
       if (unsavedRef.current) {
         const leave = await confirm({
-          title: 'Saqlanmagan o\'zgarishlar',
-          message: 'Sozlamalarda saqlanmagan o\'zgarishlar bor. Chiqsangiz, ular yo\'qoladi.',
-          confirmLabel: 'Saqlamasdan chiqish',
+          title: tr('Saqlanmagan o\'zgarishlar'),
+          message: tr('Sozlamalarda saqlanmagan o\'zgarishlar bor. Chiqsangiz, ular yo\'qoladi.'),
+          confirmLabel: tr('Saqlamasdan chiqish'),
         })
         if (!leave) return
         unsavedRef.current = false
@@ -308,7 +309,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt, ...(data.status === 'paid' ? { paidAt: createdAt } : {}) }
       setCustomers((list) => [customer, ...list])
       audit('customer.create', customer.name, customer.id)
-      toast.success(`"${customer.name}" mijozlar bazasiga qo'shildi`)
+      toast.success(tr('"{0}" mijozlar bazasiga qo\'shildi', { 0: customer.name }))
     },
     updateCustomer: (id, patch) => {
       if (!allowed('customers.edit')) return
@@ -319,10 +320,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const keys = Object.keys(patch)
       if (keys.length === 1 && patch.status) {
         audit('customer.status', `${name}: ${before ? STATUS_LABELS[before.status] : '—'} → ${STATUS_LABELS[patch.status]}`, id)
-        toast.success(`${name}: bosqich "${STATUS_LABELS[patch.status]}" ga o'zgartirildi`)
+        toast.success(tr('{0}: bosqich "{1}" ga o\'zgartirildi', { 0: name, 1: STATUS_LABELS[patch.status] }))
       } else {
         audit('customer.update', patch.name && patch.name.trim() !== name ? `${name} → ${patch.name.trim()}` : name, id)
-        toast.success(`${name} ma'lumotlari saqlandi`)
+        toast.success(tr('{0} ma\'lumotlari saqlandi', { 0: name }))
       }
     },
     deleteCustomer: (id) => {
@@ -336,15 +337,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const entry = trashed('customer', id, customer)
       toTrash(entry)
       audit('customer.delete', name, id)
-      toast.success(`"${name}" savatchaga o'tkazildi`, undo(entry))
+      toast.success(tr('"{0}" savatchaga o\'tkazildi', { 0: name }), undo(entry))
     },
     addTransaction: (data) => {
       if (!allowed(data.type === 'income' ? 'payments.create' : 'payments.manage')) return
       const created = { ...withCustomerName(cleanTransaction(data)), id: createId('t') }
       setTransactions((list) => [created, ...list])
       audit('payment.create', txSummary(created), created.id)
-      const receipt = created.type === 'income' ? { action: { label: 'Chek', onClick: () => setModal({ type: 'receipt', payload: { id: created.id } }) } } : undefined
-      toast.success(`${data.type === 'income' ? 'To\'lov' : 'Xarajat'} qayd etildi: ${money(data.amount)}`, receipt)
+      const receipt = created.type === 'income' ? { action: { label: tr('Chek'), onClick: () => setModal({ type: 'receipt', payload: { id: created.id } }) } } : undefined
+      toast.success(tr('{0} qayd etildi: {1}', { 0: data.type === 'income' ? 'To\'lov' : 'Xarajat', 1: money(data.amount) }), receipt)
     },
     updateTransaction: (id, patch) => {
       if (!allowed('payments.manage')) return
@@ -363,10 +364,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const before = transactions.find((t) => t.id === id)
       if (keys.every((k) => k === 'status' || k === 'date') && patch.status) {
         if (before) audit('payment.status', `${txSummary(before)}: ${TX_STATUS_LABELS[before.status]} → ${TX_STATUS_LABELS[patch.status]}`, id)
-        toast.success(`Status: "${TX_STATUS_LABELS[patch.status]}"`)
+        toast.success(tr('Status: "{0}"', { 0: TX_STATUS_LABELS[patch.status] }))
       } else {
         if (before) audit('payment.update', txSummary({ ...before, ...clean }), id)
-        toast.success('Tranzaksiya yangilandi')
+        toast.success(tr('Tranzaksiya yangilandi'))
       }
     },
     deleteTransaction: (id) => {
@@ -378,7 +379,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const entry = trashed('transaction', id, withCustomerName(transaction))
       toTrash(entry)
       audit('payment.delete', txSummary(transaction), id)
-      toast.success('Tranzaksiya savatchaga o\'tkazildi', undo(entry))
+      toast.success(tr('Tranzaksiya savatchaga o\'tkazildi'), undo(entry))
     },
     getCourse: (id) => (id ? courses.find((c) => c.id === id) : undefined),
     addCourse: (data) => {
@@ -386,7 +387,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const course: Course = { ...data, name: normalizeCourseName(data.name), id: createId('k'), createdAt: new Date().toISOString() }
       setCourses((list) => [...list, course])
       audit('course.create', course.name, course.id)
-      toast.success(`"${course.name}" qo'shildi`)
+      toast.success(tr('"{0}" qo\'shildi', { 0: course.name }))
     },
     updateCourse: (id, patch) => {
       if (!allowed('courses.edit')) return
@@ -400,10 +401,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const keys = Object.keys(patch)
       if (keys.length === 1 && patch.status) {
         audit(patch.status === 'archived' ? 'course.archive' : 'course.update', patch.status === 'archived' ? name : `${name}: arxivdan qaytarildi`, id)
-        toast.success(patch.status === 'archived' ? `"${name}" arxivlandi` : `"${name}" arxivdan qaytarildi`)
+        toast.success(patch.status === 'archived' ? tr('"{0}" arxivlandi', { 0: name }) : tr('"{0}" arxivdan qaytarildi', { 0: name }))
       } else {
         audit('course.update', name !== before.name ? `${before.name} → ${name}` : name, id)
-        toast.success(`"${name}" saqlandi`)
+        toast.success(tr('"{0}" saqlandi', { 0: name }))
       }
     },
     removeCourse: (id) => {
@@ -413,20 +414,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       if (usedByCustomers(course, customers) > 0) {
         setCourses((list) => list.map((c) => (c.id === id ? { ...c, status: 'archived', updatedAt: new Date().toISOString() } : c)))
         audit('course.archive', course.name, id)
-        toast.info(`"${course.name}" mijozlari bor — o'chirish o'rniga arxivlandi`)
+        toast.info(tr('"{0}" mijozlari bor — o\'chirish o\'rniga arxivlandi', { 0: course.name }))
         return
       }
       setCourses((list) => list.filter((c) => c.id !== id))
       const entry = trashed('course', id, course)
       toTrash(entry)
       audit('course.delete', course.name, id)
-      toast.success(`"${course.name}" savatchaga o'tkazildi`, undo(entry))
+      toast.success(tr('"{0}" savatchaga o\'tkazildi', { 0: course.name }), undo(entry))
     },
     updateSettings: (next, options) => {
       if (!allowed('settings.manage')) return
       setSettings(next)
       audit('settings.update', next.orgName)
-      if (!options?.silent) toast.success('Sozlamalar saqlandi')
+      if (!options?.silent) toast.success(tr('Sozlamalar saqlandi'))
     },
     resetData: () => {
       if (!allowed('data.manage')) return
@@ -435,7 +436,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setIsDemo(true)
       reportSave('all', saved)
       audit('data.reset', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
-      if (saved.ok) toast.success('Demo ma\'lumotlar tiklandi')
+      if (saved.ok) toast.success(tr('Demo ma\'lumotlar tiklandi'))
     },
     clearAllData: () => {
       if (!allowed('data.manage')) return
@@ -449,7 +450,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setIsDemo(false)
       reportSave(STORAGE_KEYS.demo, setDemoMode(false))
       audit('data.clear', `${customers.length} mijoz, ${transactions.length} tranzaksiya, ${courses.length} kurs`)
-      toast.success('Barcha ma\'lumot tozalandi')
+      toast.success(tr('Barcha ma\'lumot tozalandi'))
     },
     clearDemoData: () => {
       if (!allowed('data.manage')) return
@@ -461,7 +462,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setIsDemo(false)
       reportSave(STORAGE_KEYS.demo, setDemoMode(false))
       audit('data.clear', `Demo: ${customers.length} mijoz, ${transactions.length} tranzaksiya`)
-      toast.success('Demo ma\'lumot tozalandi — endi o\'z ma\'lumotlaringizni kiritishingiz mumkin')
+      toast.success(tr('Demo ma\'lumot tozalandi — endi o\'z ma\'lumotlaringizni kiritishingiz mumkin'))
     },
     replaceData: (data) => {
       if (!allowed('data.manage')) return
@@ -471,7 +472,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setIsDemo(false)
       reportSave('all', combineResults([saved, setDemoMode(false)]))
       audit('data.import', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya, ${data.courses.length} kurs`)
-      if (saved.ok) toast.success(`Zaxira tiklandi: ${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+      if (saved.ok) toast.success(tr('Zaxira tiklandi: {0} mijoz, {1} tranzaksiya', { 0: data.customers.length, 1: data.transactions.length }))
     },
     tourOpen,
     startTour: () => {
@@ -495,13 +496,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       if (!entry) return
       setTrash((list) => list.filter((e) => e !== entry))
       audit('trash.purge', entry.kind === 'transaction' ? txSummary(entry.item) : entry.item.name, id)
-      toast.success('Butunlay o\'chirildi')
+      toast.success(tr('Butunlay o\'chirildi'))
     },
     emptyTrash: () => {
       if (!allowed('trash.manage') || trash.length === 0) return
       audit('trash.purge', `Savatcha tozalandi: ${trash.length} ta yozuv`)
       setTrash([])
-      toast.success('Savatcha tozalandi')
+      toast.success(tr('Savatcha tozalandi'))
     },
     logExport: (what, kind = 'export') => audit(kind === 'backup' ? 'data.backup' : 'data.export', what),
     money,

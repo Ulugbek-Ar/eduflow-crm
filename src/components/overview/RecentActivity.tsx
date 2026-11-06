@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { Icon, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useCan } from '../../hooks/useAuth'
@@ -13,10 +14,10 @@ export function RecentActivity() {
   return (
     <section className="card" aria-labelledby="activity-title">
       <div className="card-head">
-        <h2 id="activity-title">So'nggi amallar</h2>
+        <h2 id="activity-title">{tr('So\'nggi amallar')}</h2>
       </div>
       {items.length === 0 ? (
-        <p className="muted">Hali faoliyat yo'q.</p>
+        <p className="muted">{tr('Hali faoliyat yo\'q.')}</p>
       ) : (
         <ul className="activity-list">
           {items.map((item) =>
@@ -31,7 +32,7 @@ export function RecentActivity() {
                     <Icon name="userPlus" size={16} />
                   </span>
                   <span className="activity-text">
-                    <strong>Yangi lid: {item.customer.name}</strong>
+                    <strong>{tr('Yangi lid:')} {item.customer.name}</strong>
                     <small className="muted">
                       {item.customer.course} · {formatDate(item.date)}
                     </small>

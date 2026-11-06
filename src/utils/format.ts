@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { Currency, DateFormat } from '../types/dashboard.types'
 
 // Raqamlar brauzer lokaliga bog'liq emas: ba'zi brauzerlarda uz-UZ "2,150,000" beradi, O'zbekistonda esa
@@ -27,7 +28,7 @@ export function formatDecimal(value: number, fixed = false): string {
 const usdFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 export function formatMoney(amount: number, currency: Currency): string {
-  return currency === 'USD' ? usdFormat.format(amount) : `${formatNumber(amount)} so'm`
+  return currency === 'USD' ? usdFormat.format(amount) : `${formatNumber(amount)} ${tr('so\'m')}`
 }
 
 export function formatPercent(value: number): string {

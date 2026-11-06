@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { IconName } from '../constants/navigation'
 import { useDashboard } from '../context/useDashboard'
 import { useCan } from './useAuth'
@@ -17,32 +18,32 @@ export function useQuickAdd(): QuickAddAction[] {
   const actions: Array<QuickAddAction & { allowed: boolean }> = [
     {
       id: 'customer',
-      label: 'Yangi mijoz',
-      description: 'Lid yoki o\'quvchi',
+      label: tr('Yangi mijoz'),
+      description: tr('Lid yoki o\'quvchi'),
       icon: 'userPlus',
       run: () => openModal({ type: 'customer' }),
       allowed: can('customers.edit'),
     },
     {
       id: 'income',
-      label: 'To\'lov qabul qilish',
-      description: 'Kurs to\'lovi yoki boshqa kirim',
+      label: tr('To\'lov qabul qilish'),
+      description: tr('Kurs to\'lovi yoki boshqa kirim'),
       icon: 'card',
       run: () => openModal({ type: 'transaction', payload: { kind: 'income' } }),
       allowed: can('payments.create'),
     },
     {
       id: 'expense',
-      label: 'Xarajat yozish',
-      description: 'Ijara, maosh, reklama',
+      label: tr('Xarajat yozish'),
+      description: tr('Ijara, maosh, reklama'),
       icon: 'receipt',
       run: () => openModal({ type: 'transaction', payload: { kind: 'expense' } }),
       allowed: can('payments.manage'),
     },
     {
       id: 'course',
-      label: 'Yangi kurs',
-      description: 'Kurs yoki xizmat, narxi bilan',
+      label: tr('Yangi kurs'),
+      description: tr('Kurs yoki xizmat, narxi bilan'),
       icon: 'bookOpen',
       run: () => openModal({ type: 'course' }),
       allowed: can('courses.edit'),

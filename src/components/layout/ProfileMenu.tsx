@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { ROLE_LABELS } from '../../auth/permissions'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
@@ -20,7 +21,7 @@ export function ProfileMenu() {
 
   return (
     <Dropdown
-      label="Profil menyusi"
+      label={tr('Profil menyusi')}
       className="header-profile"
       header={
         <div className="profile-menu-head">
@@ -29,11 +30,11 @@ export function ProfileMenu() {
             {user.title ? `${user.title} · ` : ''}
             {role}
           </small>
-          <small className="muted">Login: {user.login}</small>
+          <small className="muted">{tr('Login:')} {user.login}</small>
         </div>
       }
       trigger={(props) => (
-        <button type="button" className="profile-btn" aria-label={`Profil: ${name}`} {...props}>
+        <button type="button" className="profile-btn" aria-label={tr('Profil: {0}', { 0: name })} {...props}>
           <span className="avatar avatar-sm" aria-hidden="true">
             {getInitials(name)}
           </span>
@@ -46,12 +47,12 @@ export function ProfileMenu() {
       )}
       sections={[
         {
-          label: 'Hisob',
+          label: tr('Hisob'),
           items: [
             {
               id: 'profile',
-              label: 'Profil va parol',
-              description: 'Ism, lavozim, login va parol',
+              label: tr('Profil va parol'),
+              description: tr('Ism, lavozim, login va parol'),
               icon: 'user',
               onSelect: () => {
                 setActiveSection('settings')
@@ -60,17 +61,17 @@ export function ProfileMenu() {
             },
             {
               id: 'theme',
-              label: resolved === 'dark' ? 'Yorug\' mavzu' : 'Qorong\'i mavzu',
+              label: resolved === 'dark' ? tr('Yorug\' mavzu') : tr('Qorong\'i mavzu'),
               icon: resolved === 'dark' ? 'sun' : 'moon',
               onSelect: () => setPreference(resolved === 'dark' ? 'light' : 'dark'),
             },
             {
               id: 'logout',
-              label: mode === 'demo' ? 'Demo\'dan chiqish' : 'Chiqish',
+              label: mode === 'demo' ? tr('Demo\'dan chiqish') : tr('Chiqish'),
               icon: 'logout',
               onSelect: () => {
                 logout()
-                toast.info(mode === 'demo' ? 'Demo yopildi — namunaviy ma\'lumot o\'chirildi' : 'Tizimdan chiqdingiz')
+                toast.info(mode === 'demo' ? tr('Demo yopildi — namunaviy ma\'lumot o\'chirildi') : tr('Tizimdan chiqdingiz'))
               },
             },
           ],

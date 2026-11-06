@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { pageTitle } from '../../constants/app'
@@ -16,7 +17,7 @@ const ORDER: readonly Field[] = ['orgName', 'fullName', 'title', 'login', 'passw
 // Birinchi ishga tushish: hali xodim yo'q. Standart parol yo'q — markaz egasi hisobni o'zi yaratadi
 export function SetupAdminScreen() {
   const { setupAdmin } = useAuth()
-  const [form, setForm] = useState<Record<Field, string>>({ orgName: '', fullName: '', title: 'Direktor', login: '', password: '', confirm: '' })
+  const [form, setForm] = useState<Record<Field, string>>({ orgName: '', fullName: '', title: tr('Direktor'), login: '', password: '', confirm: '' })
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -24,7 +25,7 @@ export function SetupAdminScreen() {
   const cryptoReady = isCryptoAvailable()
 
   useEffect(() => {
-    document.title = pageTitle('Ro\'yxatdan o\'tish')
+    document.title = pageTitle(tr('Ro\'yxatdan o\'tish'))
   }, [])
 
   const update = (key: Field, value: string) => {
@@ -37,9 +38,9 @@ export function SetupAdminScreen() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const next: Partial<Record<Field, string>> = {}
-    if (form.orgName.trim().length < 2) next.orgName = 'Markaz nomini kiriting'
-    if (form.password && form.password !== form.confirm) next.confirm = 'Parollar mos kelmadi'
-    if (!form.confirm) next.confirm = 'Parolni yana bir marta yozing'
+    if (form.orgName.trim().length < 2) next.orgName = tr('Markaz nomini kiriting')
+    if (form.password && form.password !== form.confirm) next.confirm = tr('Parollar mos kelmadi')
+    if (!form.confirm) next.confirm = tr('Parolni yana bir marta yozing')
     setErrors(next)
     setFormError('')
     const first = ORDER.find((f) => next[f])
@@ -63,63 +64,63 @@ export function SetupAdminScreen() {
     <main className="login-page">
       <div className="login-card login-card-wide">
         <form ref={formRef} className="auth-form" onSubmit={handleSubmit} noValidate aria-labelledby="login-title">
-          <AuthBrand title="Markazni ro'yxatdan o'tkazish" subtitle="Administrator hisobi — xodimlarni keyin o'zingiz qo'shasiz" />
+          <AuthBrand title={tr('Markazni ro\'yxatdan o\'tkazish')} subtitle={tr('Administrator hisobi — xodimlarni keyin o\'zingiz qo\'shasiz')} />
 
           {!cryptoReady && (
             <p className="notice notice-error" role="alert">
-              Brauzer xavfsiz kontekstda emas (HTTPS yoki localhost kerak) — hisob yaratib bo'lmaydi.
+              {tr('Brauzer xavfsiz kontekstda emas (HTTPS yoki localhost kerak) — hisob yaratib bo\'lmaydi.')}
             </p>
           )}
 
           <Input
             name="orgName"
-            label="O'quv markazi nomi"
+            label={tr('O\'quv markazi nomi')}
             required
             value={form.orgName}
             error={errors.orgName}
-            placeholder="Masalan: Bilim Plus"
+            placeholder={tr('Masalan: Bilim Plus')}
             onChange={(e) => update('orgName', e.target.value)}
             autoFocus
           />
           <div className="form-row">
             <Input
               name="fullName"
-              label="Ism familiyangiz"
+              label={tr('Ism familiyangiz')}
               required
               autoComplete="name"
               value={form.fullName}
               error={errors.fullName}
               onChange={(e) => update('fullName', e.target.value)}
             />
-            <Input name="title" label="Lavozim" value={form.title} error={errors.title} onChange={(e) => update('title', e.target.value)} />
+            <Input name="title" label={tr('Lavozim')} value={form.title} error={errors.title} onChange={(e) => update('title', e.target.value)} />
           </div>
           <Input
             name="login"
-            label="Login"
+            label={tr('Login')}
             required
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
             value={form.login}
             error={errors.login}
-            hint="Kirish uchun: lotin harflari, raqam, _ . - (3–32 belgi)"
+            hint={tr('Kirish uchun: lotin harflari, raqam, _ . - (3–32 belgi)')}
             onChange={(e) => update('login', e.target.value)}
           />
           <div className="form-row">
             <PasswordInput
               name="password"
-              label="Parol"
+              label={tr('Parol')}
               required
               autoComplete="new-password"
               value={form.password}
               error={errors.password}
-              hint={`Kamida ${MIN_PASSWORD_LENGTH} ta belgi`}
+              hint={tr('Kamida {0} ta belgi', { 0: MIN_PASSWORD_LENGTH })}
               onChange={(e) => update('password', e.target.value)}
             />
             <Input
               name="confirm"
               type="password"
-              label="Parolni takrorlang"
+              label={tr('Parolni takrorlang')}
               required
               autoComplete="new-password"
               value={form.confirm}
@@ -135,9 +136,9 @@ export function SetupAdminScreen() {
           )}
 
           <Button type="submit" className="btn-block" disabled={busy || !cryptoReady}>
-            {busy ? 'Yaratilmoqda...' : 'Hisob yaratish'}
+            {busy ? tr('Yaratilmoqda...') : tr('Hisob yaratish')}
           </Button>
-          <p className="login-hint">Ma'lumotlar shu brauzerda saqlanadi. Muntazam zaxira olishni unutmang.</p>
+          <p className="login-hint">{tr('Ma\'lumotlar shu brauzerda saqlanadi. Muntazam zaxira olishni unutmang.')}</p>
         </form>
         <DemoEntry />
       </div>
