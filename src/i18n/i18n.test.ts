@@ -25,22 +25,18 @@ describe('tarjima', () => {
 })
 
 describe('lug\'at to\'liqligi', () => {
-  it('kodda tr(\'...\') bilan o\'ralgan har bir matnning rus tarjimasi bor', async () => {
-    const { readdirSync, readFileSync, statSync } = await import('node:fs')
-    const { join } = await import('node:path')
+  it('kodda tr(\'...\') bilan o\'ralgan har bir matnning rus tarjimasi bor', () => {
     const same = new Set(['CSV', 'Excel', 'CPL', 'ROI', '{0} — CSV', '{0} — Excel', 'Email', 'Telegram', 'Ctrl K', 'A4', 'Instagram', 'ROI, %'])
-    const files: string[] = []
-    const walk = (dir: string) => {
-      for (const name of readdirSync(dir)) {
-        const full = join(dir, name)
-        if (statSync(full).isDirectory()) walk(full)
-        else if (/\.tsx?$/.test(name) && !/\.test\./.test(name) && !full.includes('/i18n/') && !full.includes('/test/')) files.push(full)
-      }
-    }
-    walk('src')
+    // Vite: barcha manba fayllari matn ko'rinishida (Node tiplarisiz)
+    const sources = import.meta.glob(['/src/**/*.{ts,tsx}', '!/src/**/*.test.{ts,tsx}', '!/src/i18n/**', '!/src/test/**'], {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>
     const missing: string[] = []
-    for (const file of files) {
-      for (const match of readFileSync(file, 'utf8').matchAll(/\btr\('((?:[^'\\]|\\.)*)'/g)) {
+    expect(Object.keys(sources).length).toBeGreaterThan(50)
+    for (const [file, text] of Object.entries(sources)) {
+      for (const match of text.matchAll(/\btr\('((?:[^'\\]|\\.)*)'/g)) {
         const key = match[1].replace(/\\n/g, '\n').replace(/\\(.)/g, '$1')
         if (!(key in RU) && !same.has(key)) missing.push(`${file}: ${key}`)
       }
