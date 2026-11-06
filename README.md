@@ -236,6 +236,74 @@ Birinchi ochilishda hech narsa yozilmaydi — foydalanuvchi bo'sh yoki demo ma'l
 **Sozlamalar → Ma'lumotlar → JSON zaxira** dan foydalaning. Brauzer tarixini tozalash ma'lumotlarni ham o'chiradi, shuning uchun
 zaxirani muntazam yuklab oling.
 
+## Bulutli rejim (Supabase)
+
+Kalitlarsiz ilova **lokal rejimda** ishlaydi: ma'lumot shu brauzerda, "Demo'ni ko'rish" — alohida namunaviy markaz.
+`VITE_SUPABASE_URL` va `VITE_SUPABASE_ANON_KEY` berilsa — **bulutli rejim**: email + parol bilan kirish, ma'lumot serverda,
+har markaz RLS bilan ajratilgan, istalgan qurilmadan ishlash, tarif muddati va to'xtatish majburiy.
+
+### Ulash — qadam-baqadam
+
+1. **Loyiha yarating.** [supabase.com](https://supabase.com) → *New project*. Region tanlang (pastdagi "Ma'lumot joylashuvi"ga qarang),
+   kuchli DB parolini saqlab qo'ying.
+2. **Sxemani o'rnating.** Kompyuterda [Supabase CLI](https://supabase.com/docs/guides/cli) o'rnatilgan bo'lsin:
+   ```bash
+   supabase login
+   supabase link --project-ref <loyiha-id>
+   supabase db push
+   ```
+   CLI'siz: Dashboard → *SQL Editor* → `supabase/migrations/20261106000001_init.sql` mazmunini qo'yib *Run*.
+3. **Xodim funksiyasini joylang** (xodim qo'shish va parolini tiklash — service role kaliti faqat serverda qoladi):
+   ```bash
+   supabase functions deploy staff
+   ```
+4. **Auth sozlamalari.** Dashboard → *Authentication → URL Configuration*: *Site URL* = `https://<domeningiz>/app`,
+   *Redirect URLs* ga ham shu manzilni qo'shing (parolni tiklash havolasi shu yerga qaytaradi).
+   *Providers → Email*: yoqilgan. "Confirm email" yoqilgan bo'lsa, ro'yxatdan o'tgan markaz emailni tasdiqlagach yaratiladi.
+5. **Kalitlarni ilovaga bering.** Dashboard → *Project Settings → API*: `Project URL` va `anon public` kalit.
+   Vercel → *Settings → Environment Variables*:
+   ```
+   VITE_SUPABASE_URL=https://<loyiha-id>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<anon kalit>
+   ```
+   Lokal: `.env.example` dan `.env.local` yarating. **`service_role` kalitini hech qachon ilovaga yozmang.**
+6. **Qayta deploy qiling** va `/app` da "Ro'yxatdan o'tish" — markaz 14 kunlik sinov bilan yaratiladi.
+7. **Sotuvchi (super-admin).** O'zingiz `/app` da ro'yxatdan o'ting (yoki Dashboard → *Authentication → Add user*), so'ng
+   *SQL Editor* da:
+   ```sql
+   insert into public.platform_admins (user_id) select id from auth.users where email = 'siz@domen.uz';
+   ```
+   Endi `/owner` da shu email bilan kirasiz: markazlar, tarif, +30 kun, to'xtatish.
+8. **Savatchani avtomatik tozalash** (30 kundan eski o'chirilganlar). Dashboard → *Database → Extensions* → `pg_cron`, so'ng:
+   ```sql
+   select cron.schedule('eduflow-purge-trash', '15 3 * * *', $$select public.purge_trash()$$);
+   ```
+9. **Eski ma'lumotni ko'chirish.** Avval lokal rejimda ishlagan markaz shu brauzerda bulutli rejimga kirsa, Sozlamalar →
+   Ma'lumotlar'da **"Bulutga ko'chirish"** chiqadi (mijozlar, to'lovlar, kurslar, sozlamalar). Boshqa kompyuterdagi ma'lumot —
+   o'sha yerda JSON zaxira olib, bulutda Sozlamalar → Ma'lumotlar → "Zaxirani tiklash".
+
+### Nima qayerda
+
+| Narsa | Joyi |
+| --- | --- |
+| Jadvallar, RLS, RPC, triggerlar | `supabase/migrations/20261106000001_init.sql` |
+| Lokal Supabase uchun namunaviy markaz | `supabase/seed.sql` (`supabase start` → demo@eduflow.uz / DemoParol2026) |
+| Xodim qo'shish / parol tiklash | `supabase/functions/staff/index.ts` |
+| RLS testlari (oddiy PostgreSQL'da) | `supabase/tests/run-local.sh` |
+| Ilovadagi adapter | `src/data/` (`supabase.ts`, `mappers.ts`, `diff.ts`), `src/context/CloudAuthProvider.tsx` |
+
+- Ruxsatlar `has_permission()` da — `src/auth/permissions.ts` dagi jadval bilan bir xil; birini o'zgartirsangiz, ikkinchisini ham.
+- Markaz o'z tarifini, holatini va muddatini o'zgartira olmaydi (ustun huquqlari); buni faqat sotuvchi `owner_update_org` bilan qiladi.
+- Muddat tugasa yoki markaz to'xtatilsa — RLS faqat o'qishga ruxsat beradi, ma'lumot o'chmaydi.
+- O'chirish — `deleted_at` (savatcha, `trash_move` / `trash_restore`), butunlay o'chirish — faqat savatchadan.
+- Amallar jurnali (`audit_log`) server triggerlari bilan yoziladi; ilova faqat kirish, eksport va zaxira hodisalarini yuboradi.
+
+### Ma'lumot joylashuvi (muhim)
+
+O'zbekiston qonunchiligiga ko'ra fuqarolarning shaxsga doir ma'lumotlari O'zbekiston hududidagi serverlarda saqlanishi kerak.
+Supabase'ning bunday regioni yo'q. Bulutli rejimni mijozlarga sotishdan oldin **yurist bilan maslahatlashing**: muqobil — Supabase'ni
+(ochiq kodli) O'zbekistondagi serverda o'zingiz joylashtirish (self-hosted), sxema va ilova o'zgarishsiz ishlaydi.
+
 ## Deploy
 
 ### Vercel
@@ -250,8 +318,7 @@ zaxirani muntazam yuklab oling.
 2. Sozlamalar `netlify.toml` dan olinadi (Node 22, `dist`, SPA redirect, kesh headerlari).
 3. **Deploy site** ni bosing.
 
-Deploydan so'ng `index.html` dagi `og:image` ni to'liq manzil bilan almashtiring (masalan, `https://sizning-domen.uz/og-image.jpg`) —
-ijtimoiy tarmoqlardagi ko'rinish uchun.
+`og:url`, `canonical` va to'liq `og:image` build paytida qo'shiladi: Vercel'da avtomatik, boshqa joyda `VITE_SITE_URL` bering.
 
 > Parol hashi Web Crypto API orqali hisoblanadi va u faqat **HTTPS** yoki `localhost` da ishlaydi. Vercel va Netlify
 > avtomatik HTTPS beradi.
@@ -262,7 +329,8 @@ ijtimoiy tarmoqlardagi ko'rinish uchun.
 
 ```
 default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
-font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'
 ```
 
 - Inline skript yo'q: mavzuni oldindan qo'llovchi skript `public/theme-init.js` faylida, shuning uchun hash kerak emas.

@@ -8,6 +8,7 @@ import type { ActionResult, AuthContextValue } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
 import { logAudit } from '../services/audit.service'
 import type { AuditAction } from '../services/audit.service'
+import { isCloudEnabled } from '../data/config'
 import { closeDemoWorkspace, openDemoWorkspace } from '../services/demo.service'
 import { computeAccess, loadSubscription, startTrialIfMissing } from '../services/subscription.service'
 import {
@@ -92,6 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const leaveDemo = () => {
     if (session) endSession(session.id)
     closeDemoWorkspace()
+    // Bulutli rejim yoqilgan bo'lsa — haqiqiy (Supabase) kirishga qaytish uchun sahifa qayta ochiladi
+    if (isCloudEnabled()) {
+      window.location.reload()
+      return
+    }
     setMode('main')
     setSubscription(loadSubscription())
     setUsers(staff.loadUsers())

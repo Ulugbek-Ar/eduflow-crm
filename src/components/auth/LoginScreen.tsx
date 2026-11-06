@@ -46,8 +46,32 @@ export function DemoEntry() {
   )
 }
 
-export function LoginScreen() {
-  const { login } = useAuth()
+// Bulutli rejimda: email bilan, parol tiklash havolasi emailga, ro'yxatdan o'tish (onSignUp)
+function CloudReset({ initialEmail }: { initialEmail: string }) {
+  const { cloud } = useAuth()
+  const [email, setEmail] = useState(initialEmail)
+  const [notice, setNotice] = useState('')
+  if (!cloud) return null
+  return (
+    <div className="form">
+      <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={async () => {
+          const result = await cloud.sendPasswordReset(email)
+          setNotice(result.ok ? tr('Parolni tiklash havolasi emailingizga yuborildi.') : result.error)
+        }}
+      >
+        {tr('Havolani yuborish')}
+      </Button>
+      {notice && <p role="status">{notice}</p>}
+    </div>
+  )
+}
+
+export function LoginScreen({ onSignUp }: { onSignUp?: () => void }) {
+  const { login, cloud } = useAuth()
   const [form, setForm] = useState({ login: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -114,7 +138,8 @@ export function LoginScreen() {
           )}
 
           <Input
-            label={tr('Login')}
+            label={cloud ? 'Email' : tr('Login')}
+            type={cloud ? 'email' : 'text'}
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
@@ -149,10 +174,19 @@ export function LoginScreen() {
 
           <details className="auth-help">
             <summary>{tr('Parolni unutdingizmi?')}</summary>
-            <p>
-              {tr('Markaz administratoridan parolni tiklashni so\'rang:')} <strong>{tr('Boshqaruv → Xodimlar → Parolni tiklash')}</strong>{tr('. U sizga vaqtinchalik parol beradi, kirgach o\'zingiz yangisini o\'rnatasiz.')}
-            </p>
+            {cloud ? (
+              <CloudReset initialEmail={form.login} />
+            ) : (
+              <p>
+                {tr('Markaz administratoridan parolni tiklashni so\'rang:')} <strong>{tr('Boshqaruv → Xodimlar → Parolni tiklash')}</strong>{tr('. U sizga vaqtinchalik parol beradi, kirgach o\'zingiz yangisini o\'rnatasiz.')}
+              </p>
+            )}
           </details>
+          {onSignUp && (
+            <button type="button" className="link-btn auth-signup" onClick={onSignUp}>
+              {tr('Markazingiz hali ro\'yxatdan o\'tmaganmi? Ro\'yxatdan o\'tish')}
+            </button>
+          )}
         </form>
         <DemoEntry />
       </div>

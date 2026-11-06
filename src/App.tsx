@@ -19,6 +19,8 @@ import { LoginScreen } from './components/auth/LoginScreen'
 import { SetupWizard } from './components/onboarding/SetupWizard'
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
 import { SetupAdminScreen } from './components/auth/SetupAdminScreen'
+import { CloudDataGate, CloudLoading, CloudSignUpScreen } from './components/auth/CloudScreens'
+import { isCloudEnabled } from './data/config'
 import { ToastProvider } from './components/ui/Toast'
 import { NAV_ITEMS } from './constants/navigation'
 import { AuthProvider } from './context/AuthContext'
@@ -26,7 +28,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { DashboardProvider } from './context/DashboardContext'
 import { useDashboard } from './context/useDashboard'
 import { useAuth } from './hooks/useAuth'
-import { isFirstRun } from './services/storage.service'
+import { getStorageNamespace, isFirstRun } from './services/storage.service'
 import { pageTitle } from './constants/app'
 import { cx } from './utils/cx'
 import { canOpenSection } from './auth/permissions'
@@ -209,8 +211,9 @@ function Shell() {
 }
 
 function AuthGate() {
-  const { user, needsSetup, mode, enterDemo } = useAuth()
+  const { user, needsSetup, mode, enterDemo, loading, cloud } = useAuth()
   const [firstRunDone, setFirstRunDone] = useState(false)
+  const [signUp, setSignUp] = useState(false)
   // Landing'dagi "Demo'ni ko'rish" -> /app?demo=1: kirilmagan bo'lsa demo markaz darhol ochiladi
   const openDemoFromLink = useEffectEvent(() => {
     const params = new URLSearchParams(window.location.search)
@@ -219,9 +222,21 @@ function AuthGate() {
     if (!user) enterDemo()
   })
   useEffect(() => openDemoFromLink(), [])
-  if (!user) return needsSetup ? <SetupAdminScreen /> : <LoginScreen />
+  if (loading) return <CloudLoading />
+  if (!user) {
+    if (cloud && signUp) return <CloudSignUpScreen cloud={cloud} onBack={() => setSignUp(false)} />
+    return needsSetup ? <SetupAdminScreen /> : <LoginScreen onSignUp={cloud ? () => setSignUp(true) : undefined} />
+  }
   // Vaqtinchalik parol bilan kirilgan — avval yangi parol
   if (user.mustChange) return <ForcePasswordChange />
+  // Bulutli rejim: ma'lumot serverdan (sozlash ustasi o'rniga — Bosh sahifadagi "Boshlash" ro'yxati)
+  if (cloud) {
+    return (
+      <CloudDataGate key={user.id} cloud={cloud}>
+        <Shell />
+      </CloudDataGate>
+    )
+  }
   // Birinchi kirish: sozlash ustasi (markaz, kurslar, xodimlar, ma'lumot). Ma'lumot avtomatik yozilmaydi
   if (!firstRunDone && isFirstRun()) return <SetupWizard onDone={() => setFirstRunDone(true)} />
   // Rejim yoki xodim almashsa, panel holati (bo'lim, filtrlar) noldan boshlanadi
@@ -232,15 +247,27 @@ function AuthGate() {
   )
 }
 
+// Kalitlar berilgan va tab demo rejimda emas — bulutli (Supabase) rejim; supabase-js faqat shunda yuklanadi
+const CLOUD_MODE = isCloudEnabled() && getStorageNamespace() !== 'demo'
+const CloudAuthProvider = lazy(() => import('./context/CloudAuthProvider').then((m) => ({ default: m.CloudAuthProvider })))
+
 export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
           <ConfirmProvider>
-            <AuthProvider>
-              <AuthGate />
-            </AuthProvider>
+            {CLOUD_MODE ? (
+              <Suspense fallback={<CloudLoading />}>
+                <CloudAuthProvider>
+                  <AuthGate />
+                </CloudAuthProvider>
+              </Suspense>
+            ) : (
+              <AuthProvider>
+                <AuthGate />
+              </AuthProvider>
+            )}
           </ConfirmProvider>
         </ToastProvider>
       </ThemeProvider>

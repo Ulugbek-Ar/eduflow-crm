@@ -173,7 +173,34 @@ export function subscribeAudit(listener: () => void): () => void {
   }
 }
 
+// Bulutli rejim: yozuvlar serverda (log — ilova hodisalari, list — o'qish). Lokal rejimda null
+export interface AuditBackend {
+  log: (entry: AuditEntry) => Promise<void>
+  list: () => Promise<AuditEntry[]>
+}
+
+let backend: AuditBackend | null = null
+let remote: AuditEntry[] = []
+
+export function setAuditBackend(next: AuditBackend | null): void {
+  backend = next
+  remote = []
+  notify()
+}
+
+// Jurnal oynasi ochilganda: bulutda serverdan qayta o'qiladi (lokalda hech narsa qilmaydi)
+export async function refreshAudit(): Promise<void> {
+  if (!backend) return
+  try {
+    remote = await backend.list()
+  } catch {
+    // Tarmoq xatosi — eski ro'yxat qoladi
+  }
+  notify()
+}
+
 export function getAuditSnapshot(): AuditEntry[] {
+  if (backend) return remote
   snapshot ??= readAudit()
   return snapshot
 }
@@ -193,6 +220,10 @@ export function logAudit(actor: AuditActor | null, action: AuditAction, summary:
     ...(actor ? { role: actor.role } : {}),
     summary: summary.slice(0, 200),
     ...(entityId ? { entityId } : {}),
+  }
+  if (backend) {
+    backend.log(entry).catch(() => undefined)
+    return entry
   }
   // Jurnal yozilmasa ham asosiy amal to'xtamaydi (xotira to'lgan bo'lsa saqlash xatosi boshqa joyda ko'rsatiladi)
   setItem(AUDIT_KEY, prune([entry, ...readAudit(now.getTime())], now.getTime()))

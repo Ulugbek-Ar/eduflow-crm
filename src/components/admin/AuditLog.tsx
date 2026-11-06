@@ -1,5 +1,5 @@
 import { tr } from '../../i18n'
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { ROLE_LABELS } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
@@ -10,6 +10,7 @@ import {
   EMPTY_AUDIT_FILTERS,
   filterAudit,
   getAuditSnapshot,
+  refreshAudit,
   subscribeAudit,
 } from '../../services/audit.service'
 import type { AuditCategory, AuditFilters } from '../../services/audit.service'
@@ -41,6 +42,10 @@ export function AuditLog() {
   const { settings, logExport } = useDashboard()
   const { users } = useAuth()
   const entries = useSyncExternalStore(subscribeAudit, getAuditSnapshot)
+  // Bulutli rejimda jurnal serverdan o'qiladi
+  useEffect(() => {
+    refreshAudit()
+  }, [])
   const [filters, setFilters] = useState<AuditFilters>(EMPTY_AUDIT_FILTERS)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)

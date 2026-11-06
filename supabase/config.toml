@@ -1,0 +1,30 @@
+# Supabase CLI sozlamasi (supabase start / supabase db push). Batafsil: README → "Bulutli rejim (Supabase)"
+project_id = "eduflow-crm"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+port = 54322
+major_version = 16
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173/app"
+additional_redirect_urls = ["http://localhost:5173/app", "http://localhost:4173/app"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[functions.staff]
+verify_jwt = true

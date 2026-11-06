@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Muhit o'zgaruvchilari (kalitlar) — repozitoriyga tushmasin
+.env
+.env.*
+!.env.example

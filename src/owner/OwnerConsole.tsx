@@ -16,6 +16,8 @@ import { useConfirm } from '../hooks/useConfirm'
 import { useToast } from '../hooks/useToast'
 import { checkPassword, PBKDF2_ITERATIONS } from '../services/auth.service'
 import { formatDateWith, formatMoney, formatNumber } from '../utils/format'
+import { isCloudEnabled } from '../data/config'
+import { cloudTenantsRepository, ownerSignIn } from './cloudTenants'
 import { extendPatch, localTenantsRepository, monthlyRevenue, tenantDaysLeft, tenantEnd } from './tenants'
 import type { Tenant, TenantsRepository } from './tenants'
 import '../landing/landing.css'
@@ -62,12 +64,22 @@ function stateOf(t: Tenant, now: number): { label: string; tone: BadgeTone } {
   return t.plan === 'trial' ? { label: 'Sinov', tone: 'primary' } : { label: 'Faol', tone: 'paid' }
 }
 
-function OwnerLogin({ onDone }: { onDone: () => void }) {
+function OwnerLogin({ onDone, cloud }: { onDone: () => void; cloud: boolean }) {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (cloud) {
+      setBusy(true)
+      const result = await ownerSignIn(email, password)
+      setBusy(false)
+      if (result === 'ok') return onDone()
+      setError(result === 'not-owner' ? 'Bu hisob sotuvchi emas (platform_admins jadvalida yo\'q)' : 'Email yoki parol noto\'g\'ri')
+      setPassword('')
+      return
+    }
     const [salt, passwordHash] = OWNER_HASH.split(':')
     setBusy(true)
     const ok = Boolean(salt && passwordHash) && (await checkPassword({ salt, passwordHash, algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS }, password))
@@ -92,7 +104,8 @@ function OwnerLogin({ onDone }: { onDone: () => void }) {
             <p className="muted">{APP_NAME} · markazlar va tariflar</p>
           </div>
         </div>
-        <PasswordInput label="Parol" autoComplete="current-password" value={password} error={error} onChange={(e) => setPassword(e.target.value)} autoFocus />
+        {cloud && <Input label="Email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />}
+        <PasswordInput label="Parol" autoComplete="current-password" value={password} error={error} onChange={(e) => setPassword(e.target.value)} autoFocus={!cloud} />
         <Button type="submit" className="btn-block" disabled={busy || !password}>
           {busy ? 'Tekshirilmoqda...' : 'Kirish'}
         </Button>
@@ -266,14 +279,17 @@ function Console({ repo }: { repo: TenantsRepository }) {
   )
 }
 
-export function OwnerConsole({ repo = localTenantsRepository() }: { repo?: TenantsRepository }) {
-  const [unlocked, setUnlocked] = useState(() => !OWNER_HASH || sessionStorage.getItem(SESSION_KEY) === '1')
+export function OwnerConsole({ repo: given }: { repo?: TenantsRepository }) {
+  // Supabase ulangan bo'lsa — haqiqiy markazlar (sotuvchi email/parol bilan kiradi); aks holda namunaviy ro'yxat
+  const cloud = !given && isCloudEnabled()
+  const [repo] = useState<TenantsRepository>(() => given ?? (cloud ? cloudTenantsRepository() : localTenantsRepository()))
+  const [unlocked, setUnlocked] = useState(() => !cloud && (!OWNER_HASH || sessionStorage.getItem(SESSION_KEY) === '1'))
   useEffect(() => {
     document.title = `Sotuvchi paneli · ${APP_NAME}`
   }, [])
   return (
     <ToastProvider>
-      <ConfirmProvider>{unlocked ? <Console repo={repo} /> : <OwnerLogin onDone={() => setUnlocked(true)} />}</ConfirmProvider>
+      <ConfirmProvider>{unlocked ? <Console repo={repo} /> : <OwnerLogin cloud={cloud} onDone={() => setUnlocked(true)} />}</ConfirmProvider>
     </ToastProvider>
   )
 }

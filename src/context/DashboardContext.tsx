@@ -28,6 +28,8 @@ import {
   STORAGE_KEYS,
 } from '../services/storage.service'
 import type { SaveResult, StoredData } from '../services/storage.service'
+import type { CloudSnapshot, CloudSync } from '../data/supabase'
+import type { Settings } from '../types/dashboard.types'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, ModalType, Section, SortState } from '../types/dashboard.types'
 import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
@@ -88,7 +90,13 @@ function modalPermission(modal: NonNullable<ModalState>): Permission {
   return byType[modal.type]
 }
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
+// Bulutli rejim: boshlang'ich ma'lumot serverdan, o'zgarishlar CloudSync orqali
+export interface CloudBinding {
+  initial: CloudSnapshot
+  sync: CloudSync
+}
+
+export function DashboardProvider({ children, cloud }: { children: ReactNode; cloud?: CloudBinding }) {
   const toast = useToast()
   const confirm = useConfirm()
   const can = useCan()
@@ -97,8 +105,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Demo markazda rol almashtirilsa ham tanishtiruv qayta chiqmaydi
   const tourKey = authMode === 'demo' ? 'demo' : (actor?.userId ?? 'local')
   const [tourOpen, setTourOpen] = useState(() => Boolean(actor) && !isTourDone(tourKey))
-  const [initial] = useState(loadData)
-  const [trash, setTrash] = useState(() => loadTrash())
+  const [initial] = useState(() => (cloud ? { data: cloud.initial.data, dropped: 0 } : loadData()))
+  const [trash, setTrash] = useState(() => (cloud ? cloud.initial.trash : loadTrash()))
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref
   const unsavedRef = useRef(false)
   const startupNoticeRef = useRef(false)
@@ -107,7 +115,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState(initial.data.transactions)
   const [settings, setSettings] = useState(initial.data.settings)
   const [courses, setCourses] = useState(initial.data.courses)
-  const [isDemo, setIsDemo] = useState(isDemoMode)
+  const [isDemo, setIsDemo] = useState(() => !cloud && isDemoMode())
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
   const [activeSection, setSection] = useState<Section>('overview')
@@ -149,16 +157,37 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [saveMonitor])
 
   // Har bir ro'yxat o'zgarganda alohida yoziladi; natija reportSave orqali kuzatiladi
-  useEffect(() => onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers)), [customers])
-  useEffect(() => onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions)), [transactions])
-  useEffect(() => onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings)), [settings])
-  useEffect(() => onSaved(STORAGE_KEYS.courses, setItem(STORAGE_KEYS.courses, courses)), [courses])
-  useEffect(() => onSaved(TRASH_KEY, saveTrash(trash)), [trash])
+  // Bulut: oxirgi muvaffaqiyatli yuborilgan holat va navbat (o'zgarishlar ketma-ket, faqat farqi yuboriladi).
+  // Xato bo'lsa holat yangilanmaydi — keyingi o'zgarishda farq qayta yuboriladi
+  const synced = useRef(initial.data)
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  const pushCloud = useEffectEvent(<K extends 'customers' | 'transactions' | 'courses' | 'settings'>(key: K, next: StoredData[K]) => {
+    if (!cloud || synced.current[key] === next) return
+    queue.current = queue.current.then(async () => {
+      const prev = synced.current[key]
+      try {
+        if (key === 'settings') await cloud.sync.settings(next as Settings)
+        else await (cloud.sync[key] as (a: unknown, b: unknown) => Promise<void>)(prev, next)
+        synced.current = { ...synced.current, [key]: next }
+        onSaved(key, { ok: true })
+      } catch {
+        onSaved(key, { ok: false, reason: 'network' })
+      }
+    })
+  })
+
+  useEffect(() => (cloud ? pushCloud('customers', customers) : onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers))), [customers, cloud])
+  useEffect(() => (cloud ? pushCloud('transactions', transactions) : onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions))), [transactions, cloud])
+  useEffect(() => (cloud ? pushCloud('settings', settings) : onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings))), [settings, cloud])
+  useEffect(() => (cloud ? pushCloud('courses', courses) : onSaved(STORAGE_KEYS.courses, setItem(STORAGE_KEYS.courses, courses))), [courses, cloud])
+  useEffect(() => {
+    if (!cloud) onSaved(TRASH_KEY, saveTrash(trash))
+  }, [trash, cloud])
 
   // Boshqa tabda o'zgargan ma'lumotni shu tabga olib kelish (storage event faqat boshqa tablarda chiqadi)
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.storageArea !== localStorage) return
+      if (cloud || event.storageArea !== localStorage) return
       // Demo rejimda kalitlar boshqa nom maydonida (eduflow-demo:*)
       const is = (key: string) => event.key === null || event.key === physicalKey(key)
       const watched = [STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.courses, STORAGE_KEYS.demo, TRASH_KEY]
@@ -173,7 +202,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [])
+  }, [cloud])
 
   // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi
   const balance = cashBalance(transactions)
@@ -495,12 +524,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const entry = trash.find((e) => e.kind === kind && e.id === id)
       if (!entry) return
       setTrash((list) => list.filter((e) => e !== entry))
+      cloud?.sync.purge(entry.kind, [entry.id]).catch(() => reportSave('trash', { ok: false, reason: 'network' }))
       audit('trash.purge', entry.kind === 'transaction' ? txSummary(entry.item) : entry.item.name, id)
       toast.success(tr('Butunlay o\'chirildi'))
     },
     emptyTrash: () => {
       if (!allowed('trash.manage') || trash.length === 0) return
       audit('trash.purge', `Savatcha tozalandi: ${trash.length} ta yozuv`)
+      if (cloud) {
+        for (const kind of ['customer', 'transaction', 'course'] as const) {
+          cloud.sync.purge(kind, trash.filter((e) => e.kind === kind).map((e) => e.id)).catch(() => reportSave('trash', { ok: false, reason: 'network' }))
+        }
+      }
       setTrash([])
       toast.success(tr('Savatcha tozalandi'))
     },

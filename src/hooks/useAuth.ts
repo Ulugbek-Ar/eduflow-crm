@@ -2,7 +2,8 @@ import { createContext, useContext } from 'react'
 import type { Permission } from '../auth/permissions'
 import type { AuditActor } from '../services/audit.service'
 import type { Access, Subscription } from '../services/subscription.service'
-import type { StorageNamespace } from '../services/storage.service'
+import type { StorageNamespace, StoredData } from '../services/storage.service'
+import type { CloudOrg, CloudSnapshot, CloudSync } from '../data/supabase'
 import { displayName } from '../services/users.service'
 import type { NewUserInput, UserField, UserPatch } from '../services/users.service'
 import type { PublicUser, Role, SessionRecord } from '../types/user.types'
@@ -11,7 +12,20 @@ export type ActionResult = { ok: true } | { ok: false; field?: UserField; error:
 
 export type LoginResult = { ok: true } | { ok: false; reason: 'invalid' | 'blocked' }
 
+// Bulutli rejimga xos imkoniyatlar (lokal rejimda undefined)
+export interface CloudAuthExtras {
+  org: CloudOrg | null
+  loadSnapshot: () => Promise<CloudSnapshot>
+  createSync: (snapshot: CloudSnapshot) => CloudSync
+  signUp: (input: { email: string; password: string; orgName: string; fullName: string; title: string }) => Promise<ActionResult & { confirmEmail?: boolean }>
+  sendPasswordReset: (email: string) => Promise<ActionResult>
+  importLocal: (data: StoredData) => Promise<ActionResult>
+}
+
 export interface AuthContextValue {
+  // Bulutda seans tekshirilayotganda true
+  loading?: boolean
+  cloud?: CloudAuthExtras
   // Kirgan xodim (bo'lmasa null). Parol xeshi bu yerga chiqmaydi
   user: PublicUser | null
   sessionId: string | null

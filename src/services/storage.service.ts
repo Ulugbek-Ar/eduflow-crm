@@ -119,7 +119,7 @@ export function getItem<T>(key: StorageKey, fallback: T, guard: (value: unknown)
 }
 
 // 'quota' — brauzer xotirasi to'lgan; 'unavailable' — saqlash bloklangan yoki boshqa xato
-export type SaveFailure = 'quota' | 'unavailable'
+export type SaveFailure = 'quota' | 'unavailable' | 'network'
 export type SaveResult = { ok: true } | { ok: false; reason: SaveFailure }
 
 const SAVED: SaveResult = { ok: true }
@@ -161,6 +161,7 @@ export function combineResults(results: readonly SaveResult[]): SaveResult {
 }
 
 export function saveErrorMessage(reason: SaveFailure): string {
+  if (reason === 'network') return tr('O\'zgarish serverga yetib bormadi. Internetni tekshiring — keyingi o\'zgarishda qayta yuboriladi.')
   return reason === 'quota'
     ? tr('Ma\'lumot saqlanmadi: brauzer xotirasi to\'lgan. JSON zaxira oling.')
     : tr('Ma\'lumot saqlanmadi: brauzer saqlashni bloklagan. JSON zaxira oling.')

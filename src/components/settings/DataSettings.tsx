@@ -9,6 +9,7 @@ import { createBackup, parseBackup, STORAGE_LIMIT_BYTES } from '../../services/s
 import type { StoredData } from '../../services/storage.service'
 import { cx } from '../../utils/cx'
 import { formatKilobytes, formatPercent } from '../../utils/format'
+import { CloudMigration } from './CloudMigration'
 import { Button } from '../ui/Button'
 import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
@@ -91,6 +92,7 @@ export function DataSettings() {
 
   return (
     <div className="settings-rows">
+      <CloudMigration />
       <p className="muted">
         {tr('Brauzerda saqlangan:')} {customers.length} {tr('ta mijoz,')} {transactions.length} {tr('ta tranzaksiya.')}
       </p>
