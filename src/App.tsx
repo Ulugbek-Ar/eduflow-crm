@@ -2,6 +2,7 @@ import { tr } from './i18n'
 import { CustomerTable } from './components/customers/CustomerTable'
 import { DemoBar } from './components/layout/DemoBar'
 import { MobileNav } from './components/layout/MobileNav'
+import { OfflineBanner } from './components/layout/OfflineBanner'
 import { SubscriptionBanner } from './components/layout/SubscriptionBanner'
 import { PeriodBar } from './components/layout/PeriodBar'
 import { Header } from './components/layout/Header'
@@ -31,6 +32,7 @@ import { useAuth } from './hooks/useAuth'
 import { getStorageNamespace, isFirstRun } from './services/storage.service'
 import { pageTitle } from './constants/app'
 import { cx } from './utils/cx'
+import { loadWithRetry } from './utils/lazyRetry'
 import { canOpenSection } from './auth/permissions'
 
 function ActiveSection() {
@@ -78,17 +80,17 @@ function ActiveSection() {
 
 
 // Og'irroq bo'limlar va modallar alohida chunk'larda: birinchi ochilishda yuklanadigan JS kamayadi
-const loadTransactionTable = () => import('./components/finance/TransactionTable')
-const loadSettingsPanel = () => import('./components/settings/SettingsPanel')
-const loadCustomerForm = () => import('./components/customers/CustomerFormModal')
-const loadCustomerDetail = () => import('./components/customers/CustomerDetail')
-const loadTransactionForm = () => import('./components/finance/TransactionFormModal')
-const loadCoursesPanel = () => import('./components/courses/CoursesPanel')
-const loadAnalyticsPanel = () => import('./components/analytics/AnalyticsPanel')
-const loadCourseForm = () => import('./components/courses/CourseFormModal')
-const loadAdminPanel = () => import('./components/admin/AdminPanel')
-const loadReceipt = () => import('./components/print/ReceiptModal')
-const loadHelpPanel = () => import('./components/help/HelpPanel')
+const loadTransactionTable = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/finance/TransactionTable'), opts)
+const loadSettingsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/settings/SettingsPanel'), opts)
+const loadCustomerForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/customers/CustomerFormModal'), opts)
+const loadCustomerDetail = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/customers/CustomerDetail'), opts)
+const loadTransactionForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/finance/TransactionFormModal'), opts)
+const loadCoursesPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/courses/CoursesPanel'), opts)
+const loadAnalyticsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/analytics/AnalyticsPanel'), opts)
+const loadCourseForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/courses/CourseFormModal'), opts)
+const loadAdminPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/admin/AdminPanel'), opts)
+const loadReceipt = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/print/ReceiptModal'), opts)
+const loadHelpPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/help/HelpPanel'), opts)
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
@@ -101,12 +103,12 @@ const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.Co
 const AdminPanel = lazy(() => loadAdminPanel().then((m) => ({ default: m.AdminPanel })))
 const ReceiptModal = lazy(() => loadReceipt().then((m) => ({ default: m.ReceiptModal })))
 const HelpPanel = lazy(() => loadHelpPanel().then((m) => ({ default: m.HelpPanel })))
-const ProductTour = lazy(() => import('./components/onboarding/ProductTour').then((m) => ({ default: m.ProductTour })))
+const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
   for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel]) {
-    load().catch(() => {
+    load({ reload: false }).catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })
   }
@@ -179,6 +181,7 @@ function Shell() {
       <MobileNav />
       <div className="content">
         <DemoBar />
+        <OfflineBanner />
         <SubscriptionBanner />
         <Header />
         <main className="main" id="main-content" tabIndex={-1}>
@@ -249,7 +252,7 @@ function AuthGate() {
 
 // Kalitlar berilgan va tab demo rejimda emas — bulutli (Supabase) rejim; supabase-js faqat shunda yuklanadi
 const CLOUD_MODE = isCloudEnabled() && getStorageNamespace() !== 'demo'
-const CloudAuthProvider = lazy(() => import('./context/CloudAuthProvider').then((m) => ({ default: m.CloudAuthProvider })))
+const CloudAuthProvider = lazy(() => loadWithRetry(() => import('./context/CloudAuthProvider')).then((m) => ({ default: m.CloudAuthProvider })))
 
 export default function App() {
   return (
