@@ -1,0 +1,1 @@
+var e={telegram:``,phone:``,email:``};export{e as t};

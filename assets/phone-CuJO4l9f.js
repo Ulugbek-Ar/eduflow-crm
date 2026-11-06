@@ -1,0 +1,1 @@
+function e(e){let t=e.replace(/\D/g,``);return t.startsWith(`998`)&&(t=t.slice(3)),t.slice(0,9)}function t(t){let n=e(t),r=`+998`;return n.length>0&&(r+=` ${n.slice(0,2)}`),n.length>2&&(r+=` ${n.slice(2,5)}`),n.length>5&&(r+=` ${n.slice(5,7)}`),n.length>7&&(r+=` ${n.slice(7,9)}`),r}function n(t){return e(t).length===9}export{n,e as r,t};
