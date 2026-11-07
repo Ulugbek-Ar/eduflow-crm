@@ -216,8 +216,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: tr('Tarifingizda {0} tagacha xodim. Ko\'proq xodim uchun tarifni almashtiring.', { 0: access.staffLimit }) }
       }
       const result = await staff.addUser(input)
-      if (result.ok) audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
-      return fromResult(result)
+      if (!result.ok) return result
+      audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
+      setUsers(result.users)
+      return { ok: true, userId: result.user.id }
     },
     updateUser: (id, patch) => {
       if (!current || !allowed('staff.manage')) return DENIED

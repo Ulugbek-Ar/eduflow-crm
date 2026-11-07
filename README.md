@@ -171,6 +171,28 @@ qayta hisoblanadi.
 4. Qarz = max(0, kutilgan − to'langan); ortiqcha to'lov keyingi oyga o'tkazilmaydi.
 5. Ro'yxat qarzi kattasidan saralanadi; "Kutilmoqda" to'lovlar alohida ro'yxatda.
 
+**Kirim qaysi guruhga tegishli** (`src/utils/attribution.ts` — maosh va guruh bo'yicha qarz uchun yagona qoida):
+
+| Holat | Kirim qayerga hisoblanadi |
+| --- | --- |
+| Tranzaksiyada `enrollmentId` bor | O'sha o'qish (guruh) |
+| `enrollmentId` yo'q | To'lov sanasida o'quvchining shu kurs (`Customer.course`) bo'yicha faol o'qishi; bir nechta bo'lsa — eng oldin boshlangani |
+| Bunday o'qish topilmadi | Hech bir guruhga ham, maoshga ham hisoblanmaydi |
+
+**O'qituvchi maoshi (oy bo'yicha, `src/utils/payroll.ts`):**
+
+| Ko'rsatkich | Formula |
+| --- | --- |
+| Yig'ilgan kirim | oy ichidagi "To'langan" kirimlar, yuqoridagi qoida bo'yicha o'qituvchi guruhlariga tegishlilari |
+| Faol o'quvchilar | o'qituvchi guruhlarida oy ichida kamida bir kun faol (butun oy pauzada emas) bo'lgan o'quvchilar, har biri bir marta |
+| Hisoblangan maosh | `fixed` — belgilangan summa; `percent` — yig'ilgan kirim × foiz; `perStudent` — faol o'quvchilar × summa |
+| To'langan | shu o'qituvchiga (`teacherId`) shu oy uchun (`period`, bo'lmasa xarajat sanasining oyi) "To'langan" maosh xarajatlari |
+| Qolgan | max(0, hisoblangan − to'langan) |
+
+"Maosh to'lash" (`payroll.manage`) kassadan `salary` kategoriyasida, `teacherId` va `period` bilan xarajat yozadi; xarajat sanasi —
+to'langan kun. Oy o'rtasida guruh almashgan o'quvchining kirimi to'lov sanasidagi guruhga, chegirmali o'quvchida — haqiqatda
+to'langan summa bo'yicha hisoblanadi (testlar: `src/utils/payroll.test.ts`).
+
 ## Texnologiyalar
 
 React 19 · TypeScript 7 · Vite 8 · React Compiler · Vitest · Testing Library · Playwright. Runtime bog'liqliklar: `react`, `react-dom` va

@@ -134,7 +134,13 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
     addUser: async (input) => {
       if (!allowed('staff.manage')) return { ok: false, error: tr('Bu amal uchun ruxsatingiz yo\'q') }
       if (!EMAIL.test(input.login.trim())) return { ok: false, field: 'login', error: tr('Bulutli rejimda login — xodimning emaili') }
-      return run(() => cloudApi.inviteStaff({ email: input.login, fullName: input.fullName, title: input.title, role: input.role, password: input.password }))
+      try {
+        const created = await cloudApi.inviteStaff({ email: input.login, fullName: input.fullName, title: input.title, role: input.role, password: input.password, teacherId: input.teacherId })
+        refresh()
+        return { ok: true, userId: created.id }
+      } catch (error) {
+        return { ok: false, error: message(error) }
+      }
     },
     updateUser: (id, patch) => {
       if (!allowed('staff.manage')) return { ok: false, error: tr('Bu amal uchun ruxsatingiz yo\'q') }

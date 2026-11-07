@@ -70,6 +70,8 @@ function ActiveSection() {
       )
     case 'courses':
       return <CoursesPanel />
+    case 'teachers':
+      return <TeachersPanel />
     case 'analytics':
       return <AnalyticsPanel />
     case 'admin':
@@ -97,6 +99,8 @@ const loadHelpPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import
 const loadGroupsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupsPanel'), opts)
 const loadGroupDetail = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupDetail'), opts)
 const loadGroupForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupFormModal'), opts)
+const loadTeachersPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/teachers/TeachersPanel'), opts)
+const loadTeacherForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/teachers/TeacherFormModal'), opts)
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
@@ -112,6 +116,8 @@ const HelpPanel = lazy(() => loadHelpPanel().then((m) => ({ default: m.HelpPanel
 const GroupsPanel = lazy(() => loadGroupsPanel().then((m) => ({ default: m.GroupsPanel })))
 const GroupDetail = lazy(() => loadGroupDetail().then((m) => ({ default: m.GroupDetail })))
 const GroupFormModal = lazy(() => loadGroupForm().then((m) => ({ default: m.GroupFormModal })))
+const TeachersPanel = lazy(() => loadTeachersPanel().then((m) => ({ default: m.TeachersPanel })))
+const TeacherFormModal = lazy(() => loadTeacherForm().then((m) => ({ default: m.TeacherFormModal })))
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
@@ -209,6 +215,7 @@ function Shell() {
         {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
         {modal?.type === 'receipt' && <ReceiptModal key={modal.payload.id} transactionId={modal.payload.id} />}
         {modal?.type === 'group' && <GroupFormModal key={modal.payload?.id ?? 'new'} groupId={modal.payload?.id} />}
+        {modal?.type === 'teacher' && <TeacherFormModal key={modal.payload?.id ?? 'new'} teacherId={modal.payload?.id} />}
         {modal?.type === 'groupDetail' && <GroupDetail key={modal.payload.id} groupId={modal.payload.id} tab={modal.payload.tab} />}
         {modal?.type === 'transaction' && (
           <TransactionFormModal

@@ -233,7 +233,7 @@ async function invokeStaff(body: Record<string, unknown>): Promise<{ id?: string
   return data as { id?: string; password: string }
 }
 
-export function inviteStaff(input: { email: string; fullName: string; title: string; role: Role; password: string }) {
+export function inviteStaff(input: { email: string; fullName: string; title: string; role: Role; password: string; teacherId?: string }) {
   return invokeStaff({ action: 'invite', ...input })
 }
 

@@ -128,6 +128,8 @@ export interface NewUserInput {
   login: string
   role: Role
   password: string
+  // O'qituvchi kirishi: shu o'qituvchi yozuviga bog'lanadi (bulutda Edge Function teachers.user_id ni yozadi)
+  teacherId?: string
 }
 
 function validateProfile(fullName: string, title: string): { field: UserField; error: string } | null {

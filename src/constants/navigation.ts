@@ -150,6 +150,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'groups', label: tr('Guruhlar'), icon: 'layers' },
   { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
   { id: 'courses', label: tr('Kurslar va xizmatlar'), icon: 'bookOpen' },
+  { id: 'teachers', label: tr('O\'qituvchilar'), icon: 'briefcase' },
   { id: 'analytics', label: tr('Tahlil va hisobotlar'), icon: 'barChart' },
   { id: 'admin', label: tr('Boshqaruv'), icon: 'shield' },
   { id: 'settings', label: tr('Sozlamalar'), icon: 'settings' },

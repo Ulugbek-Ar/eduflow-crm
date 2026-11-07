@@ -16,6 +16,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
       'Guruhlar',
       'Moliya va kassa',
       'Kurslar va xizmatlar',
+      'O\'qituvchilar',
       'Tahlil va hisobotlar',
       'Boshqaruv',
       'Sozlamalar',
