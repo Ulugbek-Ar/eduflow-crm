@@ -19,6 +19,8 @@ bitta brauzer ilovasida. Interfeys o'zbek (lotin) va rus tillarida, telefonda ha
 
 Standart parol yo'q: birinchi ochilishda **sozlash ustasi** markaz nomi va administrator hisobini yaratadi.
 
+> **Ishga tushirish (Supabase, Vercel, Pages, domen) — qadam-baqadam runbook: [DEPLOY.md](DEPLOY.md).**
+
 | Yorug' mavzu | Qorong'i mavzu |
 | --- | --- |
 | ![Umumiy ko'rinish](docs/overview-light.jpg) | ![Umumiy ko'rinish — qorong'i](docs/overview-dark.jpg) |
@@ -195,7 +197,8 @@ Ketma-ket 5 ta noto'g'ri parol urinishidan keyin kirish bloklanadi: 30 s → 60 
 | Buyruq | Vazifasi |
 | --- | --- |
 | `npm run dev` | Ishlab chiqish serveri |
-| `npm run build` | Tur tekshiruvi va production build (`dist/`) |
+| `npm run build` | Tur tekshiruvi va production build (`dist/`), so'ng `scripts/spa-routes.mjs` (sahifa nusxalari, sitemap) |
+| `npm run build:pages` | Namoyish sayti build'i (`site/`, `/eduflow-crm/` ostida, 404.html va .nojekyll bilan) |
 | `npm run preview` | Build natijasini lokal ko'rish (prod CSP sarlavhasi bilan) |
 | `npm run lint` | Oxlint (ogohlantirishlar ham xato hisoblanadi) |
 | `npm run test` / `test:watch` | Vitest: unit va komponent testlari |
@@ -370,10 +373,20 @@ Supabase'ning bunday regioni yo'q. Bulutli rejimni mijozlarga sotishdan oldin **
 
 ### GitHub Pages (faqat demo)
 
-`.github/workflows/pages.yml` `main` ga har push'da `npm run check` dan so'ng `--base /eduflow-crm/` va `VITE_DEMO_ONLY=1`
-bilan yig'ib `gh-pages` branch'iga joylaydi. Repozitoriya *Settings → Pages*: manba — `gh-pages` branch. *Settings →
-Secrets and variables → Actions → Variables* ga `MAIN_SITE_URL` (Vercel manzili) qo'shing — demo'dagi "Ro'yxatdan o'tish"
-shu yerga olib boradi.
+`.github/workflows/pages.yml` `main` ga har push'da `npm run check` dan so'ng `npm run build:pages` (`--base /eduflow-crm/`,
+`VITE_DEMO_ONLY=1`) bilan yig'ib `gh-pages` branch'iga joylaydi. Repozitoriya *Settings → Pages*: manba — `gh-pages` branch.
+*Settings → Secrets and variables → Actions → Variables*: `MAIN_SITE_URL` (Vercel manzili) — "Bepul sinash" va tariflar
+shu saytning `/app` sahifasiga olib boradi; `SUPPORT_TELEGRAM`, `SUPPORT_PHONE`, `SUPPORT_EMAIL` — footer, Yordam va
+"Ulanish uchun ariza". Hech biri berilmasa workflow `::warning::` chiqaradi va landing'da faqat demo qoladi (berk ko'cha yo'q).
+
+**Deep link'lar.** `scripts/spa-routes.mjs` build'dan keyin `app/`, `privacy/`, `terms/`, `owner/` papkalariga `index.html`
+nusxasini (o'z `<title>`, `canonical`, `og:url`; `/app` va `/owner` da `noindex`) va `sitemap.xml` ni yozadi — shuning uchun
+`/eduflow-crm/app` ham **200** qaytaradi (ilgari `404.html` orqali 404 status bilan ochilardi). `npm run build` ham shu skriptni
+ishga tushiradi. E2E `e2e/pages.spec.ts` Pages'ni taqlid qiluvchi serverda (`scripts/pages-server.mjs`) buni tekshiradi.
+
+> Pages sayti pastki papkada (`/eduflow-crm/`) — **`robots.txt` u yerda ishlamaydi** (qidiruv tizimlari uni faqat domen
+> ildizidan o'qiydi). Indekslanmasligi kerak bo'lgan sahifalarda `<meta name="robots" content="noindex">` bor. Vercel'dagi
+> asosiy saytda `robots.txt` ildizda va `Sitemap:` qatori bilan ishlaydi.
 
 ### Netlify (ixtiyoriy)
 

@@ -31,3 +31,6 @@ dist-ssr
 # Playwright natijalari
 test-results/
 playwright-report/
+
+# GitHub Pages build (npm run build:pages)
+site/

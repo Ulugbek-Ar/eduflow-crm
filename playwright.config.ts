@@ -19,10 +19,26 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
-  webServer: {
-    command: 'npx vite preview --port 4174 --strictPort',
-    url: 'http://localhost:4174',
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: 'npx vite preview --port 4174 --strictPort',
+      url: 'http://localhost:4174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    // GitHub Pages taqlidi (e2e/pages.spec.ts): namoyish build'i /eduflow-crm/ ostida, yo'q fayl — 404.html (404 status)
+    {
+      command: 'npm run build:pages && node scripts/pages-server.mjs --dir site --base /eduflow-crm/ --port 4175',
+      url: 'http://localhost:4175/eduflow-crm/',
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      env: {
+        VITE_DEMO_ONLY: '1',
+        VITE_SITE_URL: 'https://ulugbek-ar.github.io/eduflow-crm',
+        VITE_SUPPORT_TELEGRAM: '@eduflow_uz',
+        VITE_SUPPORT_PHONE: '+998 90 000 00 00',
+        VITE_MAIN_SITE_URL: '',
+      },
+    },
+  ],
 })

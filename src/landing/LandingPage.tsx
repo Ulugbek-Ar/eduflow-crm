@@ -1,14 +1,36 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { APP_NAME } from '../constants/app'
 import { Icon } from '../constants/navigation'
 import type { IconName } from '../constants/navigation'
 import { PLANS, TRIAL_DAYS } from '../constants/plans'
-import { SUPPORT_CONTACTS } from '../constants/support'
+import { contactLinks, DEMO_ONLY, hasSupportContacts, MAIN_SITE_URL } from '../constants/support'
 import { tr } from '../i18n'
 import { routeHref } from '../router'
 import { formatNumber } from '../utils/format'
 import { LanguageSwitch } from '../components/ui/LanguageSwitch'
+import { landingCtas } from './apply'
+import type { CtaAction } from './apply'
 import './landing.css'
+
+const ApplyModal = lazy(() => import('./ApplyModal').then((m) => ({ default: m.ApplyModal })))
+
+// Tugma yoki havola: ariza oynasini ochadi yoki manzilga olib boradi
+function Cta({ action, className, onApply, icon }: { action: CtaAction; className: string; onApply: () => void; icon?: IconName }) {
+  if (action.kind === 'apply') {
+    return (
+      <button type="button" className={className} onClick={onApply} aria-haspopup="dialog">
+        {icon && <Icon name={icon} size={16} />}
+        {action.label}
+      </button>
+    )
+  }
+  return (
+    <a className={className} href={action.href}>
+      {icon && <Icon name={icon} size={16} />}
+      {action.label}
+    </a>
+  )
+}
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}landing/${name}`
 
@@ -105,11 +127,15 @@ export function LandingPage() {
     document.title = `${APP_NAME} — ${tr('o\'quv markazlari uchun CRM')}`
   }, [])
 
-  const contacts = [
-    SUPPORT_CONTACTS.telegram && { label: 'Telegram', value: SUPPORT_CONTACTS.telegram, href: `https://t.me/${SUPPORT_CONTACTS.telegram.replace(/^@/, '')}` },
-    SUPPORT_CONTACTS.phone && { label: tr('Telefon'), value: SUPPORT_CONTACTS.phone, href: `tel:${SUPPORT_CONTACTS.phone.replace(/\s/g, '')}` },
-    SUPPORT_CONTACTS.email && { label: 'Email', value: SUPPORT_CONTACTS.email, href: `mailto:${SUPPORT_CONTACTS.email}` },
-  ].filter((c): c is { label: string; value: string; href: string } => Boolean(c))
+  const [applyOpen, setApplyOpen] = useState(false)
+  const contacts = contactLinks()
+  const trialLabel = tr('{0} kun bepul sinash', { 0: TRIAL_DAYS })
+  const ctas = landingCtas(
+    { demoOnly: DEMO_ONLY, mainSiteUrl: MAIN_SITE_URL, hasContacts: hasSupportContacts(), appHref: routeHref('app'), demoHref: routeHref('app', '?demo=1') },
+    trialLabel,
+  )
+  const openApply = () => setApplyOpen(true)
+  const primaryIcon: IconName | undefined = ctas.primary.kind === 'link' && ctas.primary.href.includes('demo=1') ? 'play' : undefined
 
   return (
     <div className="lp">
@@ -126,13 +152,8 @@ export function LandingPage() {
               {tr('Lidlar, to\'lovlar, qarzdorlar, kassa va hisobotlar — daftar va Excel\'siz. Administrator 10 daqiqada o\'rganadi.')}
             </p>
             <div className="lp-cta">
-              <a className="btn btn-primary lp-btn-lg" href={routeHref('app')}>
-                {tr('{0} kun bepul sinash', { 0: TRIAL_DAYS })}
-              </a>
-              <a className="btn btn-ghost lp-btn-lg" href={routeHref('app', '?demo=1')}>
-                <Icon name="play" size={16} />
-                {tr('Demo\'ni ko\'rish')}
-              </a>
+              <Cta action={ctas.primary} className="btn btn-primary lp-btn-lg" onApply={openApply} icon={primaryIcon} />
+              {ctas.secondary && <Cta action={ctas.secondary} className="btn btn-ghost lp-btn-lg" onApply={openApply} icon={ctas.secondary.kind === 'link' ? 'play' : 'mail'} />}
             </div>
             <p className="lp-note muted">{tr('Karta talab qilinmaydi · O\'zbek va rus tilida · Telefon va kompyuterda')}</p>
           </div>
@@ -225,9 +246,11 @@ export function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <a className={plan.highlighted ? 'btn btn-primary' : 'btn btn-ghost'} href={routeHref('app')}>
-                  {plan.id === 'trial' ? tr('Bepul boshlash') : tr('Sinovdan boshlash')}
-                </a>
+                <Cta
+                  action={ctas.plan.kind === 'link' && ctas.plan.label === trialLabel ? { ...ctas.plan, label: plan.id === 'trial' ? tr('Bepul boshlash') : tr('Sinovdan boshlash') } : ctas.plan}
+                  className={plan.highlighted ? 'btn btn-primary' : 'btn btn-ghost'}
+                  onApply={openApply}
+                />
               </article>
             ))}
           </div>
@@ -253,17 +276,13 @@ export function LandingPage() {
           <h2 id="final-title">{tr('Bugunoq boshlang')}</h2>
           <p>{tr('Ro\'yxatdan o\'ting, kurslaringizni kiriting va birinchi to\'lovni yozing — hammasi 10 daqiqada.')}</p>
           <div className="lp-cta">
-            <a className="btn btn-primary lp-btn-lg" href={routeHref('app')}>
-              {tr('{0} kun bepul sinash', { 0: TRIAL_DAYS })}
-            </a>
-            <a className="btn btn-ghost lp-btn-lg" href={routeHref('app', '?demo=1')}>
-              {tr('Demo\'ni ko\'rish')}
-            </a>
+            <Cta action={ctas.primary} className="btn btn-primary lp-btn-lg" onApply={openApply} />
+            {ctas.secondary && <Cta action={ctas.secondary} className="btn btn-ghost lp-btn-lg" onApply={openApply} />}
           </div>
           {contacts.length > 0 && (
             <ul className="lp-contacts" aria-label={tr('Bog\'lanish')}>
               {contacts.map((c) => (
-                <li key={c.label}>
+                <li key={c.kind}>
                   <span className="muted">{c.label}:</span>{' '}
                   <a href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
                     {c.value}
@@ -279,12 +298,29 @@ export function LandingPage() {
         <span>
           © {APP_NAME} · {tr('O\'zbekistonda ishlab chiqilgan')}
         </span>
+        {contacts.length > 0 && (
+          <ul className="lp-footer-contacts" aria-label={tr('Sotuvchi bilan bog\'lanish')}>
+            {contacts.map((c) => (
+              <li key={c.kind}>
+                <a href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
+                  <Icon name={c.kind === 'phone' ? 'phone' : 'mail'} size={14} />
+                  {c.value}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
         <nav aria-label={tr('Huquqiy ma\'lumot')}>
           <a href={routeHref('privacy')}>{tr('Maxfiylik siyosati')}</a>
           <a href={routeHref('terms')}>{tr('Foydalanish shartlari')}</a>
           <a href={routeHref('app')}>{tr('Kirish')}</a>
         </nav>
       </footer>
+      {applyOpen && (
+        <Suspense fallback={null}>
+          <ApplyModal onClose={() => setApplyOpen(false)} siteUrl={typeof window === 'undefined' ? '' : `${window.location.origin}${routeHref('landing')}`} />
+        </Suspense>
+      )}
     </div>
   )
 }

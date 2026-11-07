@@ -853,6 +853,10 @@ body.scroll-locked {
   transition: background-color 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease);
 }
 
+a.btn {
+  text-decoration: none;
+}
+
 .btn-sm {
   height: 32px;
   padding: 0 12px;
@@ -2929,6 +2933,23 @@ body.scroll-locked {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.apply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.apply-actions .btn {
+  flex: 1 1 200px;
+  justify-content: center;
+}
+
+.apply-status {
+  min-height: 1.4em;
+  color: var(--success-text);
+  font-size: 0.88rem;
 }
 
 .small-note {
