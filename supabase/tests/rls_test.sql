@@ -130,6 +130,125 @@ do $$ begin
 end $$;
 reset role;
 
+-- 7a) v11: guruhlar, o'qituvchilar, davomat. A markazida ikki o'qituvchi va kassir
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000e1', 'oqituvchi1@a.uz'),
+  ('00000000-0000-0000-0000-0000000000e2', 'oqituvchi2@a.uz'),
+  ('00000000-0000-0000-0000-0000000000e3', 'kassir@a.uz');
+insert into public.profiles (id, organization_id, full_name, role) values
+  ('00000000-0000-0000-0000-0000000000e1', :'org_a', 'Nodira Saidova', 'teacher'),
+  ('00000000-0000-0000-0000-0000000000e2', :'org_a', 'Sherzod Aliyev', 'teacher'),
+  ('00000000-0000-0000-0000-0000000000e3', :'org_a', 'Sardor Qodirov', 'cashier');
+
+-- Administrator: o'qituvchilar (kirish bilan bog'langan), ikki guruh, o'quvchilar guruhga yoziladi
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into public.teachers (organization_id, id, name, subjects, pay_rule, user_id) values
+  (public.current_org_id(), 'p1', 'Nodira Saidova', '{Ingliz tili}', '{"type": "percent", "percent": 40}', '00000000-0000-0000-0000-0000000000e1'),
+  (public.current_org_id(), 'p2', 'Sherzod Aliyev', '{Python}', '{"type": "fixed", "amount": 6000000}', '00000000-0000-0000-0000-0000000000e2');
+insert into public.groups (organization_id, id, name, course_id, teacher_id, room, days, start_time, end_time, capacity, start_date) values
+  (public.current_org_id(), 'g1', 'IELTS — kechki', 'k1', 'p1', '101', '{mon,wed,fri}', '18:00', '19:30', 15, current_date - 60),
+  (public.current_org_id(), 'g2', 'Python — 1-guruh', 'k1', 'p2', '102', '{tue,thu}', '16:00', '17:30', 12, current_date - 60);
+insert into public.enrollments (organization_id, id, customer_id, group_id, start_date) values
+  (public.current_org_id(), 'e1', 'c1', 'g1', current_date - 30),
+  (public.current_org_id(), 'e2', 'c2', 'g2', current_date - 30);
+do $$ begin
+  if not exists (select 1 from public.audit_log where action = 'enrollment.create' and summary = 'Aziza Karimova — IELTS — kechki') then
+    raise exception 'FAIL: guruhga yozilish jurnalda yo''q';
+  end if;
+  -- Guruh bilan bog'liq soft delete ham faqat RPC orqali
+  begin
+    update public.groups set deleted_at = now() where id = 'g2';
+    raise exception 'FAIL: guruh deleted_at to''g''ridan-to''g''ri o''zgardi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
+-- O'qituvchi A: faqat o'z guruhi, o'quvchilari (telefonsiz roster), davomatni bugun va oxirgi N kunga
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e1');
+do $$ begin
+  if (select count(*) from public.groups) <> 1 or not exists (select 1 from public.groups where id = 'g1') then
+    raise exception 'FAIL: o''qituvchi A boshqa o''qituvchining guruhini ko''rdi';
+  end if;
+  if (select count(*) from public.enrollments) <> 1 then raise exception 'FAIL: o''qituvchi boshqa guruh o''quvchilarini ko''rdi'; end if;
+  if (select count(*) from public.customers) <> 0 then raise exception 'FAIL: o''qituvchi mijozlar jadvalini ko''rdi'; end if;
+  if (select count(*) from public.transactions) <> 0 then raise exception 'FAIL: o''qituvchi to''lovlarni ko''rdi'; end if;
+  if (select count(*) from public.teacher_roster()) <> 1 or (select phone from public.teacher_roster() limit 1) <> '' then
+    raise exception 'FAIL: roster noto''g''ri (telefon yashirilmagan yoki boshqa o''quvchi)';
+  end if;
+  if (select count(*) from public.teachers) <> 1 then raise exception 'FAIL: o''qituvchi boshqa o''qituvchining maosh qoidasini ko''rdi'; end if;
+  insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd1', 'g1', 'c1', current_date, 'present');
+  begin
+    insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd2', 'g2', 'c2', current_date, 'present');
+    raise exception 'FAIL: o''qituvchi A boshqa guruhga davomat yozdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd3', 'g1', 'c1', current_date - 10, 'absent');
+    raise exception 'FAIL: o''qituvchi 10 kun oldingi davomatni yozdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd4', 'g1', 'c1', current_date + 1, 'present');
+    raise exception 'FAIL: kelajak sanasiga davomat yozildi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.groups (organization_id, id, name, course_id, days, start_time, end_time, capacity, start_date)
+    values (public.current_org_id(), 'g9', 'Soxta', 'k1', '{mon}', '10:00', '11:00', 5, current_date);
+    raise exception 'FAIL: o''qituvchi guruh ochdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
+-- O'qituvchi B: A ning guruhi va davomatini ko'rmaydi
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e2');
+do $$ begin
+  if exists (select 1 from public.groups where id = 'g1') then raise exception 'FAIL: o''qituvchi B o''qituvchi A guruhini ko''rdi'; end if;
+  if (select count(*) from public.attendance) <> 0 then raise exception 'FAIL: o''qituvchi B boshqa guruh davomatini ko''rdi'; end if;
+  if (select count(*) from public.lesson_exceptions) <> 0 then raise exception 'FAIL: boshqa guruh darslari ko''rindi'; end if;
+end $$;
+reset role;
+
+-- Kassir: guruh va davomatni ko'radi, lekin davomat yoza olmaydi; maoshni ko'radi
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e3');
+do $$ begin
+  if (select count(*) from public.groups) <> 2 then raise exception 'FAIL: kassir guruhlarni ko''rmadi'; end if;
+  if (select count(*) from public.teachers) <> 2 then raise exception 'FAIL: kassir (payroll.view) o''qituvchilarni ko''rmadi'; end if;
+  begin
+    insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd5', 'g1', 'c1', current_date, 'absent');
+    raise exception 'FAIL: kassir davomat yozdi';
+  exception when insufficient_privilege then null; end;
+  update public.attendance set status = 'absent' where id = 'd1';
+  if (select status from public.attendance where id = 'd1') <> 'present' then raise exception 'FAIL: kassir davomatni o''zgartirdi'; end if;
+end $$;
+reset role;
+
+-- Administrator: istalgan kunga davomat, dars bekor qilish, jurnal, savatcha
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd6', 'g1', 'c1', current_date - 20, 'late');
+insert into public.lesson_exceptions (organization_id, id, group_id, date, reason) values (public.current_org_id(), 'x1', 'g1', current_date - 14, 'Bayram');
+do $$ begin
+  if not exists (select 1 from public.audit_log where action = 'attendance.mark' and summary like 'IELTS — kechki · % 1 ta') then raise exception 'FAIL: davomat jurnalda yo''q'; end if;
+  if not exists (select 1 from public.audit_log where action = 'lesson.cancel') then raise exception 'FAIL: bekor qilingan dars jurnalda yo''q'; end if;
+  if public.trash_move('enrollments', array['e2']) <> 1 then raise exception 'FAIL: o''qish savatchaga o''tmadi'; end if;
+  if public.trash_restore('enrollments', array['e2']) <> 1 then raise exception 'FAIL: o''qish tiklanmadi'; end if;
+  if (select count(*) from public.teacher_directory()) <> 2 then raise exception 'FAIL: teacher_directory'; end if;
+end $$;
+reset role;
+
+-- B markazi: A ning guruh, o'qituvchi, o'qish va davomatini ko'rmaydi va yoza olmaydi
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+do $$ begin
+  if (select count(*) from public.groups) + (select count(*) from public.teachers) + (select count(*) from public.enrollments)
+     + (select count(*) from public.attendance) + (select count(*) from public.lesson_exceptions) <> 0 then
+    raise exception 'FAIL: boshqa markazning guruh/davomat ma''lumoti ko''rindi';
+  end if;
+  begin
+    insert into public.groups (organization_id, id, name, course_id, days, start_time, end_time, capacity, start_date)
+    values ((select id from public.organizations where name like 'Bilim Plus%'), 'gx', 'Hack', 'k1', '{mon}', '10:00', '11:00', 5, current_date);
+    raise exception 'FAIL: boshqa markazga guruh yozildi';
+  exception when insufficient_privilege then null; when others then if sqlerrm like 'FAIL%' then raise; end if;
+  end;
+end $$;
+reset role;
+
 -- 8) Sotuvchi: markazlar ro'yxati, muddati tugasa markaz faqat o'qiydi
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000ff');
 do $$ begin

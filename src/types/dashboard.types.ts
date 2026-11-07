@@ -1,6 +1,18 @@
 import type { TransactionType } from './finance.types'
 
-export type Section = 'overview' | 'customers' | 'finance' | 'courses' | 'analytics' | 'admin' | 'settings' | 'help'
+export type Section =
+  | 'overview'
+  | 'customers'
+  | 'groups'
+  | 'schedule'
+  | 'attendance'
+  | 'finance'
+  | 'courses'
+  | 'teachers'
+  | 'analytics'
+  | 'admin'
+  | 'settings'
+  | 'help'
 
 export type DateRange = 'today' | '7d' | 'month' | 'year'
 
@@ -41,4 +53,13 @@ export interface Settings {
   // Header'dagi profil menyusi: to'liq ism (bo'sh bo'lsa login ko'rsatiladi) va lavozim
   profileName: string
   profileRole: string
+  // v11: o'qituvchi davomatni necha kun orqagacha tahrirlay oladi (bugun + N kun)
+  attendanceEditDays: number
+  // v11: birinchi oy narxi kunlar bo'yicha (proporsional) hisoblansinmi
+  prorateFirstMonth: boolean
+  // v11: oylik to'lov muddati — oyning shu sanasigacha (undan keyin to'lanmagan summa qarz)
+  paymentDueDay: number
+  // v11: qarz eslatmasi shablonlari ({ism} {summa} {kurs} {guruh} {oy} {markaz} {telefon})
+  reminderTemplateUz: string
+  reminderTemplateRu: string
 }

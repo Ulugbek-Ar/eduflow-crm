@@ -210,8 +210,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     users: users.map(staff.toPublicUser),
     addUser: async (input) => {
       if (!allowed('staff.manage')) return DENIED
-      const activeCount = users.filter((u) => u.status === 'active').length
-      if (access.staffLimit !== null && activeCount >= access.staffLimit) {
+      // O'qituvchi kirishlari tarif limitiga kirmaydi (markazda o'qituvchilar ko'p bo'ladi)
+      const activeCount = users.filter((u) => u.status === 'active' && u.role !== 'teacher').length
+      if (input.role !== 'teacher' && access.staffLimit !== null && activeCount >= access.staffLimit) {
         return { ok: false, error: tr('Tarifingizda {0} tagacha xodim. Ko\'proq xodim uchun tarifni almashtiring.', { 0: access.staffLimit }) }
       }
       const result = await staff.addUser(input)

@@ -13,7 +13,7 @@ const customer = (id: string, name: string, phone = '+998 90 000 00 00'): Custom
   source: 'instagram',
   createdAt: '2026-01-01T00:00:00.000Z',
 })
-const course: Course = { id: 'k1', name: 'Python asoslari', type: 'course', durationMonths: 4, monthlyPrice: 900_000, activeGroups: 1, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }
+const course: Course = { id: 'k1', name: 'Python asoslari', type: 'course', durationMonths: 4, monthlyPrice: 900_000, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }
 const tx = (id: string, note: string, date: string, customerId?: string): Transaction => ({
   id,
   type: 'income',

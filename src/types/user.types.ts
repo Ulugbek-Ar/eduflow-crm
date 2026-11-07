@@ -1,8 +1,9 @@
 import type { HashAlgo } from '../services/auth.service'
 
-// Rollar: Administrator — hamma narsa; Menejer — mijozlar, lidlar, to'lov qabul qilish;
-// Kassir / Buxgalter — moliya va hisobotlar; Kuzatuvchi — faqat ko'rish
-export type Role = 'admin' | 'manager' | 'cashier' | 'viewer'
+// Rollar: Administrator — hamma narsa; Menejer — mijozlar, lidlar, guruhlar, to'lov qabul qilish;
+// Kassir / Buxgalter — moliya, maosh va hisobotlar; Kuzatuvchi — faqat ko'rish;
+// O'qituvchi (v11) — faqat o'z guruhlari, jadvali va davomati
+export type Role = 'admin' | 'manager' | 'cashier' | 'viewer' | 'teacher'
 
 export type UserStatus = 'active' | 'blocked'
 

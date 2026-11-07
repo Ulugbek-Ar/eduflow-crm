@@ -9,7 +9,7 @@ const cors = {
 }
 
 const STAFF_LIMIT: Record<string, number | null> = { trial: 3, standard: 5, pro: null }
-const ROLES = ['admin', 'manager', 'cashier', 'viewer']
+const ROLES = ['admin', 'manager', 'cashier', 'viewer', 'teacher']
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -53,9 +53,10 @@ Deno.serve(async (req) => {
     if (!ROLES.includes(role)) return json(400, { error: 'Rol noto\'g\'ri' })
 
     const { data: org } = await admin.from('organizations').select('plan').eq('id', me.organization_id).single()
-    const { count } = await admin.from('profiles').select('id', { count: 'exact', head: true }).eq('organization_id', me.organization_id).eq('status', 'active')
+    // O'qituvchi kirishlari tarif limitiga kirmaydi
+    const { count } = await admin.from('profiles').select('id', { count: 'exact', head: true }).eq('organization_id', me.organization_id).eq('status', 'active').neq('role', 'teacher')
     const limit = STAFF_LIMIT[org?.plan ?? 'trial']
-    if (limit !== null && (count ?? 0) >= limit) return json(409, { error: `Tarifingizda ${limit} tagacha xodim` })
+    if (role !== 'teacher' && limit !== null && (count ?? 0) >= limit) return json(409, { error: `Tarifingizda ${limit} tagacha xodim` })
 
     // Ilova yaratgan vaqtinchalik parol (administrator uni xodimga beradi) yoki serverda yangisi
     const given = String(body.password ?? '')
@@ -75,6 +76,12 @@ Deno.serve(async (req) => {
       return json(400, { error: profileError.message })
     }
     await admin.from('audit_log').insert({ organization_id: me.organization_id, user_id: me.id, action: 'staff.create', summary: `${fullName} (${role})`, entity_id: created.user.id })
+    // O'qituvchi kirishi: o'qituvchi yozuviga bog'lanadi (RLS "o'z guruhlari"ni shu orqali aniqlaydi)
+    const teacherId = String(body.teacherId ?? '')
+    if (role === 'teacher' && teacherId) {
+      await admin.from('teachers').update({ user_id: created.user.id }).eq('organization_id', me.organization_id).eq('id', teacherId)
+      await admin.from('audit_log').insert({ organization_id: me.organization_id, user_id: me.id, action: 'teacher.access', summary: fullName, entity_id: teacherId })
+    }
     return json(200, { id: created.user.id, password })
   }
 

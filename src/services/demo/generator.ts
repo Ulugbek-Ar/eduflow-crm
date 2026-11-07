@@ -10,9 +10,12 @@ import type { Course } from '../../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../../types/customer.types'
 import type { DateRange } from '../../types/dashboard.types'
 import type { PaymentMethod, Transaction, TransactionCategory } from '../../types/finance.types'
+import type { AttendanceRecord, AttendanceStatus, LessonException } from '../../types/attendance.types'
+import type { Enrollment, Group, Weekday } from '../../types/group.types'
+import type { Teacher } from '../../types/teacher.types'
 import { getPeriod, getPreviousPeriod } from '../../utils/analytics'
 import type { Period } from '../../utils/analytics'
-import { createMockCourses } from '../../constants/mockData'
+import { createMockCourses, DEMO_TEACHER_USER_ID } from '../../constants/mockData'
 import { Rng } from './prng'
 
 const DAY = 86_400_000
@@ -196,6 +199,8 @@ export interface DemoStudentPlan {
   payDay: number
   method: PaymentMethod
   debtor: boolean
+  // Joriy oy pauzada (to'lov va davomat yo'q)
+  paused: boolean
 }
 
 interface LeadPlan {
@@ -266,6 +271,7 @@ function planStudents(now: Date, rng: Rng, courses: readonly Course[], historySt
         payDay: rng.int(1, 10),
         method: rng.weighted(METHOD_WEIGHTS),
         debtor: false,
+        paused: false,
       }
     }
     return null
@@ -350,13 +356,18 @@ export function buildPlan(now: Date): DemoPlan {
       payDay: rng.int(1, 10),
       method: rng.weighted(METHOD_WEIGHTS),
       debtor: false,
+      paused: false,
     }
   }
 
   // Qarzdorlar: o'tgan oydan oldin yozilgan faol o'quvchilardan 4–7 nafari
   const previousMonth = addMonths(monthStart(now.getFullYear(), now.getMonth()), -1)
   const candidates = rng.shuffle(students.filter((s) => s.status === 'active' && s.start.getTime() < previousMonth.getTime()))
-  for (const s of candidates.slice(0, rng.int(4, 7))) s.debtor = true
+  const debtorCount = rng.int(4, 7)
+  for (const s of candidates.slice(0, debtorCount)) s.debtor = true
+  // Bir o'quvchi shu oy pauzada (oilaviy sabab) — to'lov kutilmaydi
+  const pausedStudent = candidates[debtorCount]
+  if (pausedStudent) pausedStudent.paused = true
 
   // Yozilmagan lidlar: kuniga ~0.4 ta, eskilari ko'pincha "Bekor qilindi"
   const leads: LeadPlan[] = students.map((student) => ({ createdAt: student.leadAt, courseIndex: student.courseIndex, status: 'paid', student }))
@@ -443,6 +454,7 @@ function schedulePayments(plan: DemoPlan, rng: Rng): DemoPayment[] {
     const lastMonth = Math.min(monthIndex(student.end), currentMonth + 1)
     for (let m = monthIndex(student.start) + 1; m <= lastMonth; m++) {
       if (student.debtor && m >= currentMonth - 1) continue
+      if (student.paused && m === currentMonth) continue
       const month = new Date(Math.floor(m / 12), m % 12, 1)
       const day = workday(new Date(month.getFullYear(), month.getMonth(), student.payDay))
       payments.push({ student, date: atTime(day, rng.int(9, 19), rng.int(0, 59)), amount: fee, period: periodKey(month), first: false })
@@ -455,7 +467,17 @@ export interface DemoData {
   customers: Customer[]
   transactions: Transaction[]
   courses: Course[]
+  teachers: Teacher[]
+  groups: Group[]
+  enrollments: Enrollment[]
+  attendance: AttendanceRecord[]
+  lessonExceptions: LessonException[]
 }
+
+const WEEKDAY_BY_NUMBER: readonly Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+// Davomat oxirgi 8 hafta bo'yicha
+export const ATTENDANCE_WEEKS = 8
 
 export interface DemoBuild extends DemoData {
   plan: DemoPlan
@@ -519,6 +541,55 @@ export function generateDemo(now: Date = new Date()): DemoBuild {
   })
   const customerById = new Map(customers.map((c) => [c.id, c]))
 
+  // O'qituvchilar (birinchisi demo o'qituvchi xodimiga bog'langan), guruhlar va o'qishlar
+  const created = new Date(historyStart(plan).getTime() - 280 * DAY).toISOString()
+  const teachers: Teacher[] = DEMO_TEACHERS.map((t, index) => ({
+    id: `p${index + 1}`,
+    name: t.name,
+    phone: t.phone,
+    subjects: [...t.subjects],
+    payRule: { ...t.payRule },
+    ...(index === 0 ? { userId: DEMO_TEACHER_USER_ID } : {}),
+    status: 'active',
+    createdAt: created,
+  }))
+  const earliestStart = plan.students.reduce((min, st) => (st.start.getTime() < min ? st.start.getTime() : min), now.getTime())
+  const groups: Group[] = DEMO_GROUPS.map((g, index) => ({
+    id: `g${index + 1}`,
+    name: g.name,
+    courseId: courses[g.courseIndex].id,
+    teacherId: `p${g.teacherIndex + 1}`,
+    room: g.room,
+    days: g.days.map((d) => WEEKDAY_BY_NUMBER[d]),
+    startTime: g.startTime,
+    endTime: g.endTime,
+    capacity: plan.capacities[index],
+    startDate: dayKey(new Date(earliestStart)),
+    status: 'active',
+    createdAt: created,
+  }))
+  const thisMonthStart = monthStart(now.getFullYear(), now.getMonth())
+  const enrollmentIds = new Map<DemoStudentPlan, string>()
+  const enrollments: Enrollment[] = []
+  plan.students.forEach((student, index) => {
+    const customerId = customerIds.get(student)
+    if (!customerId) return
+    const id = `e${index + 1}`
+    enrollmentIds.set(student, id)
+    enrollments.push({
+      id,
+      customerId,
+      groupId: `g${student.groupIndex + 1}`,
+      startDate: dayKey(student.start),
+      // Faol o'quvchida — kurs davomiyligi bo'yicha rejadagi tugash sanasi
+      endDate: dayKey(student.end),
+      ...(student.discount > 0 ? { discountPercent: student.discount } : {}),
+      status: student.paused ? 'paused' : student.status,
+      ...(student.paused ? { pausedFrom: dayKey(thisMonthStart), pausedTo: dayKey(monthEnd(thisMonthStart)) } : {}),
+      createdAt: student.start.toISOString(),
+    })
+  })
+
   // To'lovlar jadvali + kafolat: har oynada to'langan kirim (keyingi to'lovni oldinroq — avans sifatida — tortib)
   const payments = schedulePayments(plan, rng)
   for (const p of payments) {
@@ -563,6 +634,8 @@ export function generateDemo(now: Date = new Date()): DemoBuild {
       customerName: customerById.get(customerId)?.name,
       status: 'paid',
       date: p.date.toISOString(),
+      enrollmentId: enrollmentIds.get(p.student),
+      period: p.period,
     })
   }
 
@@ -585,6 +658,8 @@ export function generateDemo(now: Date = new Date()): DemoBuild {
         customerName: customerById.get(customerId)?.name,
         status: 'paid',
         date: date.toISOString(),
+        enrollmentId: enrollmentIds.get(s),
+        period: periodKey(addMonths(thisMonth, -1)),
       })
     }
   }
@@ -602,6 +677,8 @@ export function generateDemo(now: Date = new Date()): DemoBuild {
       customerName: customerById.get(customerId)?.name,
       status: 'pending',
       date: atTime(new Date(now.getTime() + rng.int(2, 6) * DAY), 10, 0).toISOString(),
+      enrollmentId: enrollmentIds.get(s),
+      period: periodKey(addMonths(thisMonth, -1)),
     })
   }
   // Bekor qilingan (xato kiritilgan) to'lov
@@ -612,7 +689,77 @@ export function generateDemo(now: Date = new Date()): DemoBuild {
   transactions.push(...monthlyExpenses(plan, payments, rng, nextId))
   transactions.sort((a, b) => b.date.localeCompare(a.date))
 
-  return { customers, transactions, courses, plan, customerIds, payments }
+  const { attendance, lessonExceptions } = demoAttendance(plan, groups, enrollments, teachers, new Rng(`eduflow-demo-att:${dayKey(now)}`))
+  return { customers, transactions, courses, teachers, groups, enrollments, attendance, lessonExceptions, plan, customerIds, payments }
+}
+
+const historyStart = (plan: DemoPlan) => plan.historyStart
+
+// O'zbekistondagi dam olish kunlari (sana o'zgarmaydiganlari)
+const HOLIDAYS: Record<string, string> = {
+  '01-01': 'Yangi yil',
+  '03-08': 'Xotin-qizlar kuni',
+  '03-21': 'Navro\'z',
+  '05-09': 'Xotira va qadrlash kuni',
+  '09-01': 'Mustaqillik kuni',
+  '10-01': 'O\'qituvchilar kuni',
+  '12-08': 'Konstitutsiya kuni',
+}
+
+// Oxirgi 8 hafta davomati (~85–92% kelgan). Bugungi tugagan darslardan oxirgisi belgilanmagan qoladi
+// ("Dars tugadi, lekin davomat belgilanmagan" eslatmasi uchun); bitta o'quvchi ketma-ket 3 darsga kelmagan
+function demoAttendance(plan: DemoPlan, groups: readonly Group[], enrollments: readonly Enrollment[], teachers: readonly Teacher[], rng: Rng) {
+  const { now } = plan
+  const today = dayKey(now)
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const attendance: AttendanceRecord[] = []
+  const lessonExceptions: LessonException[] = []
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ATTENDANCE_WEEKS * 7)
+  // Bitta guruhda bir dars o'qituvchi kasalligi sababli bekor qilingan (taxminan 2–3 hafta oldin)
+  const sickGroup = groups[3]
+  let sickDay = ''
+  for (let back = 15; back < 25 && !sickDay; back++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back)
+    if (sickGroup && sickGroup.days.includes(WEEKDAY_BY_NUMBER[date.getDay()])) sickDay = dayKey(date)
+  }
+  if (sickGroup && sickDay) lessonExceptions.push({ id: 'x1', groupId: sickGroup.id, date: sickDay, reason: 'O\'qituvchi kasal' })
+  // Ketma-ket kelmayotgan o'quvchi: eng ko'p o'quvchisi bor guruhdan bir nafar
+  const truant = rng.pick(enrollments.filter((e) => e.status === 'active' && e.startDate < dayKey(from)))
+  const endedToday = groups.filter((g) => g.days.includes(WEEKDAY_BY_NUMBER[now.getDay()]) && toMinutes(g.endTime) <= nowMinutes)
+  const unmarked = endedToday.sort((a, b) => toMinutes(b.endTime) - toMinutes(a.endTime))[0]
+  for (let date = new Date(from); dayKey(date) <= today; date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)) {
+    const day = dayKey(date)
+    const holiday = HOLIDAYS[day.slice(5)]
+    for (const group of groups) {
+      if (!group.days.includes(WEEKDAY_BY_NUMBER[date.getDay()])) continue
+      if (holiday) {
+        lessonExceptions.push({ id: `x-${group.id}-${day}`, groupId: group.id, date: day, reason: `Bayram: ${holiday}` })
+        continue
+      }
+      if (lessonExceptions.some((e) => e.groupId === group.id && e.date === day)) continue
+      const teacher = teachers.find((t) => t.id === group.teacherId)
+      for (const e of enrollments) {
+        if (e.groupId !== group.id || e.startDate > day || (e.endDate && e.endDate < day)) continue
+        if (e.status === 'paused' && e.pausedFrom && e.pausedFrom <= day) continue
+        // PRNG har dars uchun bir xil iste'mol qilinadi (kun ichidagi soatdan qat'i nazar)
+        const status: AttendanceStatus = rng.weighted([['present', 86], ['late', 4], ['absent', 6], ['excused', 4]] as const)
+        // Bugun: faqat tugagan darslar (oxirgisidan tashqari)
+        if (day === today && (toMinutes(group.endTime) > nowMinutes || group === unmarked)) continue
+        attendance.push({ id: `d${attendance.length + 1}`, groupId: group.id, customerId: e.customerId, date: day, status, markedBy: teacher?.name, updatedAt: atTime(date, 20, 0).toISOString() })
+      }
+    }
+  }
+  // Oxirgi 3 belgilangan dars — "kelmadi"
+  if (truant) {
+    const marked = attendance.filter((r) => r.customerId === truant.customerId && r.groupId === truant.groupId).sort((a, b) => a.date.localeCompare(b.date))
+    for (const r of marked.slice(-3)) r.status = 'absent'
+  }
+  return { attendance, lessonExceptions }
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
 }
 
 // Har oy: ijara (1-sana), maosh (keyingi oyning 5-sanasi, o'qituvchi qoidasi bo'yicha), marketing (manba bilan),
@@ -620,10 +767,10 @@ export function generateDemo(now: Date = new Date()): DemoBuild {
 function monthlyExpenses(plan: DemoPlan, payments: readonly DemoPayment[], rng: Rng, nextId: () => string): Transaction[] {
   const { now, historyStart } = plan
   const result: Transaction[] = []
-  const add = (planned: Date, amount: number, category: TransactionCategory, note: string, method: PaymentMethod, source?: CustomerSource) => {
+  const add = (planned: Date, amount: number, category: TransactionCategory, note: string, method: PaymentMethod, source?: CustomerSource, extra?: Pick<Transaction, 'teacherId' | 'period'>) => {
     const date = clampToNow(planned, now, rng.int(1, 40))
     if (!date) return
-    result.push({ id: nextId(), type: 'expense', amount, method, category, note, status: 'paid', date: date.toISOString(), ...(source ? { source } : {}) })
+    result.push({ id: nextId(), type: 'expense', amount, method, category, note, status: 'paid', date: date.toISOString(), ...(source ? { source } : {}), ...extra })
   }
   for (let month = new Date(historyStart); month.getTime() <= now.getTime(); month = addMonths(month, 1)) {
     const y = month.getFullYear()
@@ -652,7 +799,7 @@ function monthlyExpenses(plan: DemoPlan, payments: readonly DemoPayment[], rng: 
           .reduce((sum, p) => sum + p.amount, 0)
         amount = Math.round((revenue * teacher.payRule.percent) / 100 / 10_000) * 10_000
       }
-      if (amount > 0) add(payDate, amount, 'salary', `Maosh: ${teacher.name} — ${label}`, 'transfer')
+      if (amount > 0) add(payDate, amount, 'salary', `Maosh: ${teacher.name} — ${label}`, 'transfer', undefined, { teacherId: `p${teacherIndex + 1}`, period: periodKey(monthStartDate) })
     })
   }
   return result

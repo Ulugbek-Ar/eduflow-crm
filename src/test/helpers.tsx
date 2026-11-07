@@ -3,9 +3,9 @@ import { cleanup, render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach } from 'vitest'
 import App from '../App'
-import { COURSES, createMockCourses, DEFAULT_SETTINGS } from '../constants/mockData'
+import { COURSES, createMockCourses } from '../constants/mockData'
 import { hashPassword, PBKDF2_ITERATIONS } from '../services/auth.service'
-import { saveAll, setDemoMode } from '../services/storage.service'
+import { createEmptyData, saveAll, setDemoMode } from '../services/storage.service'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
@@ -95,7 +95,7 @@ export function seedData({
   transactions = [],
   courses = createMockCourses(),
 }: { customers?: Customer[]; transactions?: Transaction[]; courses?: Course[] } = {}) {
-  saveAll({ customers, transactions, courses, settings: { ...DEFAULT_SETTINGS } })
+  saveAll({ ...createEmptyData(), customers, transactions, courses })
   setDemoMode(false)
 }
 

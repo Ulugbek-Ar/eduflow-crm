@@ -20,7 +20,7 @@ const FILTERS: Array<{ id: StatusFilter; label: string }> = [
 ]
 
 export function CoursesPanel() {
-  const { courses, customers, search, money, openModal, updateCourse, removeCourse } = useDashboard()
+  const { courses, customers, groups, enrollments, search, money, openModal, updateCourse, removeCourse } = useDashboard()
   const confirm = useConfirm()
   const canEdit = useCan()('courses.edit')
   const [filter, setFilter] = useState<StatusFilter>('active')
@@ -31,7 +31,7 @@ export function CoursesPanel() {
   const incomplete = coursesNeedingSetup(courses)
   const totals = active.reduce(
     (sum, course) => {
-      const stats = courseStats(course, customers)
+      const stats = courseStats(course, customers, groups, enrollments)
       return { students: sum.students + stats.students, expected: sum.expected + stats.expectedMonthly }
     },
     { students: 0, expected: 0 },
@@ -65,7 +65,7 @@ export function CoursesPanel() {
           <strong>{formatNumber(active.length)}</strong>
         </div>
         <div className="card summary">
-          <small>{tr('Talabalar (To\'lov qildi)')}</small>
+          <small>{tr('O\'qiyotgan talabalar')}</small>
           <strong>{formatNumber(totals.students)}</strong>
         </div>
         <div className="card summary">
@@ -163,8 +163,8 @@ export function CoursesPanel() {
               </thead>
               <tbody>
                 {visible.map((course) => {
-                  const stats = courseStats(course, customers)
-                  const used = stats.leads > 0
+                  const stats = courseStats(course, customers, groups, enrollments)
+                  const used = stats.leads > 0 || groups.some((g) => g.courseId === course.id)
                   return (
                     <tr key={course.id} className={cx(course.status === 'archived' && 'is-muted')}>
                       <td data-label={tr('Nomi')}>
@@ -179,7 +179,7 @@ export function CoursesPanel() {
                           {COURSE_TYPE_LABELS[course.type]}
                           <span className="show-compact">
                             {' '}
-                            · {durationLabel(course.durationMonths)} · {course.activeGroups} {tr('guruh')}
+                            · {durationLabel(course.durationMonths)} · {stats.groups} {tr('guruh')}
                           </span>
                         </small>
                       </td>
@@ -190,7 +190,7 @@ export function CoursesPanel() {
                         {course.monthlyPrice > 0 ? money(course.monthlyPrice) : <span className="text-warning">{tr('Kiritilmagan')}</span>}
                       </td>
                       <td data-label={tr('Guruhlar')} className="align-right col-optional">
-                        {course.activeGroups}
+                        {stats.groups}
                       </td>
                       <td data-label={tr('Talabalar')} className="align-right strong">
                         {stats.students}

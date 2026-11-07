@@ -178,7 +178,7 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       org,
       loadSnapshot: () => {
         if (!org) return Promise.reject(new Error(tr('Markaz topilmadi')))
-        return cloudApi.loadSnapshot(org)
+        return cloudApi.loadSnapshot(org, profile?.role)
       },
       createSync: (snapshot) => new cloudApi.CloudSync(org?.id ?? '', snapshot.trash),
       signUp: async (input) => {

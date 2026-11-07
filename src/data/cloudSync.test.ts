@@ -68,6 +68,30 @@ describe('Bulut bilan sinxronlash', () => {
     expect(calls.map((c) => `${c.op}:${c.table}`)).toEqual(['upsert:transactions'])
   })
 
+  it('v11: guruh va o\'qish savatcha bilan, davomat — noyob kalit bo\'yicha upsert va o\'chirish', async () => {
+    const calls: Call[] = []
+    setClient(fakeClient(calls))
+    const sync = new CloudSync('org-1', [])
+    const group = { id: 'g1', name: 'IELTS', courseId: 'k1', room: '', days: ['mon' as const], startTime: '09:00', endTime: '10:30', capacity: 12, startDate: '2026-09-01', status: 'active' as const, createdAt: '2026-09-01T00:00:00.000Z' }
+    await sync.list('groups', [group], [])
+    expect(calls).toEqual([{ op: 'rpc', table: 'trash_move', args: { p_table: 'groups', p_ids: ['g1'] } }])
+    calls.length = 0
+    const enrollment = { id: 'e1', customerId: 'c1', groupId: 'g1', startDate: '2026-09-01', status: 'active' as const, createdAt: '2026-09-01T00:00:00.000Z' }
+    await sync.list('enrollments', [], [enrollment])
+    expect(calls[0]).toMatchObject({ op: 'upsert', table: 'enrollments', args: { opts: { onConflict: 'organization_id,id' } } })
+    calls.length = 0
+    const mark = { id: 'd1', groupId: 'g1', customerId: 'c1', date: '2026-11-06', status: 'present' as const, updatedAt: '2026-11-06T10:00:00.000Z' }
+    await sync.list('attendance', [mark], [{ ...mark, status: 'absent' }])
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({ op: 'upsert', table: 'attendance', args: { opts: { onConflict: 'organization_id,group_id,customer_id,date' } } })
+    calls.length = 0
+    await sync.list('attendance', [mark], [])
+    expect(calls).toEqual([{ op: 'delete', table: 'attendance', args: { org: 'org-1', ids: ['d1'] } }])
+    calls.length = 0
+    await sync.list('lessonExceptions', [], [{ id: 'x1', groupId: 'g1', date: '2026-10-01', reason: 'Bayram' }])
+    expect(calls[0]).toMatchObject({ op: 'upsert', table: 'lesson_exceptions', args: { opts: { onConflict: 'organization_id,group_id,date' } } })
+  })
+
   it('savatchadan butunlay o\'chirish faqat shu markaz qatorlari', async () => {
     const calls: Call[] = []
     setClient(fakeClient(calls))

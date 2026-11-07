@@ -9,9 +9,9 @@ const NOW = new Date(2026, 10, 15, 12)
 const at = (m: number, d: number) => new Date(2026, m, d, 12).toISOString()
 
 const courses: Course[] = [
-  { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 6, monthlyPrice: 650_000, activeGroups: 1, status: 'active', createdAt: at(0, 1) },
-  { id: 'k2', name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, activeGroups: 1, status: 'archived', createdAt: at(0, 1) },
-  { id: 'k3', name: 'Bepul', type: 'service', durationMonths: 1, monthlyPrice: 0, activeGroups: 0, status: 'active', createdAt: at(0, 1) },
+  { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 6, monthlyPrice: 650_000, status: 'active', createdAt: at(0, 1) },
+  { id: 'k2', name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, status: 'archived', createdAt: at(0, 1) },
+  { id: 'k3', name: 'Bepul', type: 'service', durationMonths: 1, monthlyPrice: 0, status: 'active', createdAt: at(0, 1) },
 ]
 
 const customer = (id: string, patch: Partial<Customer> = {}): Customer => ({

@@ -41,3 +41,49 @@ describe('ruxsatlar jadvali', () => {
     expect(NAV_ITEMS.every((item) => typeof canOpenSection('viewer', item.id) === 'boolean')).toBe(true)
   })
 })
+
+// Bulutdagi ruxsatlar (SQL role_has_permission) — TS jadval bilan aynan bir xil bo'lishi shart
+describe('SQL has_permission() <-> src/auth/permissions.ts', () => {
+  const migrations = import.meta.glob('/supabase/migrations/*.sql', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+
+  // Migratsiyalar nomi bo'yicha tartibda bajariladi — oxirgi "create or replace" amal qiladi
+  function sqlTable(): Map<string, Set<string> | 'all'> {
+    const files = Object.keys(migrations).sort()
+    let body = ''
+    for (const file of files) {
+      const matches = [...migrations[file].matchAll(/function public\.role_has_permission\([\s\S]*?\$\$([\s\S]*?)\$\$/g)]
+      if (matches.length) body = matches[matches.length - 1][1]
+    }
+    const table = new Map<string, Set<string> | 'all'>()
+    for (const m of body.matchAll(/when '(\w+)' then (true|p = any \(array\[([^\]]*)\]\))/g)) {
+      table.set(m[1], m[2] === 'true' ? 'all' : new Set([...m[3].matchAll(/'([\w.]+)'/g)].map((x) => x[1])))
+    }
+    return table
+  }
+
+  it('har bir rol uchun ruxsatlar to\'plami bir xil', () => {
+    const table = sqlTable()
+    expect(Object.keys(migrations).length).toBeGreaterThanOrEqual(2)
+    expect([...table.keys()].sort()).toEqual([...ROLES].sort())
+    for (const role of ROLES) {
+      const sql = table.get(role)
+      const ts = new Set(ROLE_PERMISSIONS[role])
+      if (sql === 'all') expect(ts, role).toEqual(new Set(Object.keys(PERMISSION_LABELS)))
+      else expect(sql, role).toEqual(ts)
+    }
+  })
+
+  it('o\'qituvchi: faqat guruh va davomat; mijoz, to\'lov, maosh — yo\'q', () => {
+    expect(ROLE_PERMISSIONS.teacher).toEqual(['groups.view', 'attendance.view', 'attendance.mark'])
+    expect(canOpenSection('teacher', 'groups')).toBe(true)
+    expect(canOpenSection('teacher', 'attendance')).toBe(true)
+    expect(canOpenSection('teacher', 'customers')).toBe(false)
+    expect(canOpenSection('teacher', 'finance')).toBe(false)
+    expect(canOpenSection('teacher', 'teachers')).toBe(false)
+    // "Davomat" bo'limi menyuda faqat o'qituvchiga; boshqalar davomatni guruh kartasida belgilaydi
+    expect(canOpenSection('admin', 'attendance')).toBe(false)
+    expect(canOpenSection('cashier', 'teachers')).toBe(true)
+    expect(can('cashier', 'attendance.mark')).toBe(false)
+    expect(can('manager', 'groups.edit')).toBe(true)
+  })
+})

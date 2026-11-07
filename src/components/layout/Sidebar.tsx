@@ -12,7 +12,7 @@ export function Sidebar() {
   const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } =
     useDashboard()
   const navRef = useRef<HTMLElement>(null)
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const items = NAV_ITEMS.filter((item) => canOpenSection(user?.role, item.id))
 
   // Mobil menyu ochilganda fokus birinchi bo'limga o'tadi, Esc yopadi
@@ -62,12 +62,14 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="sidebar-balance">
-          <small>
-            {tr('Kassa balansi')} <Hint term="balance" className="hint-on-dark" />
-          </small>
-          <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
-        </div>
+        {can('payments.view') && (
+          <div className="sidebar-balance">
+            <small>
+              {tr('Kassa balansi')} <Hint term="balance" className="hint-on-dark" />
+            </small>
+            <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
+          </div>
+        )}
 
         {/* Ixcham holat faqat planshet va kompyuterda; mobilda menyu chiqib keladigan panel */}
         <button

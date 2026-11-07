@@ -17,11 +17,10 @@ interface FormState {
   type: CourseType
   durationMonths: string
   monthlyPrice: string
-  activeGroups: string
   status: CourseStatus
 }
 
-const FIELD_ORDER = ['name', 'durationMonths', 'monthlyPrice', 'activeGroups'] as const
+const FIELD_ORDER = ['name', 'durationMonths', 'monthlyPrice'] as const
 
 // Bo'sh yoki noto'g'ri raqam NaN bo'ladi — tekshiruv xato beradi
 function toInt(value: string): number {
@@ -36,7 +35,6 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
     type: editing?.type ?? 'course',
     durationMonths: String(editing?.durationMonths ?? 3),
     monthlyPrice: editing ? formatAmountInput(String(editing.monthlyPrice)) : '',
-    activeGroups: String(editing?.activeGroups ?? 1),
     status: editing?.status ?? 'active',
   }))
   const [errors, setErrors] = useState<CourseFormErrors>({})
@@ -54,7 +52,6 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
       type: form.type,
       durationMonths: toInt(form.durationMonths),
       monthlyPrice: form.monthlyPrice.trim() === '' ? 0 : parseAmount(form.monthlyPrice),
-      activeGroups: toInt(form.activeGroups),
       status: form.status,
     }
     const next = validateCourse(data, courses, editing?.id)
@@ -125,20 +122,12 @@ export function CourseFormModal({ courseId }: { courseId?: string }) {
             onChange={(e) => update('monthlyPrice', formatAmountInput(e.target.value))}
             placeholder="650 000"
           />
-          <Input
-            id="course-activeGroups"
-            label={tr('Faol guruhlar soni')}
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={form.activeGroups}
-            error={errors.activeGroups}
-            onChange={(e) => update('activeGroups', e.target.value)}
-          />
+          {editing ? (
+            <Select label={tr('Holati')} value={form.status} onChange={(e) => update('status', e.target.value as CourseStatus)} options={toOptions(COURSE_STATUS_LABELS)} />
+          ) : (
+            <p className="field-hint form-note">{tr('Guruhlar "Guruhlar" bo\'limida ochiladi — faol guruhlar soni o\'zi hisoblanadi.')}</p>
+          )}
         </div>
-        {editing && (
-          <Select label={tr('Holati')} value={form.status} onChange={(e) => update('status', e.target.value as CourseStatus)} options={toOptions(COURSE_STATUS_LABELS)} />
-        )}
       </form>
     </Modal>
   )

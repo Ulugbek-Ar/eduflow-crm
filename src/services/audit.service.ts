@@ -44,13 +44,39 @@ export type AuditAction =
   | 'auth.failed'
   | 'auth.password'
   | 'session.revoke'
+  | 'group.create'
+  | 'group.update'
+  | 'group.archive'
+  | 'group.delete'
+  | 'group.restore'
+  | 'enrollment.create'
+  | 'enrollment.update'
+  | 'enrollment.transfer'
+  | 'enrollment.delete'
+  | 'enrollment.restore'
+  | 'teacher.create'
+  | 'teacher.update'
+  | 'teacher.archive'
+  | 'teacher.delete'
+  | 'teacher.restore'
+  | 'teacher.access'
+  | 'attendance.mark'
+  | 'lesson.cancel'
+  | 'lesson.restore'
+  | 'payroll.pay'
+  | 'reminder.sent'
+  | 'import.run'
+  | 'import.undo'
 
-export type AuditCategory = 'customers' | 'payments' | 'courses' | 'staff' | 'auth' | 'data'
+export type AuditCategory = 'customers' | 'payments' | 'courses' | 'groups' | 'attendance' | 'teachers' | 'staff' | 'auth' | 'data'
 
 export const AUDIT_CATEGORY_LABELS: Record<AuditCategory, string> = {
   customers: tr('Mijozlar'),
   payments: tr('To\'lovlar'),
   courses: tr('Kurslar'),
+  groups: tr('Guruhlar'),
+  attendance: tr('Davomat'),
+  teachers: tr('O\'qituvchilar va maosh'),
   staff: tr('Xodimlar'),
   auth: tr('Kirish va seanslar'),
   data: tr('Sozlamalar va ma\'lumot'),
@@ -89,16 +115,43 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'auth.failed': tr('Noto\'g\'ri kirish urinishi'),
   'auth.password': tr('O\'z paroli yoki logini o\'zgardi'),
   'session.revoke': tr('Seans yopildi'),
+  'group.create': tr('Guruh ochildi'),
+  'group.update': tr('Guruh tahrirlandi'),
+  'group.archive': tr('Guruh arxivlandi'),
+  'group.delete': tr('Guruh o\'chirildi'),
+  'group.restore': tr('Guruh tiklandi'),
+  'enrollment.create': tr('O\'quvchi guruhga qo\'shildi'),
+  'enrollment.update': tr('O\'qish o\'zgardi (pauza, tugatish, narx)'),
+  'enrollment.transfer': tr('O\'quvchi boshqa guruhga ko\'chirildi'),
+  'enrollment.delete': tr('Guruhdan o\'chirildi'),
+  'enrollment.restore': tr('Guruhga qaytarildi'),
+  'teacher.create': tr('O\'qituvchi qo\'shildi'),
+  'teacher.update': tr('O\'qituvchi tahrirlandi'),
+  'teacher.archive': tr('O\'qituvchi arxivlandi'),
+  'teacher.delete': tr('O\'qituvchi o\'chirildi'),
+  'teacher.restore': tr('O\'qituvchi tiklandi'),
+  'teacher.access': tr('O\'qituvchiga kirish yaratildi'),
+  'attendance.mark': tr('Davomat belgilandi'),
+  'lesson.cancel': tr('Dars bekor qilindi'),
+  'lesson.restore': tr('Bekor qilingan dars qaytarildi'),
+  'payroll.pay': tr('Maosh to\'landi'),
+  'reminder.sent': tr('To\'lov eslatmasi yuborildi'),
+  'import.run': tr('Mijozlar import qilindi'),
+  'import.undo': tr('Import bekor qilindi'),
 }
 
 const ACTIONS = AUDIT_ACTION_LABELS as Record<AuditAction, unknown>
-const ROLES: Record<Role, true> = { admin: true, manager: true, cashier: true, viewer: true }
+const ROLES: Record<Role, true> = { admin: true, manager: true, cashier: true, viewer: true, teacher: true }
 
 export function actionCategory(action: AuditAction): AuditCategory {
   const prefix = action.split('.')[0]
   if (prefix === 'customer') return 'customers'
   if (prefix === 'payment') return 'payments'
   if (prefix === 'course') return 'courses'
+  if (prefix === 'group' || prefix === 'enrollment' || prefix === 'lesson') return 'groups'
+  if (prefix === 'attendance') return 'attendance'
+  if (prefix === 'teacher' || prefix === 'payroll') return 'teachers'
+  if (prefix === 'reminder' || prefix === 'import') return 'customers'
   if (prefix === 'staff') return 'staff'
   if (prefix === 'auth' || prefix === 'session') return 'auth'
   return 'data'

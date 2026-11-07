@@ -44,6 +44,7 @@ export function Header() {
     formatDate,
     isDemo,
     clearDemoData,
+    exportData,
   } = useDashboard()
   const confirm = useConfirm()
   const can = useCan()
@@ -75,7 +76,7 @@ export function Header() {
   }
 
   const exportBackup = () => {
-    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup(exportData()))
     logExport('To\'liq zaxira (JSON)', 'backup')
   }
 

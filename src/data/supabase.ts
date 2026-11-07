@@ -8,11 +8,29 @@ import type { Subscription } from '../services/subscription.service'
 import type { TrashEntry, TrashKind } from '../services/trash.service'
 import type { Settings } from '../types/dashboard.types'
 import type { PublicUser, Role, UserStatus } from '../types/user.types'
+import type { ListKey } from '../services/storage.service'
 import { sanitizeSettings } from '../utils/guards'
 import { cloudConfig } from './config'
 import { diffById } from './diff'
 import type { Changes } from './diff'
-import { courseToRow, customerToRow, rowToCourse, rowToCustomer, rowToTransaction, transactionToRow } from './mappers'
+import {
+  attendanceToRow,
+  courseToRow,
+  customerToRow,
+  enrollmentToRow,
+  exceptionToRow,
+  groupToRow,
+  rowToAttendance,
+  rowToCourse,
+  rowToCustomer,
+  rowToEnrollment,
+  rowToException,
+  rowToGroup,
+  rowToTeacher,
+  rowToTransaction,
+  teacherToRow,
+  transactionToRow,
+} from './mappers'
 import type { Row } from './mappers'
 
 let client: SupabaseClient | null = null
@@ -41,7 +59,15 @@ export interface CloudOrg {
   subscription: Subscription
 }
 
-const TABLES: Record<TrashKind, 'customers' | 'transactions' | 'courses'> = { customer: 'customers', transaction: 'transactions', course: 'courses' }
+type TrashTable = 'customers' | 'transactions' | 'courses' | 'teachers' | 'groups' | 'enrollments'
+const TABLES: Record<TrashKind, TrashTable> = {
+  customer: 'customers',
+  transaction: 'transactions',
+  course: 'courses',
+  teacher: 'teachers',
+  group: 'groups',
+  enrollment: 'enrollments',
+}
 
 function profileFromRow(r: Row, email = ''): CloudProfile {
   return {
@@ -221,20 +247,33 @@ export interface CloudSnapshot {
   trash: TrashEntry[]
 }
 
-export async function loadSnapshot(org: CloudOrg): Promise<CloudSnapshot> {
+// role — kirgan xodim roli: o'qituvchi mijozlar jadvalini ko'rmaydi (RLS) — o'quvchilar ismi teacher_roster() dan
+// (telefonsiz); o'qituvchilar ro'yxatini (maosh qoidasi bilan) faqat teachers.manage / payroll.view ko'radi,
+// qolganlar teacher_directory() dan ism va fanlarni oladi
+export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise<CloudSnapshot> {
   const sb = getClient()
-  const [customers, transactions, courses] = await Promise.all([
-    sb.from('customers').select('*').limit(10000),
+  const seesTeachers = role === 'admin' || role === 'cashier' || role === 'viewer' || role === 'teacher'
+  const [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions] = await Promise.all([
+    role === 'teacher' ? sb.rpc('teacher_roster') : sb.from('customers').select('*').limit(10000),
     sb.from('transactions').select('*').order('date', { ascending: false }).limit(20000),
     sb.from('courses').select('*'),
+    seesTeachers ? sb.from('teachers').select('*') : sb.rpc('teacher_directory'),
+    sb.from('groups').select('*'),
+    sb.from('enrollments').select('*').limit(20000),
+    sb.from('attendance').select('*').order('date', { ascending: false }).limit(50000),
+    sb.from('lesson_exceptions').select('*'),
   ])
-  for (const r of [customers, transactions, courses]) fail(r.error)
+  for (const r of [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions]) fail(r.error)
   const active = (rows: unknown[] | null) => ((rows ?? []) as Row[]).filter((r) => !r.deleted_at)
   const deleted = (rows: unknown[] | null) => ((rows ?? []) as Row[]).filter((r) => r.deleted_at)
+  const meta = (r: Row) => ({ id: String(r.id), deletedAt: String(r.deleted_at), deletedBy: String(r.deleted_by ?? '') })
   const trash: TrashEntry[] = [
-    ...deleted(customers.data).map((r) => ({ kind: 'customer' as const, id: String(r.id), deletedAt: String(r.deleted_at), deletedBy: String(r.deleted_by ?? ''), item: rowToCustomer(r) })),
-    ...deleted(transactions.data).map((r) => ({ kind: 'transaction' as const, id: String(r.id), deletedAt: String(r.deleted_at), deletedBy: String(r.deleted_by ?? ''), item: rowToTransaction(r) })),
-    ...deleted(courses.data).map((r) => ({ kind: 'course' as const, id: String(r.id), deletedAt: String(r.deleted_at), deletedBy: String(r.deleted_by ?? ''), item: rowToCourse(r) })),
+    ...deleted(customers.data).map((r) => ({ kind: 'customer' as const, ...meta(r), item: rowToCustomer(r) })),
+    ...deleted(transactions.data).map((r) => ({ kind: 'transaction' as const, ...meta(r), item: rowToTransaction(r) })),
+    ...deleted(courses.data).map((r) => ({ kind: 'course' as const, ...meta(r), item: rowToCourse(r) })),
+    ...deleted(teachers.data).map((r) => ({ kind: 'teacher' as const, ...meta(r), item: rowToTeacher(r) })),
+    ...deleted(groups.data).map((r) => ({ kind: 'group' as const, ...meta(r), item: rowToGroup(r) })),
+    ...deleted(enrollments.data).map((r) => ({ kind: 'enrollment' as const, ...meta(r), item: rowToEnrollment(r) })),
   ]
   return {
     data: {
@@ -242,6 +281,11 @@ export async function loadSnapshot(org: CloudOrg): Promise<CloudSnapshot> {
       transactions: active(transactions.data).map(rowToTransaction),
       courses: active(courses.data).map(rowToCourse),
       settings: org.settings,
+      teachers: active(teachers.data).map(rowToTeacher),
+      groups: active(groups.data).map(rowToGroup),
+      enrollments: active(enrollments.data).map(rowToEnrollment),
+      attendance: ((attendance.data ?? []) as Row[]).map(rowToAttendance),
+      lessonExceptions: ((exceptions.data ?? []) as Row[]).map(rowToException),
     },
     trash,
   }
@@ -290,6 +334,46 @@ export class CloudSync {
     return this.apply('course', diffById(prev, next), courseToRow)
   }
 
+  // Savatchasiz jadvallar (davomat, bekor qilingan darslar): o'zgargani — upsert (noyob kalit bo'yicha), olib tashlangani — o'chiriladi
+  private async plain<T extends { id: string }>(table: 'attendance' | 'lesson_exceptions', changes: Changes<T>, toRow: (item: T, org: string) => Row, conflict: string) {
+    const sb = getClient()
+    if (changes.upserts.length) {
+      const { error } = await sb.from(table).upsert(changes.upserts.map((item) => toRow(item, this.org)), { onConflict: conflict })
+      fail(error)
+    }
+    if (changes.removedIds.length) {
+      const { error } = await sb.from(table).delete().eq('organization_id', this.org).in('id', changes.removedIds)
+      fail(error)
+    }
+  }
+
+  // DashboardContext: istalgan ro'yxat o'zgarishi
+  list<K extends ListKey>(key: K, prev: StoredData[K], next: StoredData[K]): Promise<void> {
+    switch (key) {
+      case 'customers':
+        return this.customers(prev as StoredData['customers'], next as StoredData['customers'])
+      case 'transactions':
+        return this.transactions(prev as StoredData['transactions'], next as StoredData['transactions'])
+      case 'courses':
+        return this.courses(prev as StoredData['courses'], next as StoredData['courses'])
+      case 'teachers':
+        return this.apply('teacher', diffById(prev as StoredData['teachers'], next as StoredData['teachers']), teacherToRow)
+      case 'groups':
+        return this.apply('group', diffById(prev as StoredData['groups'], next as StoredData['groups']), groupToRow)
+      case 'enrollments':
+        return this.apply('enrollment', diffById(prev as StoredData['enrollments'], next as StoredData['enrollments']), enrollmentToRow)
+      case 'attendance':
+        return this.plain('attendance', diffById(prev as StoredData['attendance'], next as StoredData['attendance']), attendanceToRow, 'organization_id,group_id,customer_id,date')
+      default:
+        return this.plain(
+          'lesson_exceptions',
+          diffById(prev as StoredData['lessonExceptions'], next as StoredData['lessonExceptions']),
+          exceptionToRow,
+          'organization_id,group_id,date',
+        )
+    }
+  }
+
   settings(next: Settings) {
     return saveSettings(this.org, next)
   }
@@ -303,7 +387,7 @@ export class CloudSync {
 }
 
 // ===== Jurnal =====
-const CLIENT_EVENTS = new Set(['auth.login', 'auth.logout', 'auth.password', 'data.export', 'data.backup', 'session.revoke'])
+const CLIENT_EVENTS = new Set(['auth.login', 'auth.logout', 'auth.password', 'data.export', 'data.backup', 'session.revoke', 'reminder.sent', 'import.run', 'import.undo'])
 
 export async function logEvent(action: string, summary: string, entityId?: string): Promise<void> {
   // Ma'lumot o'zgarishlari server triggerlari bilan yoziladi — ikki marta yozmaymiz
@@ -327,10 +411,10 @@ export async function listAudit(): Promise<AuditEntry[]> {
 }
 
 // ===== Ko'chirish (lokal / JSON -> bulut) =====
-export async function importBackup(data: StoredData): Promise<{ customers: number; transactions: number; courses: number }> {
+export async function importBackup(data: StoredData): Promise<{ customers: number; transactions: number; courses: number; groups?: number; enrollments?: number }> {
   const { data: result, error } = await getClient().rpc('import_backup', { p_data: data })
   fail(error)
-  return result as { customers: number; transactions: number; courses: number }
+  return result as { customers: number; transactions: number; courses: number; groups?: number; enrollments?: number }
 }
 
 export { diffById }

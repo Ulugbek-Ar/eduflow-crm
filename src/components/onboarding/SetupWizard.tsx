@@ -122,7 +122,6 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
       type: 'course' as const,
       durationMonths: courseForm.months.trim() === '' ? 0 : Number(courseForm.months),
       monthlyPrice: parseAmount(courseForm.price),
-      activeGroups: 1,
       status: 'active' as const,
     }
     const errors = validateCourse(input, courses)

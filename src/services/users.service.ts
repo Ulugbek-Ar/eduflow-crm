@@ -20,7 +20,7 @@ import { readJson, setItem, STORAGE_KEYS } from './storage.service'
 
 export const USERS_KEY = 'apex:users'
 
-const ROLE_SET: Record<Role, true> = { admin: true, manager: true, cashier: true, viewer: true }
+const ROLE_SET: Record<Role, true> = { admin: true, manager: true, cashier: true, viewer: true, teacher: true }
 const STATUS_SET: Record<UserStatus, true> = { active: true, blocked: true }
 
 export const MAX_NAME_LENGTH = 60
@@ -288,6 +288,8 @@ export const DEMO_STAFF: ReadonlyArray<Pick<StaffUser, 'login' | 'fullName' | 't
   { login: 'demo.menejer', fullName: 'Malika Yusupova', title: tr('Sotuv menejeri'), role: 'manager' },
   { login: 'demo.kassir', fullName: 'Sardor Qodirov', title: tr('Buxgalter'), role: 'cashier' },
   { login: 'demo.kuzatuvchi', fullName: 'Nodira Karimova', title: tr('Ta\'sischi'), role: 'viewer' },
+  // id: demo-u5 (DEMO_TEACHER_USER_ID) — demo markazdagi "Nodira Saidova" o'qituvchi yozuviga bog'langan
+  { login: 'demo.oqituvchi', fullName: 'Nodira Saidova', title: tr('Ingliz tili o\'qituvchisi'), role: 'teacher' },
 ]
 
 export function createDemoStaff(now = new Date()): StaffUser[] {

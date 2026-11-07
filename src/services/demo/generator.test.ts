@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { conversion, filterByPeriod, getPeriod, overviewKpis, sumExpense, sumIncome } from '../../utils/analytics'
 import { computeDebts } from '../../utils/debts'
-import { isCourse, isCustomer, isTransaction } from '../../utils/guards'
+import { hasLessonOn, occupiesSeat } from '../../utils/groups'
+import { isAttendanceRecord, isCourse, isCustomer, isEnrollment, isGroup, isTeacher, isTransaction } from '../../utils/guards'
 import { demoWindows, generateDemo } from './generator'
 import { hashSeed, mulberry32, Rng } from './prng'
 
@@ -42,8 +43,8 @@ describe('demo generatori — davrga moslashgan', () => {
   for (const date of DATES) {
     it(`${date}: "Shu oy" KPI'lari > 0, trendlar bor, chiqim va qarzdorlar bor`, () => {
       const now = new Date(date)
-      const { customers, transactions, courses } = generateDemo(now)
-      const kpi = overviewKpis(customers, transactions, 'month', now)
+      const { customers, transactions, courses, enrollments, groups, attendance } = generateDemo(now)
+      const kpi = overviewKpis(customers, transactions, 'month', now, enrollments)
       expect(kpi.revenue.value).toBeGreaterThan(0)
       expect(kpi.active.value).toBeGreaterThan(0)
       expect(kpi.newLeads.value).toBeGreaterThan(0)
@@ -60,6 +61,22 @@ describe('demo generatori — davrga moslashgan', () => {
       // Kelajakdagi to'langan yozuv yo'q ("Kutilmoqda" — kelajak sanasi bilan bo'lishi mumkin)
       expect(transactions.filter((t) => t.status === 'paid' && Date.parse(t.date) > now.getTime())).toEqual([])
       expect(customers.filter((c) => Date.parse(c.createdAt) > now.getTime())).toEqual([])
+      // Faol o'quvchilar 45–60, guruhlar 6–8, sig'imdan oshmaydi, bitta guruh deyarli to'lgan
+      expect(kpi.active.value).toBeGreaterThanOrEqual(45)
+      expect(kpi.active.value).toBeLessThanOrEqual(60)
+      expect(groups.length).toBeGreaterThanOrEqual(6)
+      expect(groups.length).toBeLessThanOrEqual(8)
+      const day = date.slice(0, 10)
+      const seats = groups.map((g) => enrollments.filter((e) => e.groupId === g.id && occupiesSeat(e, day)).length)
+      groups.forEach((g, i) => expect(seats[i], g.name).toBeLessThanOrEqual(g.capacity))
+      expect(groups.some((g, i) => seats[i] >= g.capacity - 1)).toBe(true)
+      // Ish kunlarida (dushanba–shanba) bugungi darslar bor
+      if (now.getDay() !== 0) expect(groups.some((g) => hasLessonOn(g, day))).toBe(true)
+      // Oxirgi 8 hafta davomati: 85–92% atrofida kelgan
+      const came = attendance.filter((r) => r.status === 'present' || r.status === 'late').length
+      expect(attendance.length).toBeGreaterThan(300)
+      expect(came / attendance.length).toBeGreaterThan(0.82)
+      expect(came / attendance.length).toBeLessThan(0.95)
     })
 
     it(`${date}: har bir davr va uning oldingi teng davrida yangi lid va to'langan kirim; konversiya ("Bugun"dan tashqari)`, () => {
@@ -93,6 +110,15 @@ describe('demo generatori — davrga moslashgan', () => {
       expect(customers.every(isCustomer)).toBe(true)
       expect(transactions.every(isTransaction)).toBe(true)
       expect(courses.every(isCourse)).toBe(true)
+      const built = generateDemo(now)
+      expect(built.teachers.length).toBe(4)
+      expect(built.groups.every(isGroup)).toBe(true)
+      expect(built.enrollments.every(isEnrollment)).toBe(true)
+      expect(built.attendance.every(isAttendanceRecord)).toBe(true)
+      expect(built.teachers.every(isTeacher)).toBe(true)
+      // Kurs to'lovlari guruh (enrollment) va oyga bog'langan; maosh — o'qituvchiga
+      expect(transactions.filter((t) => t.category === 'course_fee').every((t) => t.enrollmentId && t.period)).toBe(true)
+      expect(transactions.filter((t) => t.category === 'salary').every((t) => t.teacherId && t.period)).toBe(true)
       expect(new Set(customers.map((c) => c.phone)).size).toBe(customers.length)
       expect(customers.filter((c) => c.status === 'paid').every((c) => c.paidAt && c.paidAt >= c.createdAt)).toBe(true)
       // 12 oydan kam bo'lmagan tarix
