@@ -243,6 +243,8 @@ function Shell() {
             kind={modal.payload?.kind}
             customerId={modal.payload?.customerId}
             amount={modal.payload?.amount}
+            enrollmentId={modal.payload?.enrollmentId}
+            period={modal.payload?.period}
           />
         )}
       </Suspense>

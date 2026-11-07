@@ -43,9 +43,10 @@ export function debtColumns(): ExportColumn<DebtRow>[] {
   return [
     { header: tr('Mijoz'), value: (r) => r.customer.name, width: 160 },
     { header: tr('Telefon'), value: (r) => r.customer.phone, width: 130 },
-    { header: tr('Kurs'), value: (r) => r.course.name, width: 150 },
-    { header: tr('Kutilgan'), value: (r) => r.expected, type: 'number', width: 100 },
-    { header: tr('To\'langan'), value: (r) => r.paid, type: 'number', width: 100 },
+    { header: tr('Guruh'), value: (r) => r.label, width: 170 },
+    { header: tr('Oylik'), value: (r) => r.monthly, type: 'number', width: 100 },
+    { header: tr('Kutilgan (jami)'), value: (r) => r.expected, type: 'number', width: 110 },
+    { header: tr('To\'langan (jami)'), value: (r) => r.paid, type: 'number', width: 110 },
     { header: tr('Qarz'), value: (r) => r.debt, type: 'number', width: 100 },
     { header: tr('Kutilmoqda'), value: (r) => r.pending, type: 'number', width: 100 },
   ]

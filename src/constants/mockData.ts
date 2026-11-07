@@ -15,9 +15,9 @@ export const COURSES = [
 
 // Qarz eslatmasi shablonlari (Sozlamalar -> Eslatmalar'da o'zgartiriladi)
 export const DEFAULT_REMINDER_UZ =
-  'Assalomu alaykum, {ism}! {markaz}: {kurs} ({guruh}) uchun {oy} oyi to\'lovi — {summa}. Iltimos, to\'lovni amalga oshiring. Savollar bo\'lsa: {telefon}'
+  'Assalomu alaykum, {ism}! {markaz}: «{guruh}» guruhi bo\'yicha {oy} oyi to\'lovi — {summa}. Iltimos, to\'lovni amalga oshiring. Savollar bo\'lsa: {telefon}'
 export const DEFAULT_REMINDER_RU =
-  'Здравствуйте, {ism}! {markaz}: оплата за {oy} по курсу {kurs} ({guruh}) — {summa}. Пожалуйста, внесите оплату. Вопросы: {telefon}'
+  'Здравствуйте, {ism}! {markaz}: оплата за {oy}, группа «{guruh}» — {summa}. Пожалуйста, внесите оплату. Вопросы: {telefon}'
 
 export const DEFAULT_SETTINGS: Settings = {
   orgName: 'EduFlow Academy',

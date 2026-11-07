@@ -9,6 +9,7 @@ import type { AttendanceRecord, LessonException } from '../types/attendance.type
 import type { Enrollment, Group } from '../types/group.types'
 import type { Teacher } from '../types/teacher.types'
 import type { EduActions } from './eduActions'
+import type { DebtContext } from '../utils/debts'
 
 // Guruh/o'qish/o'qituvchi/davomat amallari — context/eduActions.ts
 export interface DashboardContextValue extends EduActions {
@@ -28,6 +29,10 @@ export interface DashboardContextValue extends EduActions {
   getTeacher: (id?: string) => Teacher | undefined
   // To'liq ma'lumot (JSON zaxira uchun; rol bo'yicha filtrsiz)
   exportData: () => StoredData
+  // Qarz hisobi uchun (utils/debts.ts): guruhlar, o'qishlar, to'lov muddati va birinchi oy qoidasi
+  debtContext: DebtContext
+  // "Eslatildi": har mijoz uchun jurnalga yozuv (qarzdorlar ro'yxatida "Oxirgi eslatma")
+  logReminders: (customerIds: readonly string[], channel: string) => void
   search: string
   dateRange: DateRange
   activeSection: Section

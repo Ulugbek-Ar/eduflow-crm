@@ -58,13 +58,14 @@ describe('Moliya va kassa', () => {
     const debts = screen.getByRole('table', { name: 'Qarzdorlar' })
     const row = within(debts).getByRole('button', { name: 'Aziza Karimova' }).closest('tr') as HTMLElement
     const cells = within(row).getAllByRole('cell').map((td) => plain(td.textContent))
-    expect(cells.slice(1, 5)).toEqual([ielts.name, '650 000 so\'m', '150 000 so\'m', '500 000 so\'m'])
+    // Belgilash, Mijoz, Guruh (guruhi yo'q — kurs), Oylik, Qarz
+    expect(cells.slice(2, 5)).toEqual([ielts.name, '650 000 so\'m', '500 000 so\'m'])
 
     await user.click(within(row).getByRole('button', { name: 'Aziza Karimova: to\'lov qabul qilish' }))
     const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
     expect(plain((within(dialog).getByLabelText(/Summa/) as HTMLInputElement).value)).toBe('500 000')
     await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
-    expect(screen.getByText('Joriy oy uchun qarzdorlik yo\'q.')).toBeTruthy()
+    expect(screen.getByText('Qarzdorlik yo\'q — barcha o\'quvchilar muddatida to\'lagan.')).toBeTruthy()
   })
 
   it('kutilayotgan to\'lovni "To\'landi" deb belgilash', async () => {
@@ -132,7 +133,7 @@ describe('Kutilayotgan to\'lovlar sanasi', () => {
     const saved = storedTx()[0]
     expect(saved.status).toBe('paid')
     expect(String(saved.date).slice(0, 10)).toBe(new Date().toISOString().slice(0, 10))
-    expect(screen.getByText('Joriy oy uchun qarzdorlik yo\'q.')).toBeTruthy()
+    expect(screen.getByText('Qarzdorlik yo\'q — barcha o\'quvchilar muddatida to\'lagan.')).toBeTruthy()
   })
 
   it('jadvalda kelajakdagi kutilgan to\'lov "To\'langan" qilinsa, sanasi bugunga tushadi', async () => {

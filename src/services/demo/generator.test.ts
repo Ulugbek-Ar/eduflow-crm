@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { conversion, filterByPeriod, getPeriod, overviewKpis, sumExpense, sumIncome } from '../../utils/analytics'
-import { computeDebts } from '../../utils/debts'
+import { computeDebts, DEFAULT_DEBT_SETTINGS } from '../../utils/debts'
 import { hasLessonOn, occupiesSeat } from '../../utils/groups'
 import { isAttendanceRecord, isCourse, isCustomer, isEnrollment, isGroup, isTeacher, isTransaction } from '../../utils/guards'
 import { demoWindows, generateDemo } from './generator'
@@ -57,7 +57,10 @@ describe('demo generatori — davrga moslashgan', () => {
       expect(kpi.revenue.change ?? 0).toBeGreaterThanOrEqual(0)
       expect(kpi.newLeads.change ?? 0).toBeGreaterThanOrEqual(0)
       expect(sumExpense(filterByPeriod(transactions, (t) => t.date, getPeriod('month', now)))).toBeGreaterThan(0)
-      expect(computeDebts(customers, courses, transactions, now).length).toBeGreaterThan(0)
+      // v11: o'qish (guruh) asosidagi qarz — rejadagi 4–7 qarzdor, boshqalarda qarz yo'q
+      const debts = computeDebts(customers, courses, transactions, now, { groups, enrollments, settings: DEFAULT_DEBT_SETTINGS })
+      expect(debts.length).toBeGreaterThanOrEqual(4)
+      expect(debts.length).toBeLessThanOrEqual(7)
       // Kelajakdagi to'langan yozuv yo'q ("Kutilmoqda" — kelajak sanasi bilan bo'lishi mumkin)
       expect(transactions.filter((t) => t.status === 'paid' && Date.parse(t.date) > now.getTime())).toEqual([])
       expect(customers.filter((c) => Date.parse(c.createdAt) > now.getTime())).toEqual([])

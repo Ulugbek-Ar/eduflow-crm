@@ -2946,6 +2946,22 @@ a.btn {
   justify-content: center;
 }
 
+/* To'lov eslatmasi: asosiy amal — butun qator, qolganlari bir qatorda */
+.reminder-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reminder-actions > :first-child {
+  grid-column: 1 / -1;
+}
+
+.reminder-actions .btn {
+  justify-content: center;
+  min-width: 0;
+}
+
 .apply-status {
   min-height: 1.4em;
   color: var(--success-text);
@@ -2969,6 +2985,58 @@ a.btn {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+.check-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.check-field input,
+.cell-check input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.table .cell-check {
+  width: 36px;
+  text-align: center;
+}
+
+.ledger-table {
+  width: 100%;
+  margin: 0 0 6px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-table th,
+.ledger-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ledger-table th:first-child {
+  text-align: left;
+}
+
+.ledger-table thead th {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.ledger-table tbody th {
+  font-weight: 500;
 }
 
 .student-group-stats {

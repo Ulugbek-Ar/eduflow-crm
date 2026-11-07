@@ -38,6 +38,21 @@ describe('Sozlamalar', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('Faqat PNG, JPG, WEBP, GIF yoki SVG rasm')
   })
 
+  it('"O\'quv jarayoni": to\'lov muddati, birinchi oy ulushi va eslatma shablonlari (bo\'sh shablon — standart matn)', async () => {
+    const { user } = await openSettings()
+    const card = screen.getByRole('region', { name: 'O\'quv jarayoni' })
+    const due = within(card).getByLabelText('Oylik to\'lov muddati (oyning sanasi)')
+    await user.clear(due)
+    await user.type(due, '5')
+    await user.click(within(card).getByRole('checkbox', { name: /Birinchi oyni kunlar bo'yicha hisoblash/ }))
+    await user.clear(within(card).getByLabelText('To\'lov eslatmasi shabloni (o\'zbekcha)'))
+    fireEvent.change(within(card).getByLabelText('To\'lov eslatmasi shabloni (ruscha)'), { target: { value: 'Оплата {summa}' } })
+    expect(within(card).getByText(/O'zgaruvchilar: \{ism\} \{summa\}/)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Saqlash' }))
+    expect(storedSettings()).toMatchObject({ paymentDueDay: 5, prorateFirstMonth: true, reminderTemplateRu: 'Оплата {summa}' })
+    expect(String(storedSettings().reminderTemplateUz)).toContain('Assalomu alaykum, {ism}!')
+  })
+
   it('"Asosiy valyuta": UZS / USD', async () => {
     const { user } = await openSettings()
     const select = screen.getByLabelText('Asosiy valyuta')

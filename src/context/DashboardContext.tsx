@@ -317,7 +317,9 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const scoped = role === 'teacher'
   const visibleGroups = scoped ? groups.filter((g) => ownTeacher !== undefined && g.teacherId === ownTeacher.id) : groups
   const visibleGroupIds = new Set(visibleGroups.map((g) => g.id))
-  const visibleEnrollments = scoped ? enrollments.filter((e) => visibleGroupIds.has(e.groupId)) : enrollments
+  // Savatchadagi (o'chirilgan) mijozning o'qishlari ko'rinmaydi — tiklansa qaytadi
+  const liveCustomerIds = new Set(customers.map((c) => c.id))
+  const visibleEnrollments = enrollments.filter((e) => liveCustomerIds.has(e.customerId) && (!scoped || visibleGroupIds.has(e.groupId)))
   const studentIds = new Set(visibleEnrollments.map((e) => e.customerId))
   const visibleCustomers = scoped
     ? customers.filter((c) => studentIds.has(c.id)).map((c): Customer => ({ id: c.id, name: c.name, phone: '', course: c.course, status: c.status, source: c.source, createdAt: c.createdAt }))
@@ -380,6 +382,10 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     getGroup: (id) => (id ? groups.find((g) => g.id === id) : undefined),
     getTeacher: (id) => (id ? teachers.find((t) => t.id === id) : undefined),
     exportData: () => ({ customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions }),
+    debtContext: { groups: visibleGroups, enrollments: visibleEnrollments, settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay } },
+    logReminders: (customerIds, channel) => {
+      for (const id of customerIds) audit('reminder.sent', `${getCustomer(id)?.name ?? id} · ${channel}`, id)
+    },
     search,
     dateRange,
     activeSection,

@@ -96,9 +96,10 @@ bilan sinxron.
   bosqich menyusi yoki `Alt + ←/→`, `Enter` — kartani ochish). Mobilda Kanban faqat o'z ichida gorizontal aylanadi
 - Yangi mijoz: Ism, Telefon (`+998 XX XXX XX XX` maskasi, takroriy raqam taqiqlanadi), Manba, Kurs/Xizmat, Izoh
 - Qidiruv va filtrlar: bosqich, manba, kurs, qo'shilgan sana oralig'i
-- Mijoz kartasi: bosqichni shu yerning o'zida o'zgartirish, "To'lov qildi" sanasi va o'qish oyi ("2-oy / 6" yoki "Tugagan"),
-  to'lovlar tarixi (statuslari bilan), jami to'langan, joriy oy qarzi; tahrirlash, tasdiqlash bilan o'chirish
-  (to'lovlar jurnalda "Ism (o'chirilgan)" ko'rinishida qoladi)
+- Mijoz kartasi: bosqichni shu yerning o'zida o'zgartirish, guruhlari (har biri bo'yicha qarz yoki avans, davomat),
+  oxirgi 12 oy jadvali (kutilgan / to'langan / balans), to'lovlar tarixi (statuslari bilan), jami to'langan;
+  tahrirlash, tasdiqlash bilan o'chirish (to'lovlar jurnalda "Ism (o'chirilgan)" ko'rinishida qoladi).
+  Guruhga yozilmagan mijozda — eskicha: "To'lov qildi" sanasi, o'qish oyi ("2-oy / 6") va joriy oy qarzi
 
 **Moliya va kassa**
 
@@ -107,8 +108,15 @@ bilan sinxron.
   Bekor qilingan — jadvalning o'zida almashtiriladi). **Balans va barcha KPI faqat "To'langan" bo'yicha hisoblanadi**
 - Kirim / Chiqim formasi; marketing chiqimiga ixtiyoriy **Manba** (CPL/ROI uchun). "Kutilmoqda" to'lov kelajakdagi sana bilan
   kiritiladi; "To'landi" deb belgilanganda to'lov sanasi bugun bo'ladi
-- **Qarzdorliklar va kutilayotgan to'lovlar**: qarzi kattasidan saralangan ro'yxat, qatordan "To'lov qabul qilish"
-  (summa oldindan to'ldiriladi); "Kutilmoqda" to'lovlarni bir bosishda "To'landi" deb belgilash
+- To'lov formasi: o'quvchi tanlangach **guruh** (o'qish) va **qaysi oy uchun** tanlanadi, summa shu guruh bo'yicha tanlangan oy
+  oxirigacha qoldiq bilan o'zi to'ldiriladi; chekda guruh va oy ko'rsatiladi
+- **Qarzdorliklar va kutilayotgan to'lovlar**: qarzi kattasidan saralangan ro'yxat (Mijoz, Guruh, Oylik, Qarz), qatordan
+  "To'lov qabul qilish" (qarzi eng katta guruh va muddati o'tgan oxirgi oy oldindan tanlanadi); "Kutilmoqda" to'lovlarni bir
+  bosishda "To'landi" deb belgilash
+- **To'lov eslatmasi**: qatordagi "Eslatma" — Sozlamalardagi shablon bo'yicha tayyor matn (o'zbekcha yoki ruscha):
+  nusxa olish, Telegram'da ulashish, SMS, qo'ng'iroq. Bir nechtasini belgilab — hammasi bitta nusxada. Yuborilgan eslatma
+  jurnalga yoziladi, ro'yxatda "Oxirgi eslatma: N kun oldin" ko'rinadi. Shablon o'zgaruvchilari:
+  `{ism} {summa} {kurs} {guruh} {oy} {markaz} {telefon}`
 - To'lov turlari va xarajatlar tarkibi bo'yicha taqsimot
 
 **Kurslar va xizmatlar**
@@ -137,7 +145,7 @@ bilan sinxron.
 
 - Demo markaz alohida xotirada: undan chiqilganda sizning ma'lumotingiz o'z joyida qoladi
 - Saqlash xatosi (xotira to'lgan) haqida aniq ogohlantirish; bir nechta tab orasida sinxronlash
-- Bildirishnomalar: bog'lanilmagan yangi lidlar, joriy oy qarzdorlari, chiqim kirimdan oshishi, manfiy balans
+- Bildirishnomalar: bog'lanilmagan yangi lidlar, qarzdorlar, chiqim kirimdan oshishi, manfiy balans
 - Parol PBKDF2-HMAC-SHA256 (210 000 iteratsiya); noto'g'ri urinishlarda o'sib boruvchi blok
 - Yorug' / qorong'i / tizim mavzusi, ranglar faqat CSS o'zgaruvchilaridan, WCAG AA kontrast (ikkala mavzuda tekshirilgan)
 - Responsiv: 1440 / 1024 / 768 / 390 px; mobilda jadvallar kartalarga aylanadi, sahifada gorizontal scroll yo'q
@@ -162,14 +170,25 @@ Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `s
 Chiqim (yoki lid) 0 bo'lsa CPL va ROI **"—"** ko'rsatiladi — nolga bo'linmaydi. "Jami" qatori o'rtachalardan emas, yig'indilardan
 qayta hisoblanadi.
 
-**Qarzdorlik (joriy kalendar oyi):**
+**Qarzdorlik** (`src/utils/debts.ts`, v11 — har bir o'qish, ya'ni o'quvchining guruhga yozilishi bo'yicha alohida hisob):
 
-1. Faqat **"To'lov qildi"** bosqichidagi mijozlar hisoblanadi.
-2. Kutilgan summa = mijoz kursining **oylik narxi**. Kurs topilmasa yoki narxi 0 bo'lsa, mijoz hisobga olinmaydi; arxivdagi kurs hisoblanadi.
-   Kurs davomiyligi tugagan bo'lsa qarz yo'q: "To'lov qildi" ga o'tgan oy 1-oy, joriy oy davomiylikdan keyin bo'lsa — kurs tugagan.
-3. To'langan = shu mijozning joriy oydagi **"To'langan"** kirimlari. "Kutilmoqda" va "Bekor qilingan" kirmaydi.
-4. Qarz = max(0, kutilgan − to'langan); ortiqcha to'lov keyingi oyga o'tkazilmaydi.
-5. Ro'yxat qarzi kattasidan saralanadi; "Kutilmoqda" to'lovlar alohida ro'yxatda.
+1. **Oylik summa** = (individual narx ?? kurs narxi) × (1 − chegirma %).
+2. **Oylar**: o'qish boshlangan oydan joriy oygacha; tugash (ketish) sanasidan keyingi oylar hisoblanmaydi.
+   **Pauza** oralig'iga to'g'ri kelgan kunlar hisoblanmaydi: butun oy pauzada — 0, qisman — faol kunlar ulushida.
+3. **Birinchi oy**: Sozlamalarda "Birinchi oyni kunlar bo'yicha hisoblash" yoqilgan bo'lsa — boshlangan kundan oy oxirigacha
+   ulushda, aks holda to'liq.
+4. **To'lov muddati**: har oyning N-sanasi (Sozlamalar → O'quv jarayoni, standart 10); birinchi oy — o'qish boshlangan kun.
+   Muddati o'tmagan oy hali qarz emas.
+5. **To'langan** = shu o'qishga tegishli **"To'langan"** kirimlar (quyidagi "Kirim qaysi guruhga tegishli" qoidasi).
+   "Kutilmoqda" va "Bekor qilingan" kirmaydi.
+6. **Balans** = Σ to'langan − Σ muddati o'tgan oylar summasi (o'qish boshidan). Manfiy — qarz, musbat — **avans**: ortiqcha
+   to'lov keyingi oylarga o'tadi. Mijozning qarzi — barcha o'qishlari balansining yig'indisi.
+7. **Guruhga yozilmagan** "To'lov qildi" mijozlar — eskicha: joriy oy uchun kurs narxi − shu oy to'langan
+   (kurs davomiyligi tugagan bo'lsa qarz yo'q).
+8. Ro'yxat qarzi kattasidan saralanadi; "Kutilmoqda" to'lovlar alohida ro'yxatda.
+
+To'lov formasidagi summa = tanlangan o'qish bo'yicha tanlangan oy oxirigacha Σ kutilgan − Σ to'langan (muddatidan qat'i nazar).
+Mijoz kartasidagi oylar jadvalida to'lov "qaysi oy uchun" (`period`) bo'lsa o'sha oyga, bo'lmasa to'lov oyiga yoziladi.
 
 **Kirim qaysi guruhga tegishli** (`src/utils/attribution.ts` — maosh va guruh bo'yicha qarz uchun yagona qoida):
 
@@ -451,8 +470,10 @@ faqat-o'qish rejimi serverda tekshiriladi, jurnal server triggerlari bilan yozil
 - Valyutani USD ga o'zgartirish faqat belgini almashtiradi — summalar konvertatsiya qilinmaydi.
 - To'liq bosqich tarixi saqlanmaydi — faqat "To'lov qildi" ga o'tgan sana (`paidAt`). Bosqichdan chiqqan mijoz oldingi
   davrlar "Faol mijozlar" sonidan ham tushib qoladi; konversiya lidning joriy bosqichi bo'yicha.
-- Qarz faqat joriy oy uchun va "oylik narx" modelida: o'tgan oylardan qolgan qarz, chegirmalar va bir martalik to'lovlar
-  hisobga olinmaydi. Mijoz bosqichdan chiqib qaytsa, kurs muddati yangidan sanaladi. Mijoz kursga nom orqali bog'langan.
+- Qarz "oylik to'lov" modelida: bir martalik (butun kurs uchun) to'lov va kurs davomiyligi bo'yicha avtomatik tugash yo'q —
+  o'quvchi guruhdan chiqarilganda (tugash sanasi) hisob to'xtaydi. Guruhga yozilmagan mijozlar uchun eskicha (faqat joriy oy)
+  hisob qoladi; mijoz kursga nom orqali bog'langan.
+- Eslatmalar avtomatik yuborilmaydi: matn tayyorlanadi, yuborish — nusxa, Telegram yoki SMS ilovasi orqali qo'lda.
 - Sana maydonlari brauzerning tili/hududiga qarab ko'rinadi (masalan, `mm/dd/yyyy` yoki `dd.mm.yyyy`).
 - Logotip `localStorage`'da data URL sifatida saqlanadi (200 KB gacha) — band joyni oshiradi.
 - CSV'da `=`, `+`, `-`, `@` bilan boshlangan matnlar (masalan, `+998...` telefonlar) Excel formula sifatida bajarilmasligi uchun
@@ -461,6 +482,5 @@ faqat-o'qish rejimi serverda tekshiriladi, jurnal server triggerlari bilan yozil
 ## Keyingi rivojlanish
 
 - Payme / Click: obuna to'lovini avtomatik qabul qilish va to'lovlarni avtomatik qayd etish
-- SMS va Telegram bot orqali eslatmalar (to'lov muddati, dars jadvali)
-- Guruhlar, dars jadvali va davomat moduli
+- SMS (Eskiz) va Telegram bot orqali avtomatik eslatmalar (to'lov muddati, dars jadvali), ota-onalar uchun bot
 - O'zbekistondagi serverda (self-hosted Supabase) joylashtirish

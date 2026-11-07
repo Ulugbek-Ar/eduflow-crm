@@ -5,6 +5,7 @@ import type { Transaction } from '../types/finance.types'
 import type { Course } from '../types/course.types'
 import { filterByPeriod, getPeriod, sumExpense, sumIncome } from './analytics'
 import { computeDebts, totalDebt } from './debts'
+import type { DebtSettings } from './debts'
 import type { AttendanceRecord, LessonException } from '../types/attendance.types'
 import type { Enrollment, Group } from '../types/group.types'
 import { absentStreaks, todayLessons, unmarkedLessons } from './attendance'
@@ -17,6 +18,8 @@ export interface EduNotificationData {
   attendance: readonly AttendanceRecord[]
   lessonExceptions: readonly LessonException[]
   finance?: boolean
+  // Qarz hisobi: to'lov muddati va birinchi oy qoidasi
+  settings?: DebtSettings
 }
 
 export interface AppNotification {
@@ -75,12 +78,12 @@ export function buildNotifications(
     }
   }
 
-  const debts = finance ? computeDebts(customers, courses, transactions, now) : []
+  const debts = finance ? computeDebts(customers, courses, transactions, now, edu ? { groups: edu.groups, enrollments: edu.enrollments, settings: edu.settings } : {}) : []
   if (debts.length > 0) {
     result.push({
       id: `debts:${now.getFullYear()}-${now.getMonth() + 1}:${debts.map((d) => `${d.customer.id}=${d.debt}`).join(',')}`,
       tone: 'warning',
-      title: tr('{0} ta mijozning shu oy qarzi bor', { 0: debts.length }),
+      title: tr('{0} ta o\'quvchining qarzi bor', { 0: debts.length }),
       description: tr('Jami qarz: {0}', { 0: money(totalDebt(debts)) }),
       target: 'finance',
     })

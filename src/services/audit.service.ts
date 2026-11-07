@@ -275,6 +275,10 @@ export function logAudit(actor: AuditActor | null, action: AuditAction, summary:
     ...(entityId ? { entityId } : {}),
   }
   if (backend) {
+    // Darhol ko'rinadi (masalan, qarzdorlar ro'yxatida "Oxirgi eslatma: bugun"); keyingi refreshAudit server ro'yxati
+    // bilan almashtiradi (server triggerlari yozgan yozuvlar ham o'shanda keladi)
+    remote = [entry, ...remote]
+    notify()
     backend.log(entry).catch(() => undefined)
     return entry
   }

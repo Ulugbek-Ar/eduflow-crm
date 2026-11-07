@@ -9,14 +9,16 @@ import { deleteCustomerMessage, getInitials } from '../../utils/customers'
 import { attendanceRate, rateLabel, recordsFor } from '../../utils/attendance'
 import { customerEnrollments, ENROLLMENT_STATUS_LABELS, enrollmentMonthlyFee } from '../../utils/groups'
 import { Badge } from '../ui/Badge'
-import { customerDebt, studyMonthNumber } from '../../utils/debts'
+import { cx } from '../../utils/cx'
+import { customerDebt, last12Months, paymentPreset, studyMonthNumber } from '../../utils/debts'
+import { formatNumber } from '../../utils/format'
 import { CustomerCard } from '../print/CustomerCard'
 import { PrintDocument } from '../print/PrintDocument'
 import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings } = useDashboard()
+  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings, debtContext } = useDashboard()
   const confirm = useConfirm()
   const can = useCan()
   const actor = useAuditActor()
@@ -37,10 +39,13 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
     .sort((a, b) => b.date.localeCompare(a.date))
   // Faqat "To'langan" kirimlar
   const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' && t.status === 'paid' ? t.amount : 0), 0)
-  const debt = customerDebt(customer, courses, transactions)
+  const debt = customerDebt(customer, courses, transactions, undefined, debtContext)
+  // Oylar jadvali — faqat guruhdagi o'qish bo'yicha (eskicha mijozda yo'q)
+  const months = debt && debt.ledgers.length > 0 ? last12Months(debt) : []
   const course = courses.find((c) => c.name === customer.course)
   const studentEnrollments = customerEnrollments(customer.id, enrollments)
-  const studyMonth = customer.status === 'paid' ? studyMonthNumber(customer) : null
+  // Eskicha "nechanchi oy" — guruhga yozilmagan mijozlar uchun
+  const studyMonth = customer.status === 'paid' && studentEnrollments.length === 0 ? studyMonthNumber(customer) : null
   const finished = course && course.durationMonths > 0 && studyMonth !== null && studyMonth > course.durationMonths
 
   const handleDelete = async () => {
@@ -79,7 +84,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           {can('payments.create') && (
             <Button
               icon="plus"
-              onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, amount: debt?.debt || undefined } })}
+              onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, ...paymentPreset(debt) } })}
             >
               {tr('To\'lov')}
             </Button>
@@ -164,6 +169,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
               const group = groups.find((g) => g.id === e.groupId)
               const groupCourse = courses.find((c) => c.id === group?.courseId)
               const rate = attendanceRate(recordsFor(attendance, { customerId: customer.id, groupId: e.groupId }))
+              const balance = debt?.ledgers.find((l) => l.enrollment.id === e.id)?.balance ?? 0
               return (
                 <li key={e.id}>
                   <div>
@@ -185,6 +191,11 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
                   <span className="student-group-stats">
                     <Badge tone={e.status === 'active' ? 'paid' : e.status === 'paused' ? 'thinking' : 'neutral'}>{ENROLLMENT_STATUS_LABELS[e.status]}</Badge>
                     <span className="muted">{tr('Davomat: {0}', { 0: rateLabel(rate) })}</span>
+                    {balance !== 0 && (
+                      <span className={balance < 0 ? 'text-danger strong' : 'text-success'}>
+                        {balance < 0 ? tr('Qarz: {0}', { 0: money(-balance) }) : tr('Avans: {0}', { 0: money(balance) })}
+                      </span>
+                    )}
                   </span>
                 </li>
               )
@@ -201,10 +212,55 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
       {debt && (
         <div className={debt.debt > 0 ? 'detail-total is-debt' : 'detail-total'}>
           <span>
-            {tr('Joriy oy: kutilgan')} {money(debt.expected)}{tr(', to\'langan')} {money(debt.paid)}
+            {debt.ledgers.length > 0 ? (
+              tr('O\'qish boshidan: kutilgan {0}, to\'langan {1}', { 0: money(debt.expected), 1: money(debt.paid) })
+            ) : (
+              <>
+                {tr('Joriy oy: kutilgan')} {money(debt.expected)}
+                {tr(', to\'langan')} {money(debt.paid)}
+              </>
+            )}
           </span>
-          <strong className={debt.debt > 0 ? 'text-danger nowrap' : 'text-success nowrap'}>{debt.debt > 0 ? tr('Qarz: {0}', { 0: money(debt.debt) }) : tr('Qarz yo\'q')}</strong>
+          <strong className={debt.debt > 0 ? 'text-danger nowrap' : 'text-success nowrap'}>
+            {debt.debt > 0 ? tr('Qarz: {0}', { 0: money(debt.debt) }) : debt.advance > 0 ? tr('Avans: {0}', { 0: money(debt.advance) }) : tr('Qarz yo\'q')}
+          </strong>
         </div>
+      )}
+
+      {months.length > 0 && (
+        <>
+          <h3 className="detail-subtitle">{tr('Oylar bo\'yicha (oxirgi 12 oy)')}</h3>
+          <table className="ledger-table">
+            <thead>
+              <tr>
+                <th scope="col">{tr('Oy')}</th>
+                <th scope="col">{tr('Kutilgan')}</th>
+                <th scope="col">{tr('To\'langan')}</th>
+                <th scope="col">{tr('Balans')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {months.map((m) => (
+                <tr key={m.period}>
+                  <th scope="row">
+                    {`${m.period.slice(5, 7)}.${m.period.slice(0, 4)}`}
+                    {!m.due && <span aria-label={tr('to\'lov muddati hali kelmagan')}> *</span>}
+                  </th>
+                  <td>{formatNumber(m.expected)}</td>
+                  <td>{formatNumber(m.paid)}</td>
+                  <td className={cx(m.balance < 0 && 'text-danger', m.balance > 0 && 'text-success')}>
+                    {m.balance > 0 ? '+' : ''}
+                    {formatNumber(m.balance)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="small-note muted">
+            {tr('Summalar: {0}. Balans — o\'qish boshidan shu oy oxirigacha to\'langan minus kutilgan (minus — qarz, plyus — avans).', { 0: settings.currency === 'USD' ? 'USD' : tr('so\'m') })}
+            {months.some((m) => !m.due) && ` ${tr('* — to\'lov muddati hali kelmagan, qarzga kirmaydi.')}`}
+          </p>
+        </>
       )}
 
       <h3 className="detail-subtitle">{tr('To\'lovlar tarixi')}</h3>

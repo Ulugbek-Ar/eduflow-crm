@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   actionCategory,
   AUDIT_KEY,
   AUDIT_RETENTION_MS,
   EMPTY_AUDIT_FILTERS,
   filterAudit,
+  getAuditSnapshot,
   isAuditEntry,
   logAudit,
   MAX_AUDIT_ENTRIES,
   readAudit,
+  refreshAudit,
+  setAuditBackend,
 } from './audit.service'
 import { setStorageNamespace } from './storage.service'
 
@@ -64,6 +67,24 @@ describe('amallar jurnali', () => {
     setStorageNamespace('main')
     expect(readAudit()).toEqual([])
     expect(localStorage.getItem('eduflow-demo:audit')).toContain('demo')
+  })
+})
+
+describe('bulutli jurnal', () => {
+  it('yozuv darhol ko\'rinadi (serverga yuboriladi), refreshAudit server ro\'yxati bilan almashtiradi', async () => {
+    const server = [{ id: 'srv1', at: new Date().toISOString(), action: 'payment.create' as const, userId: 'u1', userName: 'Server', summary: 'Kirim' }]
+    const backend = { log: vi.fn().mockResolvedValue(undefined), list: vi.fn().mockResolvedValue(server) }
+    setAuditBackend(backend)
+    try {
+      const entry = logAudit(admin, 'reminder.sent', 'Aziza · Telegram', 'c1')
+      expect(backend.log).toHaveBeenCalledWith(entry)
+      expect(getAuditSnapshot()[0]).toMatchObject({ action: 'reminder.sent', entityId: 'c1' })
+      expect(readAudit()).toEqual([])
+      await refreshAudit()
+      expect(getAuditSnapshot()).toEqual(server)
+    } finally {
+      setAuditBackend(null)
+    }
   })
 })
 
