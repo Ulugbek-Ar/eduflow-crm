@@ -71,6 +71,8 @@ function ActiveSection() {
       return <GroupsPanel />
     case 'attendance':
       return <AttendancePanel />
+    case 'schedule':
+      return <SchedulePanel />
     case 'finance':
       return (
         <div className="stack">
@@ -111,6 +113,7 @@ const loadGroupForm = (opts?: { reload: boolean }) => loadWithRetry(() => import
 const loadTeachersPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/teachers/TeachersPanel'), opts)
 const loadTodayLessons = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/attendance/TodayLessons'), opts)
 const loadAttendancePanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/attendance/AttendancePanel'), opts)
+const loadSchedulePanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/schedule/SchedulePanel'), opts)
 const loadTeacherForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/teachers/TeacherFormModal'), opts)
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
@@ -131,6 +134,7 @@ const TeachersPanel = lazy(() => loadTeachersPanel().then((m) => ({ default: m.T
 const TodayLessons = lazy(() => loadTodayLessons().then((m) => ({ default: m.TodayLessons })))
 const TeacherToday = lazy(() => loadTodayLessons().then((m) => ({ default: m.TeacherToday })))
 const AttendancePanel = lazy(() => loadAttendancePanel().then((m) => ({ default: m.AttendancePanel })))
+const SchedulePanel = lazy(() => loadSchedulePanel().then((m) => ({ default: m.SchedulePanel })))
 const TeacherFormModal = lazy(() => loadTeacherForm().then((m) => ({ default: m.TeacherFormModal })))
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 

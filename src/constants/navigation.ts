@@ -148,6 +148,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: tr('Umumiy ko\'rinish'), icon: 'overview' },
   { id: 'customers', label: tr('Mijozlar va lidlar'), icon: 'customers' },
   { id: 'groups', label: tr('Guruhlar'), icon: 'layers' },
+  { id: 'schedule', label: tr('Dars jadvali'), icon: 'calendar' },
   // Faqat o'qituvchi menyusida (permissions.ts: canOpenSection)
   { id: 'attendance', label: tr('Davomat'), icon: 'checkSquare' },
   { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
@@ -160,7 +161,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 ]
 
 // O'qituvchi menyusida ba'zi bo'limlar o'z nomi bilan
-const TEACHER_LABELS: Partial<Record<Section, string>> = { overview: tr('Bugun'), groups: tr('Guruhlarim') }
+const TEACHER_LABELS: Partial<Record<Section, string>> = { overview: tr('Bugun'), groups: tr('Guruhlarim'), schedule: tr('Mening jadvalim') }
 
 export function sectionLabel(section: Section, role?: string): string {
   if (role === 'teacher' && TEACHER_LABELS[section]) return TEACHER_LABELS[section]

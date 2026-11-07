@@ -4,14 +4,17 @@ import { createPortal } from 'react-dom'
 
 import type { PaperSize } from '../../utils/receipt'
 
-// Qog'oz o'lchami: A4 yoki 80 mm termoprinter lentasi (balandligi mazmunga qarab)
-const PAGE_RULE: Record<PaperSize, string> = {
+// Qog'oz o'lchami: A4, A4 albom (dars jadvali) yoki 80 mm termoprinter lentasi (balandligi mazmunga qarab)
+type PrintSize = PaperSize | 'a4-landscape'
+
+const PAGE_RULE: Record<PrintSize, string> = {
   a4: '@page { size: A4; margin: 14mm; }',
+  'a4-landscape': '@page { size: A4 landscape; margin: 8mm; }',
   thermal: '@page { size: 80mm auto; margin: 3mm; }',
 }
 
 // Chop etish: hujjat sahifaga qo'shiladi, faqat u chop etiladi (qolgani yashiriladi), tugagach o'chadi
-export function PrintDocument({ size, onDone, children }: { size: PaperSize; onDone: () => void; children: ReactNode }) {
+export function PrintDocument({ size, onDone, children }: { size: PrintSize; onDone: () => void; children: ReactNode }) {
   const done = useEffectEvent(onDone)
   useEffect(() => {
     document.body.classList.add('is-printing')

@@ -20,6 +20,7 @@ const ITEMS: Array<{ id: Section; label: string; icon: IconName }> = [
 const TEACHER_ITEMS: Array<{ id: Section; label: string; icon: IconName }> = [
   { id: 'overview', label: tr('Bugun'), icon: 'overview' },
   { id: 'groups', label: tr('Guruhlarim'), icon: 'layers' },
+  { id: 'schedule', label: tr('Jadval'), icon: 'calendar' },
   { id: 'attendance', label: tr('Davomat'), icon: 'checkSquare' },
 ]
 
