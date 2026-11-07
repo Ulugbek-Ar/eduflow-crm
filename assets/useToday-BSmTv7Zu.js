@@ -1,0 +1,1 @@
+import{ot as e}from"./index-BjP_Oii7.js";import{u as t}from"./groups-COldnC8d.js";var n=e();function r(){let[e]=(0,n.useState)(i);return e}function i(){return t(new Date)}function a(){let[e]=(0,n.useState)(o);return e}function o(){let e=new Date;return e.getHours()*60+e.getMinutes()}export{r as n,a as t};
