@@ -62,14 +62,19 @@ const AUDIENCE: Array<{ icon: IconName; title: string }> = [
   { icon: 'calendar', title: tr('Abituriyent tayyorlov') },
 ]
 
+// Har bir da'vo ishlaydigan funksiyaga mos (README → "Bo'limlar")
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'kanban', title: tr('Lidlar voronkasi'), text: tr('Har bir qo\'ng\'iroq va so\'rov yo\'qolmaydi: Yangi → Bog\'lanildi → O\'ylayapti → To\'lov qildi.') },
-  { icon: 'receipt', title: tr('To\'lov va chek'), text: tr('To\'lovni bir daqiqada yozing va 80 mm yoki A4 chek chop eting — summa so\'z bilan.') },
-  { icon: 'alert', title: tr('Qarzdorlar avtomatik'), text: tr('Kurs narxi va muddatiga qarab kim qancha qarzligi o\'zi hisoblanadi.') },
-  { icon: 'dollar', title: tr('Kassa va xarajatlar'), text: tr('Ijara, maosh, reklama — kassada qancha pul borligini doim bilasiz.') },
-  { icon: 'barChart', title: tr('Hisobotlar'), text: tr('Qaysi reklama o\'zini oqladi, qaysi kurs ko\'p daromad keltiradi — Excel\'ga bir tugmada.') },
-  { icon: 'shield', title: tr('Xodimlar va rollar'), text: tr('Menejer, kassir, kuzatuvchi — har biri faqat o\'ziga kerakli narsani ko\'radi.') },
-  { icon: 'activity', title: tr('Amallar jurnali'), text: tr('Kim qachon nima qilgani yozib boriladi. O\'chirilgan narsa 30 kun savatchada turadi.') },
+  { icon: 'layers', title: tr('Guruhlar'), text: tr('Sig\'im, xona va vaqt ziddiyatlari tekshiriladi. O\'quvchini ko\'chirish, pauza, chegirma va individual narx.') },
+  { icon: 'calendar', title: tr('Dars jadvali'), text: tr('Hafta kunlari yoki xonalar bo\'yicha jadval, ziddiyatlar qizil bilan belgilanadi, A4 chop etish.') },
+  { icon: 'checkSquare', title: tr('Davomat'), text: tr('O\'qituvchi telefonda bir bosishda belgilaydi: keldi, kelmadi, kechikdi, sababli. Oylik setka va foiz.') },
+  { icon: 'receipt', title: tr('To\'lov va chek'), text: tr('Guruh va oy tanlanadi, summa qoldiq bilan o\'zi to\'ladi. 80 mm yoki A4 chek — summa so\'z bilan.') },
+  { icon: 'alert', title: tr('Qarzdorlar va eslatmalar'), text: tr('Qarz har bir guruh bo\'yicha o\'zi hisoblanadi. Qarzdorga tayyor matn — nusxa, Telegram yoki SMS.') },
+  { icon: 'briefcase', title: tr('O\'qituvchi maoshi'), text: tr('Belgilangan summa, tushumdan foiz yoki o\'quvchi boshiga — oylik hisob, to\'lash va eksport.') },
+  { icon: 'barChart', title: tr('Kassa va hisobotlar'), text: tr('Kirim, chiqim va balans; qaysi reklama o\'zini oqladi — CSV va Excel\'ga bir tugmada.') },
+  { icon: 'upload', title: tr('Excel\'dan import'), text: tr('Eski ro\'yxatni CSV yoki Excel\'dan ko\'chiring: ustunlar o\'zi moslashadi, takrorlar oldindan ko\'rinadi.') },
+  { icon: 'shield', title: tr('Xodimlar va rollar'), text: tr('Administrator, menejer, kassir, o\'qituvchi, kuzatuvchi — har biri faqat o\'ziga kerakli narsani ko\'radi.') },
+  { icon: 'activity', title: tr('Jurnal va savatcha'), text: tr('Kim qachon nima qilgani yozib boriladi. O\'chirilgan narsa 30 kun savatchada turadi.') },
   { icon: 'phone', title: tr('Telefonda qulay'), text: tr('Pastki menyu, katta tugmalar, qorong\'i mavzu. O\'zbek va rus tilida.') },
 ]
 
@@ -90,7 +95,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: tr('Excel\'dagi eski ro\'yxatimni ko\'chirsa bo\'ladimi?'),
-    a: tr('Ha. Ulanishda yordam beramiz: mijozlar va to\'lovlarni ko\'chirib beramiz.'),
+    a: tr('Ha. Mijozlar bo\'limidagi "Import" CSV yoki Excel faylni o\'qiydi: ustunlar o\'zi moslashadi, takror va xatoli qatorlar oldindan ko\'rinadi, xohlasangiz importni bekor qilasiz.'),
+  },
+  {
+    q: tr('O\'qituvchilar ham tizimga kiradimi?'),
+    a: tr('Ha. O\'qituvchi faqat o\'z guruhlari, jadvali va davomatini ko\'radi — mijozlar telefoni va moliya unga yopiq. O\'qituvchi kirishlari tarifdagi xodimlar soniga kirmaydi.'),
   },
   {
     q: tr('Sinov muddati tugasa nima bo\'ladi?'),
@@ -149,7 +158,7 @@ export function LandingPage() {
             <p className="lp-eyebrow">{tr('O\'quv markazlari uchun CRM')}</p>
             <h1 id="hero-title">{tr('O\'quv markazingizni bitta panelda boshqaring')}</h1>
             <p className="lp-lead">
-              {tr('Lidlar, to\'lovlar, qarzdorlar, kassa va hisobotlar — daftar va Excel\'siz. Administrator 10 daqiqada o\'rganadi.')}
+              {tr('Lidlar, guruhlar va dars jadvali, davomat, to\'lovlar va qarzdorlar, o\'qituvchi maoshi — daftar va Excel\'siz. Administrator 10 daqiqada o\'rganadi.')}
             </p>
             <div className="lp-cta">
               <Cta action={ctas.primary} className="btn btn-primary lp-btn-lg" onApply={openApply} icon={primaryIcon} />
@@ -216,6 +225,14 @@ export function LandingPage() {
             <figure className="lp-shot-phone">
               <Shot name="mobile" widths={[390]} width={390} height={844} sizes="280px" alt={tr('Telefondagi ko\'rinish')} />
               <figcaption>{tr('Telefonda')}</figcaption>
+            </figure>
+            <figure>
+              <Shot name="schedule" widths={[720, 1440]} width={1440} height={900} sizes={SHOT_SIZES} alt={tr('Haftalik dars jadvali: guruhlar kun va vaqt bo\'yicha')} />
+              <figcaption>{tr('Dars jadvali')}</figcaption>
+            </figure>
+            <figure>
+              <Shot name="attendance" widths={[720, 1440]} width={1440} height={900} sizes={SHOT_SIZES} alt={tr('Guruh kartasi: oylik davomat setkasi')} />
+              <figcaption>{tr('Guruh va davomat')}</figcaption>
             </figure>
           </div>
         </section>

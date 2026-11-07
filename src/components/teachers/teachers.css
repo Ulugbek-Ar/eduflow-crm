@@ -43,3 +43,12 @@
 .payroll-table td:first-child {
   min-width: 170px;
 }
+
+/* Raqamli ustunlar sarlavhasi ikki qatorga tushishi mumkin — jadval 1440 px'da kartaga sig'adi */
+.payroll-table th {
+  white-space: normal;
+}
+
+.payroll-table td.col-optional {
+  min-width: 120px;
+}

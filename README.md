@@ -1,9 +1,10 @@
 # EduFlow CRM
 
-[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.0.0 · ma'lumot sxemasi v10
+[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.1.0 · ma'lumot sxemasi v11 · [o'zgarishlar](CHANGELOG.md)
 
-**O'quv markazlari uchun CRM.** Lidlar va mijozlar, to'lovlar va kassa, qarzdorlar, kurslar, hisobotlar, xodimlar va rollar —
-bitta brauzer ilovasida. Interfeys o'zbek (lotin) va rus tillarida, telefonda ham qulay, yorug' va qorong'i mavzu bor.
+**O'quv markazlari uchun CRM.** Lidlar va mijozlar, guruhlar va dars jadvali, davomat, to'lovlar va kassa, qarzdorlar va
+to'lov eslatmalari, o'qituvchilar va maosh, Excel/CSV'dan import, hisobotlar, xodimlar va rollar — bitta brauzer ilovasida.
+Interfeys o'zbek (lotin) va rus tillarida, telefonda ham qulay, yorug' va qorong'i mavzu bor.
 
 | Manzil | Nima |
 | --- | --- |
@@ -23,16 +24,20 @@ Standart parol yo'q: birinchi ochilishda **sozlash ustasi** markaz nomi va admin
 
 | Yorug' mavzu | Qorong'i mavzu |
 | --- | --- |
-| ![Umumiy ko'rinish](docs/overview-light.jpg) | ![Umumiy ko'rinish — qorong'i](docs/overview-dark.jpg) |
+| ![Umumiy ko'rinish: KPI va bugungi darslar](docs/overview-light.jpg) | ![Umumiy ko'rinish — qorong'i](docs/overview-dark.jpg) |
 | ![Sotuv voronkasi — Kanban](docs/kanban-light.jpg) | ![Kanban — qorong'i](docs/kanban-dark.jpg) |
-| ![Moliya va qarzdorlar](docs/finance-light.jpg) | ![Moliya va kassa — qorong'i](docs/finance-dark.jpg) |
-| ![Kurslar va xizmatlar](docs/courses-light.jpg) | ![Tahlil va hisobotlar — qorong'i](docs/analytics-dark.jpg) |
-| ![Xodimlar va rollar](docs/admin-light.jpg) | ![Xodimlar — qorong'i](docs/admin-dark.jpg) |
-| ![Mobil (390 px)](docs/mobile-light.jpg) | ![Mobil — qorong'i](docs/mobile-dark.jpg) |
+| ![Guruhlar](docs/groups-light.jpg) | ![Dars jadvali — qorong'i](docs/schedule-dark.jpg) |
+| ![Guruh kartasi: oylik davomat setkasi](docs/attendance-light.jpg) | ![O'qituvchilar maoshi — qorong'i](docs/teachers-dark.jpg) |
+| ![Moliya va kassa](docs/finance-light.jpg) | ![Qarzdorlar va to'lov eslatmasi — qorong'i](docs/debts-dark.jpg) |
+| ![Excel/CSV'dan import](docs/import-light.jpg) | ![Tahlil va hisobotlar — qorong'i](docs/analytics-dark.jpg) |
+| ![Kurslar va xizmatlar](docs/courses-light.jpg) | ![Xodimlar va rollar — qorong'i](docs/admin-dark.jpg) |
+| ![Mobil (390 px)](docs/mobile-light.jpg) | ![O'qituvchi telefonda davomat belgilaydi — qorong'i](docs/mobile-teacher-dark.jpg) |
 
 ![Landing sahifa](docs/landing.jpg)
 
-> Skrinshotlar demo ma'lumot bilan production build'dan (`npm run preview`) olingan.
+> Skrinshotlar demo ma'lumot bilan production build'dan olinadi va bitta buyruq bilan yangilanadi:
+> `npm run build && npm run screenshots` (`scripts/screenshots.mjs` — `docs/*.jpg` va `public/landing/*.webp|*.jpg`;
+> 1440 px WebP ≤ 80 KB).
 
 ---
 
@@ -51,10 +56,15 @@ Standart parol yo'q: birinchi ochilishda **sozlash ustasi** markaz nomi va admin
 
 | Rol | Nima qila oladi |
 | --- | --- |
-| Administrator | Hamma narsa: xodimlar, sozlamalar, zaxira, jurnal, savatcha |
-| Menejer | Mijozlar va lidlar, to'lov qabul qilish |
-| Kassir / Buxgalter | To'lovlar, xarajatlar, tahlil, hisobot yuklab olish |
+| Administrator | Hamma narsa: xodimlar, o'qituvchilar va maosh, sozlamalar, zaxira, jurnal, savatcha |
+| Menejer | Mijozlar va lidlar (import bilan), guruhlar va o'quvchilarni yozish, jadval, davomat, to'lov qabul qilish, eslatmalar |
+| Kassir / Buxgalter | To'lovlar, xarajatlar, qarzdorlar va eslatmalar, maosh to'lash, tahlil, hisobot yuklab olish |
+| O'qituvchi | Faqat o'z guruhlari: "Bugun", "Guruhlarim", jadval va davomat (o'quvchi telefoni va moliya yopiq) |
 | Kuzatuvchi | Faqat ko'rish |
+
+O'qituvchi kirishi "O'qituvchilar" bo'limidan yaratiladi (o'qituvchi yozuviga bog'lanadi) va tarifdagi xodimlar soniga kirmaydi.
+O'qituvchi davomatni bugun va oxirgi N kun uchun belgilaydi (Sozlamalar → O'quv jarayoni, standart 3); administrator va
+menejer — istalgan kun.
 
 Ruxsatlar jadvali bitta joyda — `src/auth/permissions.ts` (bulutda xuddi shu jadval `has_permission()` SQL funksiyasida).
 Xodimga vaqtinchalik parol beriladi, birinchi kirishda o'zgartirish majburiy. **Amallar jurnali**: kim, qachon, nimani
@@ -71,9 +81,10 @@ bulutli rejimda muddat tugasa yoki markaz to'xtatilsa ilova **faqat o'qish** rej
 
 ## Bo'limlar
 
-Bo'limlar (sidebar tartibida): **Umumiy ko'rinish · Mijozlar va lidlar · Moliya va kassa · Kurslar va xizmatlar ·
-Tahlil va hisobotlar · Sozlamalar**. Barcha hisob-kitoblar Header'dagi umumiy davr tanlovi (Bugun / 7 kun / Shu oy / Shu yil)
-bilan sinxron.
+Bo'limlar (sidebar tartibida): **Umumiy ko'rinish · Mijozlar va lidlar · Guruhlar · Dars jadvali · Moliya va kassa ·
+Kurslar va xizmatlar · O'qituvchilar · Tahlil va hisobotlar · Boshqaruv · Sozlamalar · Yordam** (har bir bo'lim faqat ruxsati
+bor rolga ko'rinadi). O'qituvchi menyusi: **Bugun · Guruhlarim · Mening jadvalim · Davomat**. Hisob-kitoblar Header'dagi umumiy
+davr tanlovi (Bugun / 7 kun / Shu oy / Shu yil) bilan sinxron.
 
 **Layout**
 
@@ -126,6 +137,33 @@ bilan sinxron.
   `{ism} {summa} {kurs} {guruh} {oy} {markaz} {telefon}`
 - To'lov turlari va xarajatlar tarkibi bo'yicha taqsimot
 
+**Guruhlar**
+
+- Ro'yxat: kurs, o'qituvchi, kunlar va vaqt, xona, sig'im (to'lganlik ko'rsatkichi), bugungi dars belgisi; filtrlar
+- Forma: nom, kurs, o'qituvchi, xona, hafta kunlari, vaqt, sig'im, boshlanish/tugash sanasi. **Ziddiyatlar** tekshiriladi:
+  bir xona yoki bir o'qituvchi bir vaqtda ikki guruhda bo'lolmaydi
+- Guruh kartasi: o'quvchilar (qo'shish — lid "To'lov qildi"ga o'tadi; boshlanish sanasi; boshqa guruhga ko'chirish, pauza,
+  o'qishni tugatish, chegirma yoki individual narx), oylik davomat setkasi, shu oy to'lovlari; arxivlash
+
+**Dars jadvali**
+
+- Haftalik setka (Du–Ya, 08:00–21:00, 30 daqiqalik qatorlar), bloklar kurs rangida, ziddiyat — qizil chegara,
+  bekor qilingan dars belgilanadi; "Xonalar bo'yicha" rejimi; o'qituvchi, xona va kurs filtrlari; A4 (albom) chop etish
+- Telefonda — kunlar yorlig'i va shu kunning darslari ro'yxati
+
+**Davomat**
+
+- Holatlar: **Keldi (P) · Kechikdi (L) · Kelmadi (A) · Sababli (E)**; "Hammasi keldi" bir bosishda
+- Guruh kartasida oylik setka (klaviatura: `P` `L` `A` `E`, strelkalar), oy bo'yicha foiz, CSV/Excel eksport
+- O'qituvchi uchun "Bugun" (bugungi darslar, belgilanmaganlari ajratilgan) va "Davomat" (katta tugmalar, telefon uchun)
+- Bildirishnomalar: dars tugagan, lekin davomat belgilanmagan guruhlar; ketma-ket 3 darsga kelmagan o'quvchilar
+
+**O'qituvchilar va maosh**
+
+- O'qituvchilar: guruhlari, o'quvchilar soni, 30 kunlik davomat, maosh qoidasi, ilovaga kirish (login yaratish)
+- Maosh qoidasi: **belgilangan summa**, **tushumdan foiz** yoki **har o'quvchi uchun**; "Maosh" yorlig'ida oy bo'yicha hisob,
+  "To'lash" (kassadan maosh xarajati sifatida), CSV/Excel eksport
+
 **Kurslar va xizmatlar**
 
 - Nom, turi (kurs / xizmat), davomiyligi (oy), oylik narxi, faol guruhlar soni, holati (faol / arxiv)
@@ -160,7 +198,8 @@ bilan sinxron.
 
 ## Hisob qoidalari va formulalar
 
-Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `src/utils/debts.ts`, `src/utils/courses.ts`, `src/utils/search.ts`.
+Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `src/utils/debts.ts`, `src/utils/attribution.ts`,
+`src/utils/payroll.ts`, `src/utils/attendance.ts`, `src/utils/courses.ts`, `src/utils/search.ts`.
 
 | Ko'rsatkich | Formula |
 | --- | --- |
@@ -173,6 +212,9 @@ Barcha formulalar sof funksiyalar va testlar bilan: `src/utils/analytics.ts`, `s
 | CPL | manba bo'yicha "To'langan" marketing chiqimi / davrda shu manbadan kelgan lidlar (umumiy CPL — barcha marketing chiqimi / barcha lidlar) |
 | ROI | (shu manbadan kelgan mijozlarning davrdagi kirimi − chiqim) / chiqim × 100 |
 | Kurs: kutilayotgan tushum | "To'lov qildi" talabalar soni × oylik narx |
+
+**Davomat foizi** (`src/utils/attendance.ts`): (Keldi + Kechikdi) / (Keldi + Kechikdi + Kelmadi) × 100. "Sababli" hisobga
+olinmaydi; belgilanmagan dars ham hisobga kirmaydi. Bekor qilingan dars sanasi davomat setkasida ko'rsatilmaydi.
 
 Chiqim (yoki lid) 0 bo'lsa CPL va ROI **"—"** ko'rsatiladi — nolga bo'linmaydi. "Jami" qatori o'rtachalardan emas, yig'indilardan
 qayta hisoblanadi.
@@ -253,6 +295,7 @@ Ketma-ket 5 ta noto'g'ri parol urinishidan keyin kirish bloklanadi: 30 s → 60 
 | `npm run typecheck` | Faqat TypeScript tekshiruvi |
 | `npm run check` | typecheck + lint + test + build — deploydan oldin |
 | `npm run e2e` | Playwright e2e (avval `npm run build`; brauzer: `npx playwright install chromium`) |
+| `npm run screenshots` | `docs/*.jpg` va `public/landing/*` skrinshotlarini qayta yaratish (avval `npm run build`) |
 | `npm run owner:password "parol"` | Lokal/demo rejimdagi `/owner` paroli uchun `VITE_OWNER_PASSWORD_HASH` |
 
 ## Papkalar tuzilishi
@@ -260,8 +303,9 @@ Ketma-ket 5 ta noto'g'ri parol urinishidan keyin kirish bloklanadi: 30 s → 60 
 ```
 src/
 ├── auth/            Rollar va ruxsatlar jadvali
-├── components/      Bo'limlar: overview, customers, finance, courses, analytics, settings, admin (xodimlar, jurnal,
-│                    savatcha), auth, onboarding, help, print (chek), layout, ui (umumiy komponentlar)
+├── components/      Bo'limlar: overview, customers (+ import), groups, schedule, attendance, teachers, finance (qarzdorlar,
+│                    eslatmalar), courses, analytics, settings, admin (xodimlar, jurnal, savatcha), auth, onboarding, help,
+│                    print (chek), layout, ui (umumiy komponentlar)
 ├── constants/       Ilova nomi, navigatsiya, ikonlar, tariflar, demo ma'lumot
 ├── context/         Dashboard, Auth (lokal va bulutli), Theme provayderlari
 ├── data/            Supabase adapteri: ulanish, mapper'lar, o'zgarishlar farqi (diff), sinxronlash
@@ -269,12 +313,15 @@ src/
 ├── i18n/            tr(), til almashtirish, rus lug'ati
 ├── landing/         Landing va huquqiy sahifalar
 ├── owner/           Sotuvchi paneli (/owner)
-├── services/        storage (versiya, migratsiya), auth (PBKDF2), users, sessions, audit, trash, subscription, export
-├── utils/           analytics, debts, courses, format, phone, lazyRetry ...
+├── services/        storage (versiya, migratsiya), auth (PBKDF2), users, sessions, audit, trash, subscription, export,
+│                    demo (davrga moslashgan deterministik demo generatori)
+├── utils/           analytics, debts, attribution, payroll, attendance, schedule, groups, reminders, import (CSV/XLSX
+│                    parser, ustunlarni moslashtirish), courses, format, phone, lazyRetry ...
 ├── router.ts        Sahifa marshrutlari (/, /app, /owner, /privacy, /terms)
 └── index.css        Dizayn tokenlari (yorug'/qorong'i) va stillar
 supabase/            Migratsiya (sxema + RLS), seed, staff funksiyasi, RLS testlari
 e2e/                 Playwright testlari
+scripts/             spa-routes (deep link'lar, sitemap), screenshots (docs va landing rasmlari), pages-server, owner-password
 ```
 
 ## Tillar
@@ -285,20 +332,27 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 
 ## Sifat: testlar va Lighthouse
 
-- **Unit va komponent testlari** (Vitest + Testing Library): 388 ta test — `npm run test`.
-- **E2E** (Playwright, `e2e/`): landing, demo, ro'yxatdan o'tish → mijoz → to'lov → chek, xodim qo'shish; desktop va
-  Pixel 7 (mobil) da, konsolda xato yo'qligi va gorizontal scroll yo'qligi tekshiriladi — `npm run e2e`.
+- **Unit va komponent testlari** (Vitest + Testing Library): 505 ta test, 73 fayl — `npm run test`. Formulalar (qarz, maosh,
+  davomat, jadval), migratsiya, CSV/XLSX parser (xlsx fixture test ichida yasaladi), ruxsatlar jadvali va SQL
+  `has_permission()` mosligi, tarjimalar to'liqligi.
+- **E2E** (Playwright, `e2e/`): landing, demo, ro'yxatdan o'tish → mijoz → to'lov → chek, xodim qo'shish; **guruh yaratish →
+  o'quvchi qo'shish → davomat → to'lov → qarz yopiladi**; **o'qituvchi sifatida kirish → faqat o'z guruhlari va davomat**;
+  **import: 10 qatorli CSV, 2 ta takror → 8 qo'shildi, 2 o'tkazib yuborildi**; GitHub Pages deep link'lari. Desktop (1440)
+  va Pixel 7 (mobil) da, konsolda xato yo'qligi va gorizontal scroll yo'qligi tekshiriladi — `npm run e2e`.
 - **RLS testlari** oddiy PostgreSQL'da (`supabase/tests/run-local.sh`): bir markaz boshqasining ma'lumotini ko'rmaydi,
   rollar, savatcha, faqat o'qish rejimi.
 - CI (`.github/workflows/ci.yml`) har push va PR'da uchalasini ham bajaradi.
 
-**Lighthouse (mobil, production build):**
+**Lighthouse 13 (mobil, production build, v1.1.0):**
 
 | Sahifa | Performance | Accessibility | Best Practices | SEO |
 | --- | --- | --- | --- | --- |
-| `/` (landing) | 98 | 100 | 100 | 100 |
-| `/app` | 95 | 100 | 100 | 100 |
-| `/privacy` | 99 | 100 | 100 | 100 |
+| `/` (landing) | 99 | 100 | 100 | 100 |
+| `/app` | 100 | 100 | 100 | 100 |
+| `/privacy` | 100 | 100 | 100 | 100 |
+
+Boshlang'ich JS (gzip'siz): `index` ≈ 240 KB + `App` ≈ 206 KB; yangi bo'limlar (guruhlar, jadval, davomat, o'qituvchilar,
+import) alohida lazy bo'laklarda yuklanadi.
 
 ## Ma'lumotlar qayerda saqlanadi
 
@@ -313,7 +367,9 @@ xuddi shu kalitlarni `eduflow-demo:` prefiksi ostida alohida saqlaydi):
 | Kalit | Tarkibi |
 | --- | --- |
 | `apex:customers`, `apex:transactions`, `apex:courses`, `apex:settings` | Asosiy ma'lumotlar |
-| `apex:version` | Sxema versiyasi (hozir **10**) |
+| `apex:teachers`, `apex:groups`, `apex:enrollments`, `apex:attendance`, `apex:lesson-exceptions` | v11: o'qituvchilar, guruhlar, o'quvchilarning guruhga yozilishi, davomat, bekor qilingan darslar |
+| `apex:backup-pre-v11` | v11 ga ko'chishdan oldingi ma'lumotning avtomatik nusxasi (Sozlamalar → Ma'lumotlar'dan yuklab olinadi) |
+| `apex:version` | Sxema versiyasi (hozir **11**) |
 | `apex:users`, `apex:auth`, `apex:sessions`, `apex:login-lock` | Xodimlar, parol xeshlari (PBKDF2-SHA256), seanslar, kirish bloki |
 | `apex:audit`, `apex:trash` | Amallar jurnali, savatcha (30 kun) |
 | `apex:subscription` | Tarif va sinov muddati |
@@ -337,6 +393,7 @@ ham joriy sxemaga ko'chiriladi, buzuq yozuvlar tashlab yuboriladi va soni ko'rsa
 | v8 | Logotip rasmi `settings.logoImage` | `''` (harfli logo) |
 | v9 | "To'lov qildi" sanasi `customer.paidAt` | birinchi to'langan kirim sanasi, bo'lmasa qo'shilgan sana |
 | v10 | Kurs davomiyligi 0 — "muddatsiz" | v6 yaratgan (1 oy, narx 0, 0 guruh) kurslar → muddatsiz |
+| v11 | O'qituvchilar, guruhlar, o'qishlar (enrollment), davomat; to'lovda `enrollmentId`/`period`, maoshda `teacherId`; sozlamalarda davomat va to'lov muddati, eslatma shablonlari | Ko'chishdan oldin avtomatik nusxa olinadi. "To'lov qildi" mijozlar kurs bo'yicha "{Kurs} — 1-guruh"ga yoziladi (Du/Cho/Ju, 14:00–15:30, o'qituvchisiz — keyin tahrirlanadi), o'qish boshlanishi — `paidAt`; eski to'lovlar o'zgartirilmaydi, guruhga "Kirim qaysi guruhga tegishli" qoidasi bo'yicha bog'lanadi |
 
 Lokal rejimda boshqa brauzer yoki qurilmada ma'lumotlar ko'rinmaydi — ko'chirish uchun
 **Sozlamalar → Ma'lumotlar → JSON zaxira** dan foydalaning. Brauzer tarixini tozalash ma'lumotlarni ham o'chiradi, shuning uchun

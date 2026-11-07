@@ -217,6 +217,12 @@
   margin-top: 28px;
 }
 
+.lp-shot-phone {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
 .lp-shots figcaption {
   margin-top: 10px;
   color: var(--text-secondary);
@@ -428,6 +434,8 @@
   }
 
   .lp-shot-phone {
+    grid-column: auto;
+    grid-row: auto;
     max-width: 280px;
     margin: 0 auto !important;
   }

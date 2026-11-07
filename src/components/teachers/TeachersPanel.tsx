@@ -322,8 +322,8 @@ function Payroll() {
                   </td>
                   <td className="cell-actions">
                     {can('payroll.manage') && row.remaining > 0 && (
-                      <Button size="sm" icon="dollar" onClick={() => setPaying(row)}>
-                        {tr('Maosh to\'lash')}
+                      <Button size="sm" icon="dollar" aria-label={tr('{0}: maosh to\'lash', { 0: row.teacher.name })} onClick={() => setPaying(row)}>
+                        {tr('To\'lash')}
                       </Button>
                     )}
                   </td>
