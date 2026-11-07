@@ -6,6 +6,9 @@ import { useDashboard } from '../../context/useDashboard'
 import { useAuditActor, useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
+import { attendanceRate, rateLabel, recordsFor } from '../../utils/attendance'
+import { customerEnrollments, ENROLLMENT_STATUS_LABELS, enrollmentMonthlyFee } from '../../utils/groups'
+import { Badge } from '../ui/Badge'
 import { customerDebt, studyMonthNumber } from '../../utils/debts'
 import { CustomerCard } from '../print/CustomerCard'
 import { PrintDocument } from '../print/PrintDocument'
@@ -13,7 +16,7 @@ import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings } = useDashboard()
+  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings } = useDashboard()
   const confirm = useConfirm()
   const can = useCan()
   const actor = useAuditActor()
@@ -36,6 +39,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' && t.status === 'paid' ? t.amount : 0), 0)
   const debt = customerDebt(customer, courses, transactions)
   const course = courses.find((c) => c.name === customer.course)
+  const studentEnrollments = customerEnrollments(customer.id, enrollments)
   const studyMonth = customer.status === 'paid' ? studyMonthNumber(customer) : null
   const finished = course && course.durationMonths > 0 && studyMonth !== null && studyMonth > course.durationMonths
 
@@ -151,6 +155,43 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           </div>
         )}
       </dl>
+
+      {studentEnrollments.length > 0 && (
+        <>
+          <h3 className="detail-subtitle">{tr('Guruhlari')}</h3>
+          <ul className="student-groups">
+            {studentEnrollments.map((e) => {
+              const group = groups.find((g) => g.id === e.groupId)
+              const groupCourse = courses.find((c) => c.id === group?.courseId)
+              const rate = attendanceRate(recordsFor(attendance, { customerId: customer.id, groupId: e.groupId }))
+              return (
+                <li key={e.id}>
+                  <div>
+                    {group && can('groups.view') ? (
+                      <button type="button" className="link-btn" onClick={() => openModal({ type: 'groupDetail', payload: { id: group.id } })}>
+                        {group.name}
+                      </button>
+                    ) : (
+                      <strong>{group?.name ?? tr('O\'chirilgan guruh')}</strong>
+                    )}
+                    <small className="muted cell-block">
+                      {tr('{0} dan', { 0: formatDate(`${e.startDate}T12:00:00`) })}
+                      {e.endDate && e.status !== 'active' ? ` · ${tr('{0} gacha', { 0: formatDate(`${e.endDate}T12:00:00`) })}` : ''}
+                      {' · '}
+                      {money(enrollmentMonthlyFee(e, groupCourse))}
+                      {tr('/oy')}
+                    </small>
+                  </div>
+                  <span className="student-group-stats">
+                    <Badge tone={e.status === 'active' ? 'paid' : e.status === 'paused' ? 'thinking' : 'neutral'}>{ENROLLMENT_STATUS_LABELS[e.status]}</Badge>
+                    <span className="muted">{tr('Davomat: {0}', { 0: rateLabel(rate) })}</span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
 
       <div className="detail-total">
         <span>{tr('Jami to\'lagan')}</span>

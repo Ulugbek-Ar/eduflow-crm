@@ -60,6 +60,8 @@ function ActiveSection() {
       )
     case 'customers':
       return <CustomerTable />
+    case 'groups':
+      return <GroupsPanel />
     case 'finance':
       return (
         <div className="stack">
@@ -92,6 +94,9 @@ const loadCourseForm = (opts?: { reload: boolean }) => loadWithRetry(() => impor
 const loadAdminPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/admin/AdminPanel'), opts)
 const loadReceipt = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/print/ReceiptModal'), opts)
 const loadHelpPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/help/HelpPanel'), opts)
+const loadGroupsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupsPanel'), opts)
+const loadGroupDetail = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupDetail'), opts)
+const loadGroupForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupFormModal'), opts)
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
 const SettingsPanel = lazy(() => loadSettingsPanel().then((m) => ({ default: m.SettingsPanel })))
@@ -104,11 +109,14 @@ const CourseFormModal = lazy(() => loadCourseForm().then((m) => ({ default: m.Co
 const AdminPanel = lazy(() => loadAdminPanel().then((m) => ({ default: m.AdminPanel })))
 const ReceiptModal = lazy(() => loadReceipt().then((m) => ({ default: m.ReceiptModal })))
 const HelpPanel = lazy(() => loadHelpPanel().then((m) => ({ default: m.HelpPanel })))
+const GroupsPanel = lazy(() => loadGroupsPanel().then((m) => ({ default: m.GroupsPanel })))
+const GroupDetail = lazy(() => loadGroupDetail().then((m) => ({ default: m.GroupDetail })))
+const GroupFormModal = lazy(() => loadGroupForm().then((m) => ({ default: m.GroupFormModal })))
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
 function prefetchChunks() {
-  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel]) {
+  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel, loadGroupsPanel, loadGroupDetail]) {
     load({ reload: false }).catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })
@@ -200,6 +208,8 @@ function Shell() {
         {modal?.type === 'course' && <CourseFormModal key={modal.payload?.id ?? 'new'} courseId={modal.payload?.id} />}
         {modal?.type === 'customerDetail' && <CustomerDetail key={modal.payload.id} customerId={modal.payload.id} />}
         {modal?.type === 'receipt' && <ReceiptModal key={modal.payload.id} transactionId={modal.payload.id} />}
+        {modal?.type === 'group' && <GroupFormModal key={modal.payload?.id ?? 'new'} groupId={modal.payload?.id} />}
+        {modal?.type === 'groupDetail' && <GroupDetail key={modal.payload.id} groupId={modal.payload.id} tab={modal.payload.tab} />}
         {modal?.type === 'transaction' && (
           <TransactionFormModal
             key={modal.payload?.id ?? 'new'}

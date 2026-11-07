@@ -31,7 +31,12 @@ export type ModalState =
   | { type: 'transaction'; payload?: { id?: string; kind?: TransactionType; customerId?: string; amount?: number } }
   | { type: 'course'; payload?: { id?: string } }
   | { type: 'receipt'; payload: { id: string } }
+  | { type: 'group'; payload?: { id?: string } }
+  | { type: 'groupDetail'; payload: { id: string; tab?: GroupTab } }
+  | { type: 'teacher'; payload?: { id?: string } }
   | null
+
+export type GroupTab = 'students' | 'attendance' | 'payments'
 
 export type ModalType = NonNullable<ModalState>['type']
 

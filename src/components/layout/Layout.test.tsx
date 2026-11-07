@@ -13,6 +13,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     expect(labels).toEqual([
       'Umumiy ko\'rinish',
       'Mijozlar va lidlar',
+      'Guruhlar',
       'Moliya va kassa',
       'Kurslar va xizmatlar',
       'Tahlil va hisobotlar',
@@ -31,7 +32,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     unmount()
     sessionStorage.clear()
     await renderSignedIn(undefined, { role: 'manager' })
-    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar', 'Yordam'])
+    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Guruhlar', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar', 'Yordam'])
   })
 
   it('sidebar yig\'iladi, nomlar tooltip va ekran o\'quvchi uchun qoladi, holat saqlanadi', async () => {

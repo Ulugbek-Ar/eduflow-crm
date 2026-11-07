@@ -89,6 +89,9 @@ function modalPermission(modal: NonNullable<ModalState>): Permission {
     course: 'courses.edit',
     transaction: 'payments.create',
     receipt: 'payments.view',
+    group: 'groups.edit',
+    groupDetail: 'groups.view',
+    teacher: 'teachers.manage',
   }
   if (modal.type === 'transaction' && (modal.payload?.id || modal.payload?.kind === 'expense')) return 'payments.manage'
   return byType[modal.type]

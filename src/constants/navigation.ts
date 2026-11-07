@@ -106,6 +106,9 @@ export const ICONS = {
   copy: ['M20 9h-9a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2z', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
   play: ['m5 3 14 9-14 9V3z'],
   move: ['M5 9l-3 3 3 3', 'M9 5l3-3 3 3', 'M15 19l-3 3-3-3', 'M19 9l3 3-3 3', 'M2 12h20', 'M12 2v20'],
+  layers: ['m12 2 10 5-10 5L2 7z', 'm2 17 10 5 10-5', 'm2 12 10 5 10-5'],
+  briefcase: ['M4 7h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z', 'M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2'],
+  checkSquare: ['m9 11 3 3L22 4', 'M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
 } as const
 
 export type IconName = keyof typeof ICONS
@@ -144,6 +147,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: tr('Umumiy ko\'rinish'), icon: 'overview' },
   { id: 'customers', label: tr('Mijozlar va lidlar'), icon: 'customers' },
+  { id: 'groups', label: tr('Guruhlar'), icon: 'layers' },
   { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
   { id: 'courses', label: tr('Kurslar va xizmatlar'), icon: 'bookOpen' },
   { id: 'analytics', label: tr('Tahlil va hisobotlar'), icon: 'barChart' },
