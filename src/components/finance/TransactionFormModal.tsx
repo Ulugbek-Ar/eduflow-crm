@@ -1,4 +1,4 @@
-import { tr } from '../../i18n'
+import { getLang, tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, SOURCE_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
@@ -7,7 +7,10 @@ import { useFormDraft } from '../../hooks/useFormDraft'
 import type { CustomerSource } from '../../types/customer.types'
 import type { PaymentMethod, TransactionCategory, TransactionInput, TransactionStatus, TransactionType } from '../../types/finance.types'
 import { cx, toOptions } from '../../utils/cx'
+import { customerDebt, remainderThrough } from '../../utils/debts'
 import { formatAmountInput, parseAmount, toInputDate, todayInputValue } from '../../utils/format'
+import { ENROLLMENT_STATUS_LABELS } from '../../utils/groups'
+import { monthName } from '../../utils/reminders'
 import type { TransactionFormErrors } from '../../utils/transactions'
 import { Button } from '../ui/Button'
 import { DraftNotice } from '../ui/DraftNotice'
@@ -28,6 +31,29 @@ interface FormState {
   status: TransactionStatus
   // Faqat marketing chiqimida; '' — ko'rsatilmagan
   source: CustomerSource | ''
+  // Kirim qaysi o'qish (guruh) uchun; '' — avtomatik: to'lov sanasidagi shu kurs bo'yicha faol o'qish
+  enrollmentId: string
+  // Qaysi oy uchun ('YYYY-MM'); '' — ko'rsatilmagan
+  period: string
+}
+
+// 'YYYY-MM' -> "Noyabr 2026"
+function periodLabel(period: string): string {
+  const [y, m] = period.split('-').map(Number)
+  const name = monthName(new Date(y, m - 1, 1), getLang())
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${y}`
+}
+
+// Joriy oydan 3 oy oldin va 2 oy keyin (tahrirlanayotgan to'lovning oyi ro'yxatda bo'lmasa, qo'shiladi)
+function periodOptions(current: string, keep: string): string[] {
+  const [y, m] = current.split('-').map(Number)
+  const list: string[] = []
+  for (let i = -3; i <= 2; i++) {
+    const d = new Date(y, m - 1 + i, 1)
+    list.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  if (keep && !list.includes(keep)) list.push(keep)
+  return list.sort()
 }
 
 const MAX_AMOUNT = 1_000_000_000_000
@@ -38,19 +64,44 @@ interface TransactionFormModalProps {
   customerId?: string
   // Qarzdorlar ro'yxatidan: qarz summasi oldindan to'ldiriladi
   amount?: number
+  // Qaysi o'qish (guruh) va qaysi oy uchun — berilmasa, o'quvchining faol o'qishi va joriy oy
+  enrollmentId?: string
+  period?: string
 }
 
-export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount }: TransactionFormModalProps) {
-  const { customers, getTransaction, addTransaction, updateTransaction, closeModal, settings } = useDashboard()
+export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount, enrollmentId: presetEnrollment, period: presetPeriod }: TransactionFormModalProps) {
+  const { customers, courses, transactions, getTransaction, addTransaction, updateTransaction, closeModal, settings, debtContext } = useDashboard()
   const editing = getTransaction(transactionId)
+  const thisPeriod = todayInputValue().slice(0, 7)
+  const enrollmentsOf = (id: string) => (id ? (debtContext.enrollments ?? []).filter((e) => e.customerId === id) : [])
+  // Standart: birinchi faol o'qish, bo'lmasa — eng oxirgisi
+  const defaultEnrollment = (id: string) => {
+    const own = enrollmentsOf(id)
+    return (own.find((e) => e.status === 'active') ?? own.find((e) => e.status === 'paused') ?? own.at(-1))?.id ?? ''
+  }
+  // Tanlangan o'qish bo'yicha shu oy oxirigacha qoldiq (o'qishi yo'q mijozda — joriy oy qarzi)
+  const remainderFor = (id: string, enrollment: string, period: string): number => {
+    const customer = customers.find((c) => c.id === id)
+    if (!customer) return 0
+    const row = customerDebt(customer, courses, transactions, undefined, debtContext)
+    if (!row) return 0
+    const ledger = row.ledgers.find((l) => l.enrollment.id === enrollment)
+    if (!ledger) return row.ledgers.length === 0 ? row.dueNow : 0
+    return remainderThrough(ledger, period || thisPeriod, debtContext.settings ?? { prorateFirstMonth: false, paymentDueDay: 10 })
+  }
 
   // Qoralama faqat bo'sh yangi formada (mijoz yoki summa oldindan berilmagan)
   const draftEnabled = !editing && !customerId && !presetAmount
   const { form, setForm, restored, discard, clear } = useFormDraft<FormState>(`transaction-${kind ?? 'income'}`, draftEnabled, () => {
     const type = editing?.type ?? kind ?? 'income'
+    const enrollmentId = editing ? (editing.enrollmentId ?? '') : customerId ? (presetEnrollment ?? defaultEnrollment(customerId)) : ''
+    const period = editing ? (editing.period ?? '') : type === 'income' ? (presetPeriod ?? thisPeriod) : ''
+    // Mijoz oldindan tanlangan bo'lsa (qarzdorlar, mijoz kartasi) — shu guruh va oy qoldig'i
+    const suggested = !editing && !presetAmount && customerId && type === 'income' ? remainderFor(customerId, enrollmentId, period) : 0
+    const initialAmount = editing ? editing.amount : (presetAmount ?? suggested)
     return {
       type,
-      amount: editing ? formatAmountInput(String(editing.amount)) : presetAmount ? formatAmountInput(String(presetAmount)) : '',
+      amount: initialAmount ? formatAmountInput(String(initialAmount)) : '',
       method: editing?.method ?? 'card',
       category: editing?.category ?? categoriesFor(type)[0],
       customerId: editing?.customerId ?? customerId ?? '',
@@ -58,9 +109,13 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
       date: editing ? toInputDate(editing.date) : todayInputValue(),
       status: editing?.status ?? 'paid',
       source: editing?.source ?? '',
+      enrollmentId,
+      period,
     }
   })
   const [errors, setErrors] = useState<TransactionFormErrors>({})
+  // Summa qo'lda yozilsa (yoki tahrirlashda), guruh/oy almashganda qayta to'ldirilmaydi
+  const [amountTouched, setAmountTouched] = useState(() => Boolean(editing || presetAmount) || (!customerId && form.amount !== ''))
   const amountRef = useRef<HTMLInputElement>(null)
   const dateRef = useRef<HTMLInputElement>(null)
   const today = todayInputValue()
@@ -68,6 +123,17 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     if (key in errors) setErrors((prev) => ({ ...prev, [key]: undefined }))
+  }
+
+  // Mijoz, guruh yoki oy o'zgarganda: summa — shu guruh bo'yicha tanlangan oy oxirigacha qoldiq
+  const refill = (patch: Partial<Pick<FormState, 'customerId' | 'enrollmentId' | 'period'>>) => {
+    setForm((prev) => {
+      const next = { ...prev, ...patch }
+      if ('customerId' in patch) next.enrollmentId = defaultEnrollment(next.customerId)
+      if (amountTouched || next.type !== 'income' || !next.customerId) return next
+      const remainder = remainderFor(next.customerId, next.enrollmentId, next.period)
+      return { ...next, amount: remainder > 0 ? formatAmountInput(String(remainder)) : '' }
+    })
   }
 
   const switchType = (type: TransactionType) => {
@@ -108,6 +174,15 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
       source: form.type === 'expense' && form.category === 'marketing' && form.source ? form.source : undefined,
       date: toIsoDate(),
     }
+    // Kirim: guruh va oy (chiqimda maosh oyi va o'qituvchi o'zgarmaydi — bu formada ko'rsatilmaydi)
+    if (form.type === 'income') {
+      data.enrollmentId = form.customerId && enrollmentsOf(form.customerId).some((e) => e.id === form.enrollmentId) ? form.enrollmentId : undefined
+      data.period = form.period || undefined
+      data.teacherId = undefined
+    } else if (editing?.type === 'income') {
+      data.enrollmentId = undefined
+      data.period = undefined
+    }
     if (editing) updateTransaction(editing.id, data)
     else {
       addTransaction(data)
@@ -117,6 +192,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
   }
 
   const customerOptions = customers.map((c) => ({ value: c.id, label: c.name, description: `${c.phone} · ${c.course}` }))
+  const ownEnrollments = form.type === 'income' ? enrollmentsOf(form.customerId) : []
+  const groupName = (groupId: string) => (debtContext.groups ?? []).find((g) => g.id === groupId)?.name ?? '—'
 
   return (
     <Modal
@@ -157,7 +234,10 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             inputMode="numeric"
             value={form.amount}
             error={errors.amount}
-            onChange={(e) => update('amount', formatAmountInput(e.target.value))}
+            onChange={(e) => {
+              setAmountTouched(true)
+              update('amount', formatAmountInput(e.target.value))
+            }}
             placeholder="650 000"
             data-autofocus
           />
@@ -213,10 +293,33 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             label={tr('Mijoz')}
             options={customerOptions}
             value={form.customerId}
-            onChange={(value) => update('customerId', value)}
+            onChange={(value) => refill({ customerId: value })}
             placeholder={tr('Ism yoki telefon bo\'yicha qidiring')}
             hint={tr('Ixtiyoriy')}
           />
+        )}
+
+        {form.type === 'income' && (
+          <div className="form-row">
+            {ownEnrollments.length > 0 && (
+              <Select
+                label={tr('Guruh')}
+                value={form.enrollmentId}
+                hint={tr('To\'lov shu guruhdagi o\'qish qarzidan ayriladi')}
+                onChange={(e) => refill({ enrollmentId: e.target.value })}
+                options={ownEnrollments.map((e) => ({
+                  value: e.id,
+                  label: e.status === 'active' ? groupName(e.groupId) : `${groupName(e.groupId)} (${ENROLLMENT_STATUS_LABELS[e.status].toLowerCase()})`,
+                }))}
+              />
+            )}
+            <Select
+              label={tr('Qaysi oy uchun')}
+              value={form.period}
+              onChange={(e) => refill({ period: e.target.value })}
+              options={[...periodOptions(thisPeriod, form.period).map((p) => ({ value: p, label: periodLabel(p) })), { value: '', label: tr('Ko\'rsatilmagan') }]}
+            />
+          </div>
         )}
 
         <Input

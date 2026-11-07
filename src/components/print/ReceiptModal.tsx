@@ -17,7 +17,7 @@ const SIZES: Array<{ id: PaperSize; label: string }> = [
 ]
 
 export function ReceiptModal({ transactionId }: { transactionId: string }) {
-  const { getTransaction, customers, courses, transactions, settings, money, getCustomerName, closeModal } = useDashboard()
+  const { getTransaction, customers, courses, transactions, settings, money, getCustomerName, closeModal, debtContext } = useDashboard()
   const audit = useSyncExternalStore(subscribeAudit, getAuditSnapshot)
   const [size, setSize] = usePersistentState<PaperSize>('apex:receipt-size', 'thermal', isPaperSize)
   const [printing, setPrinting] = useState(false)
@@ -31,7 +31,7 @@ export function ReceiptModal({ transactionId }: { transactionId: string }) {
     )
   }
 
-  const data = buildReceipt(transaction, customers, courses, transactions, audit, transaction.customerId ? getCustomerName(transaction.customerId) : transaction.note)
+  const data = buildReceipt(transaction, customers, courses, transactions, audit, transaction.customerId ? getCustomerName(transaction.customerId) : transaction.note, debtContext)
 
   return (
     <Modal

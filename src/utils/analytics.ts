@@ -2,6 +2,8 @@ import type { Course } from '../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
+import type { Enrollment } from '../types/group.types'
+import { activeStudentsOn, dayString } from './groups'
 
 export interface Period {
   start: Date
@@ -177,7 +179,19 @@ export interface OverviewKpis {
   conversion: { value: number | null; change: number | null }
 }
 
-export function overviewKpis(customers: readonly Customer[], transactions: readonly Transaction[], range: DateRange, now = new Date()): OverviewKpis {
+// v11: guruhlar (enrollment) bo'lsa "Faol mijozlar" — davr oxirida guruhda o'qiyotgan, pauzada bo'lmaganlar;
+// bo'lmasa — eskicha, "To'lov qildi" bosqichi bo'yicha
+export function activeAt(customers: readonly Customer[], enrollments: readonly Enrollment[], end: Date): number {
+  return enrollments.length > 0 ? activeStudentsOn(enrollments, dayString(end)) : activeCustomersAt(customers, end)
+}
+
+export function overviewKpis(
+  customers: readonly Customer[],
+  transactions: readonly Transaction[],
+  range: DateRange,
+  now = new Date(),
+  enrollments: readonly Enrollment[] = [],
+): OverviewKpis {
   const current = getPeriod(range, now)
   const previous = getPreviousPeriod(range, now)
   const txNow = filterByPeriod(transactions, (t) => t.date, current)
@@ -185,11 +199,11 @@ export function overviewKpis(customers: readonly Customer[], transactions: reado
   const leadsNow = filterByPeriod(customers, (c) => c.createdAt, current)
   const leadsPrev = filterByPeriod(customers, (c) => c.createdAt, previous)
   const revenue = sumIncome(txNow)
-  const active = activeCustomersAt(customers, current.end)
+  const active = activeAt(customers, enrollments, current.end)
   const conversionNow = conversion(leadsNow)
   return {
     revenue: { value: revenue, change: trend(revenue, sumIncome(txPrev)) },
-    active: { value: active, change: trend(active, activeCustomersAt(customers, previous.end)) },
+    active: { value: active, change: trend(active, activeAt(customers, enrollments, previous.end)) },
     newLeads: { value: leadsNow.length, change: trend(leadsNow.length, leadsPrev.length) },
     conversion: { value: conversionNow, change: pointChange(conversionNow, conversion(leadsPrev)) },
   }

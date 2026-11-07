@@ -13,6 +13,7 @@ import { tr } from '../i18n'
 import { setAuditBackend } from '../services/audit.service'
 import { validatePassword } from '../services/auth.service'
 import { openDemoWorkspace } from '../services/demo.service'
+import { loadDemoData } from '../services/demo/load'
 import { startSession } from '../services/sessions.service'
 import { computeAccess } from '../services/subscription.service'
 import type { Subscription } from '../services/subscription.service'
@@ -133,7 +134,13 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
     addUser: async (input) => {
       if (!allowed('staff.manage')) return { ok: false, error: tr('Bu amal uchun ruxsatingiz yo\'q') }
       if (!EMAIL.test(input.login.trim())) return { ok: false, field: 'login', error: tr('Bulutli rejimda login — xodimning emaili') }
-      return run(() => cloudApi.inviteStaff({ email: input.login, fullName: input.fullName, title: input.title, role: input.role, password: input.password }))
+      try {
+        const created = await cloudApi.inviteStaff({ email: input.login, fullName: input.fullName, title: input.title, role: input.role, password: input.password, teacherId: input.teacherId })
+        refresh()
+        return { ok: true, userId: created.id }
+      } catch (error) {
+        return { ok: false, error: message(error) }
+      }
     },
     updateUser: (id, patch) => {
       if (!allowed('staff.manage')) return { ok: false, error: tr('Bu amal uchun ruxsatingiz yo\'q') }
@@ -163,9 +170,13 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       cloudApi.signOut('others').catch((error) => toast.error(message(error)))
     },
     enterDemo: (role = 'admin') => {
-      const demoStaff = openDemoWorkspace()
-      startSession((demoStaff.find((u) => u.role === role) ?? demoStaff[0]).id)
-      window.location.reload()
+      loadDemoData()
+        .then((data) => {
+          const demoStaff = openDemoWorkspace(data)
+          startSession((demoStaff.find((u) => u.role === role) ?? demoStaff[0]).id)
+          window.location.reload()
+        })
+        .catch(() => toast.error(tr('Demo yuklanmadi. Internetni tekshirib, qayta urinib ko\'ring.')))
     },
     exitDemo: () => undefined,
     switchDemoRole: () => undefined,
@@ -173,7 +184,7 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       org,
       loadSnapshot: () => {
         if (!org) return Promise.reject(new Error(tr('Markaz topilmadi')))
-        return cloudApi.loadSnapshot(org)
+        return cloudApi.loadSnapshot(org, profile?.role)
       },
       createSync: (snapshot) => new cloudApi.CloudSync(org?.id ?? '', snapshot.trash),
       signUp: async (input) => {

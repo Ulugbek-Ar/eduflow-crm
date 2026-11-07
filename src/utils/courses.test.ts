@@ -9,7 +9,6 @@ const course = (patch: Partial<Course> = {}): Course => ({
   type: 'course',
   durationMonths: 6,
   monthlyPrice: 650_000,
-  activeGroups: 2,
   status: 'active',
   createdAt: '2026-01-01T00:00:00.000Z',
   ...patch,
@@ -27,6 +26,20 @@ const customer = (patch: Partial<Customer>): Customer => ({
 })
 
 describe('kurslar', () => {
+  it('courseStats (v11): guruh bo\'lsa — guruhda o\'qiyotganlar, chegirma va individual narx bilan; pauzadagilar hisoblanmaydi', () => {
+    const groups = [{ id: 'g1', name: 'IELTS', courseId: 'k1', room: '', days: ['mon' as const], startTime: '09:00', endTime: '10:30', capacity: 12, startDate: '2026-01-01', status: 'active' as const, createdAt: '2026-01-01T00:00:00.000Z' }]
+    const base = { groupId: 'g1', startDate: '2026-09-01', status: 'active' as const, createdAt: '2026-09-01T00:00:00.000Z' }
+    const enrollments = [
+      { ...base, id: 'e1', customerId: 'a' },
+      { ...base, id: 'e2', customerId: 'b', discountPercent: 10 },
+      { ...base, id: 'e3', customerId: 'c', priceOverride: 500_000 },
+      { ...base, id: 'e4', customerId: 'd', status: 'paused' as const, pausedFrom: '2026-11-01', pausedTo: '2026-11-30' },
+      { ...base, id: 'e5', customerId: 'e', status: 'left' as const, endDate: '2026-10-15' },
+    ]
+    const stats = courseStats(course(), [customer({ id: 'a' })], groups, enrollments, '2026-11-07')
+    expect(stats).toEqual({ students: 3, leads: 1, expectedMonthly: 650_000 + 585_000 + 500_000, groups: 1 })
+  })
+
   it('courseStats: talabalar — faqat "To\'lov qildi", lidlar — barcha bosqichlar, tushum = talabalar × narx', () => {
     const list = [
       customer({ id: 'a', status: 'paid' }),
@@ -35,13 +48,13 @@ describe('kurslar', () => {
       customer({ id: 'd', status: 'cancelled' }),
       customer({ id: 'e', course: 'Python' }),
     ]
-    expect(courseStats(course(), list)).toEqual({ students: 2, leads: 4, expectedMonthly: 1_300_000 })
+    expect(courseStats(course(), list)).toEqual({ students: 2, leads: 4, expectedMonthly: 1_300_000, groups: 0 })
     expect(courseStats(course({ monthlyPrice: 0 }), list).expectedMonthly).toBe(0)
     expect(usedByCustomers(course({ name: 'Rus tili' }), list)).toBe(0)
   })
 
-  it('validateCourse: nom, takror, davomiylik, narx, guruhlar', () => {
-    const base = { name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, activeGroups: 1, status: 'active' } as const
+  it('validateCourse: nom, takror, davomiylik, narx', () => {
+    const base = { name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, status: 'active' } as const
     expect(validateCourse(base, [course()])).toEqual({})
     expect(validateCourse({ ...base, name: ' ielts ' }, [course()]).name).toBe('Bu nomdagi kurs yoki xizmat bor')
     expect(validateCourse({ ...base, name: 'IELTS' }, [course()], 'k1')).toEqual({})
@@ -51,7 +64,6 @@ describe('kurslar', () => {
     expect(validateCourse({ ...base, durationMonths: 61 }, []).durationMonths).toBeDefined()
     expect(validateCourse({ ...base, durationMonths: Number.NaN }, []).durationMonths).toBeDefined()
     expect(validateCourse({ ...base, monthlyPrice: -1 }, []).monthlyPrice).toBeDefined()
-    expect(validateCourse({ ...base, activeGroups: 1.5 }, []).activeGroups).toBeDefined()
   })
 
   it('courseChoices: faqat faol kurslar, tahrirlashda arxivdagi joriy kurs ham', () => {

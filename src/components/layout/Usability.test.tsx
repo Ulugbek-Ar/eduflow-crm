@@ -24,11 +24,11 @@ describe('Header va pastki menyu', () => {
     }
   })
 
-  it('"Qo\'shish" menyusi rolga qarab: menejerda xarajat va kurs yo\'q', async () => {
+  it('"Qo\'shish" menyusi rolga qarab: menejerda xarajat va kurs yo\'q (guruh bor)', async () => {
     const { user } = await renderSignedIn(data, { role: 'manager' })
     await user.click(within(screen.getByRole('banner')).getByRole('button', { name: /^Qo'shish/ }))
     const menu = screen.getByRole('menu', { name: 'Qo\'shish' })
-    expect(within(menu).getAllByRole('menuitem').map((i) => i.querySelector('span')?.firstChild?.textContent)).toEqual(['Yangi mijoz', 'To\'lov qabul qilish'])
+    expect(within(menu).getAllByRole('menuitem').map((i) => i.querySelector('span')?.firstChild?.textContent)).toEqual(['Yangi mijoz', 'Yangi guruh', 'To\'lov qabul qilish'])
     await user.click(within(menu).getByRole('menuitem', { name: /To'lov qabul qilish/ }))
     expect(await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })).toBeTruthy()
   })

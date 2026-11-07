@@ -4,7 +4,9 @@ import { tr } from '../i18n'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
-import { isCourse, isCustomer, isIsoDate, isRecord, isText, isTransaction, keepValid } from '../utils/guards'
+import type { Enrollment, Group } from '../types/group.types'
+import type { Teacher } from '../types/teacher.types'
+import { isCourse, isCustomer, isEnrollment, isGroup, isIsoDate, isRecord, isTeacher, isText, isTransaction, keepValid } from '../utils/guards'
 import { readJson, setItem } from './storage.service'
 import type { SaveResult } from './storage.service'
 
@@ -12,12 +14,17 @@ export const TRASH_KEY = 'apex:trash'
 export const TRASH_RETENTION_DAYS = 30
 const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 86_400_000
 
-export type TrashKind = 'customer' | 'transaction' | 'course'
+export type TrashKind = 'customer' | 'transaction' | 'course' | 'teacher' | 'group' | 'enrollment'
+
+export const TRASH_KINDS: readonly TrashKind[] = ['customer', 'transaction', 'course', 'teacher', 'group', 'enrollment']
 
 export const TRASH_KIND_LABELS: Record<TrashKind, string> = {
   customer: tr('Mijoz'),
   transaction: tr('Tranzaksiya'),
   course: tr('Kurs'),
+  teacher: tr('O\'qituvchi'),
+  group: tr('Guruh'),
+  enrollment: tr('Guruhga yozilish'),
 }
 
 interface TrashBase {
@@ -27,16 +34,23 @@ interface TrashBase {
   deletedBy: string
 }
 
+// Savatchadagi yozuv (enrollment uchun label — "O'quvchi — Guruh" snapshot'i)
 export type TrashEntry =
   | (TrashBase & { kind: 'customer'; item: Customer })
   | (TrashBase & { kind: 'transaction'; item: Transaction })
   | (TrashBase & { kind: 'course'; item: Course })
+  | (TrashBase & { kind: 'teacher'; item: Teacher })
+  | (TrashBase & { kind: 'group'; item: Group })
+  | (TrashBase & { kind: 'enrollment'; item: Enrollment; label?: string })
 
 export function isTrashEntry(value: unknown): value is TrashEntry {
   if (!isRecord(value) || !isText(value.id) || !isIsoDate(value.deletedAt) || typeof value.deletedBy !== 'string') return false
   if (value.kind === 'customer') return isCustomer(value.item)
   if (value.kind === 'transaction') return isTransaction(value.item)
   if (value.kind === 'course') return isCourse(value.item)
+  if (value.kind === 'teacher') return isTeacher(value.item)
+  if (value.kind === 'group') return isGroup(value.item)
+  if (value.kind === 'enrollment') return isEnrollment(value.item) && (value.label === undefined || typeof value.label === 'string')
   return false
 }
 
@@ -65,7 +79,11 @@ export function trashTitle(entry: TrashEntry, money: (amount: number) => string)
     case 'customer':
       return entry.item.name
     case 'course':
+    case 'teacher':
+    case 'group':
       return entry.item.name
+    case 'enrollment':
+      return entry.label ?? entry.item.id
     case 'transaction':
       return `${entry.item.type === 'income' ? 'Kirim' : 'Chiqim'}: ${money(entry.item.amount)}${entry.item.customerName ? ` · ${entry.item.customerName}` : ''}`
   }

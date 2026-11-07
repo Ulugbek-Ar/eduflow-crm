@@ -13,7 +13,9 @@ import type { CsvDelimiter, Currency, DateFormat, Settings } from '../../types/d
 import { formatDateWith } from '../../utils/format'
 import { formatPhone, phoneDigits } from '../../utils/phone'
 import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
+import { Input, Textarea } from '../ui/Input'
+import { REMINDER_VARIABLES } from '../../utils/reminders'
+import { DEFAULT_REMINDER_RU, DEFAULT_REMINDER_UZ } from '../../constants/mockData'
 import { Select } from '../ui/Select'
 import { DataSettings } from './DataSettings'
 import { LogoUpload } from './LogoUpload'
@@ -45,6 +47,7 @@ const SAMPLE_DATE = new Date(2026, 0, 31, 12).toISOString()
 const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null }> = [
   { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
+  { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
   { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
@@ -116,6 +119,10 @@ export function SettingsPanel() {
       logoText: form.logoText.trim().toUpperCase(),
       phone: digits.length === 0 ? '' : form.phone,
       address: form.address.trim(),
+      paymentDueDay: form.paymentDueDay >= 1 ? form.paymentDueDay : 10,
+      // Bo'sh shablon — standart matn
+      reminderTemplateUz: form.reminderTemplateUz.trim() || DEFAULT_REMINDER_UZ,
+      reminderTemplateRu: form.reminderTemplateRu.trim() || DEFAULT_REMINDER_RU,
     })
   }
 
@@ -194,6 +201,56 @@ export function SettingsPanel() {
                   options={(Object.keys(DELIMITERS) as CsvDelimiter[]).map((d) => ({ value: d, label: DELIMITERS[d] }))}
                 />
               </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard id="learning" title={tr('O\'quv jarayoni')} description={tr('Davomat, to\'lov muddati va qarz hisobi')}>
+            <div className="form">
+              <div className="form-row">
+                <Input
+                  label={tr('O\'qituvchi davomatni necha kun orqagacha tahrirlaydi')}
+                  type="number"
+                  min={0}
+                  max={60}
+                  inputMode="numeric"
+                  value={String(form.attendanceEditDays)}
+                  hint={tr('Bugun + shuncha kun (0 — faqat bugun). Administrator va menejer istalgan kunni tahrirlaydi.')}
+                  onChange={(e) => update('attendanceEditDays', Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))))}
+                />
+                <Input
+                  label={tr('Oylik to\'lov muddati (oyning sanasi)')}
+                  type="number"
+                  min={1}
+                  max={28}
+                  inputMode="numeric"
+                  value={form.paymentDueDay > 0 ? String(form.paymentDueDay) : ''}
+                  hint={tr('Shu sanagacha to\'lanmasa — qarz. Birinchi oy o\'qish boshlangan kuni to\'lanadi.')}
+                  // Bo'sh maydon vaqtincha 0 (saqlashda — standart 10), 28 dan katta — 28
+                  onChange={(e) => update('paymentDueDay', Math.max(0, Math.min(28, Math.round(Number(e.target.value) || 0))))}
+                />
+              </div>
+              <label className="check-field">
+                <input type="checkbox" checked={form.prorateFirstMonth} onChange={(e) => update('prorateFirstMonth', e.target.checked)} />
+                <span>
+                  {tr('Birinchi oyni kunlar bo\'yicha hisoblash')}
+                  <small className="muted cell-block">{tr('Oy o\'rtasida qo\'shilgan o\'quvchi shu oy uchun faqat qolgan kunlar ulushini to\'laydi')}</small>
+                </span>
+              </label>
+              <Textarea
+                label={tr('To\'lov eslatmasi shabloni (o\'zbekcha)')}
+                rows={3}
+                maxLength={600}
+                value={form.reminderTemplateUz}
+                onChange={(e) => update('reminderTemplateUz', e.target.value)}
+              />
+              <Textarea
+                label={tr('To\'lov eslatmasi shabloni (ruscha)')}
+                rows={3}
+                maxLength={600}
+                value={form.reminderTemplateRu}
+                hint={tr('O\'zgaruvchilar: {0}', { 0: REMINDER_VARIABLES.map((v) => `{${v}}`).join(' ') })}
+                onChange={(e) => update('reminderTemplateRu', e.target.value)}
+              />
             </div>
           </SettingsCard>
         </form>

@@ -33,7 +33,7 @@ interface ReportDef {
 }
 
 export function AnalyticsPanel() {
-  const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings, logExport } = useDashboard()
+  const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings, logExport, debtContext } = useDashboard()
   const canExport = useCan()('reports.export')
   const period = getPeriod(dateRange)
   const periodLabel = DATE_RANGE_LABELS[dateRange]
@@ -73,7 +73,7 @@ export function AnalyticsPanel() {
       id: 'debtors',
       title: tr('Qarzdorlar'),
       description: tr('Joriy oy · qarzi kattasidan'),
-      download: (format) => exportRows('qarzdorlar', computeDebts(customers, courses, transactions), debtColumns(), format, options('Qarzdorlar')),
+      download: (format) => exportRows('qarzdorlar', computeDebts(customers, courses, transactions, undefined, debtContext), debtColumns(), format, options('Qarzdorlar')),
     },
     {
       id: 'sources',

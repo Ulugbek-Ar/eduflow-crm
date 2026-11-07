@@ -41,8 +41,8 @@ function TrendBadge({ change, unit }: { change: number | null; unit: Kpi['unit']
 }
 
 export function KpiCards() {
-  const { customers, transactions, dateRange, money } = useDashboard()
-  const k = overviewKpis(customers, transactions, dateRange)
+  const { customers, transactions, enrollments, dateRange, money } = useDashboard()
+  const k = overviewKpis(customers, transactions, dateRange, undefined, enrollments)
 
   const kpis: Kpi[] = [
     {
@@ -59,7 +59,7 @@ export function KpiCards() {
       value: formatNumber(k.active.value),
       change: k.active.change,
       unit: '%',
-      hint: tr('"To\'lov qildi" bosqichida'),
+      hint: enrollments.length > 0 ? tr('guruhlarda o\'qiyotganlar') : tr('"To\'lov qildi" bosqichida'),
       icon: 'userCheck',
       tone: 'primary',
     },

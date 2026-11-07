@@ -1,7 +1,7 @@
 import { tr } from '../../i18n'
 import { useEffect, useRef } from 'react'
 import { APP_NAME } from '../../constants/app'
-import { Icon, NAV_ITEMS } from '../../constants/navigation'
+import { Icon, NAV_ITEMS, sectionLabel } from '../../constants/navigation'
 import { canOpenSection } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
@@ -12,7 +12,7 @@ export function Sidebar() {
   const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } =
     useDashboard()
   const navRef = useRef<HTMLElement>(null)
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const items = NAV_ITEMS.filter((item) => canOpenSection(user?.role, item.id))
 
   // Mobil menyu ochilganda fokus birinchi bo'limga o'tadi, Esc yopadi
@@ -52,22 +52,24 @@ export function Sidebar() {
               type="button"
               className={cx('nav-item', activeSection === item.id && 'is-active')}
               aria-current={activeSection === item.id ? 'page' : undefined}
-              data-tooltip={item.label}
+              data-tooltip={sectionLabel(item.id, user?.role)}
               data-tour={item.id}
               onClick={() => setActiveSection(item.id)}
             >
               <Icon name={item.icon} />
-              <span className="nav-label">{item.label}</span>
+              <span className="nav-label">{sectionLabel(item.id, user?.role)}</span>
             </button>
           ))}
         </nav>
 
-        <div className="sidebar-balance">
-          <small>
-            {tr('Kassa balansi')} <Hint term="balance" className="hint-on-dark" />
-          </small>
-          <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
-        </div>
+        {can('payments.view') && (
+          <div className="sidebar-balance">
+            <small>
+              {tr('Kassa balansi')} <Hint term="balance" className="hint-on-dark" />
+            </small>
+            <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
+          </div>
+        )}
 
         {/* Ixcham holat faqat planshet va kompyuterda; mobilda menyu chiqib keladigan panel */}
         <button

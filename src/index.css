@@ -853,6 +853,10 @@ body.scroll-locked {
   transition: background-color 150ms var(--ease), border-color 150ms var(--ease), color 150ms var(--ease);
 }
 
+a.btn {
+  text-decoration: none;
+}
+
 .btn-sm {
   height: 32px;
   padding: 0 12px;
@@ -2929,6 +2933,131 @@ body.scroll-locked {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.apply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.apply-actions .btn {
+  flex: 1 1 200px;
+  justify-content: center;
+}
+
+/* To'lov eslatmasi: asosiy amal — butun qator, qolganlari bir qatorda */
+.reminder-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reminder-actions > :first-child {
+  grid-column: 1 / -1;
+}
+
+.reminder-actions .btn {
+  justify-content: center;
+  min-width: 0;
+}
+
+.apply-status {
+  min-height: 1.4em;
+  color: var(--success-text);
+  font-size: 0.88rem;
+}
+
+.student-groups {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.student-groups li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.check-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.check-field input,
+.cell-check input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.table .cell-check {
+  width: 36px;
+  text-align: center;
+}
+
+.ledger-table {
+  width: 100%;
+  margin: 0 0 6px;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-table th,
+.ledger-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ledger-table th:first-child {
+  text-align: left;
+}
+
+.ledger-table thead th {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.ledger-table tbody th {
+  font-weight: 500;
+}
+
+.student-group-stats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cell-block {
+  display: block;
+}
+
+.small-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.form-note {
+  align-self: end;
+  margin: 0 0 8px;
 }
 
 .small-note {

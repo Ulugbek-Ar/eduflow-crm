@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
-import { computeDebts, currentMonth, customerDebt, pendingPayments, studyMonthNumber, totalDebt } from './debts'
+import { DEFAULT_DEBT_SETTINGS, computeDebts, currentMonth, customerDebt, last12Months, monthExpected, pendingPayments, studyMonthNumber, totalDebt } from './debts'
 
 // 2026-yil 15-noyabr
 const NOW = new Date(2026, 10, 15, 12)
 const at = (m: number, d: number) => new Date(2026, m, d, 12).toISOString()
 
 const courses: Course[] = [
-  { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 6, monthlyPrice: 650_000, activeGroups: 1, status: 'active', createdAt: at(0, 1) },
-  { id: 'k2', name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, activeGroups: 1, status: 'archived', createdAt: at(0, 1) },
-  { id: 'k3', name: 'Bepul', type: 'service', durationMonths: 1, monthlyPrice: 0, activeGroups: 0, status: 'active', createdAt: at(0, 1) },
+  { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 6, monthlyPrice: 650_000, status: 'active', createdAt: at(0, 1) },
+  { id: 'k2', name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, status: 'archived', createdAt: at(0, 1) },
+  { id: 'k3', name: 'Bepul', type: 'service', durationMonths: 1, monthlyPrice: 0, status: 'active', createdAt: at(0, 1) },
 ]
 
 const customer = (id: string, patch: Partial<Customer> = {}): Customer => ({
@@ -99,5 +99,99 @@ describe('kurs davomiyligi (paidAt)', () => {
     expect(customerDebt(customer('a', { paidAt: at(5, 1) }), courses, [], NOW)).toMatchObject({ debt: 650_000, studyMonth: 6 })
     expect(customerDebt(customer('b', { paidAt: at(4, 30) }), courses, [], NOW)).toBeNull()
     expect(computeDebts([customer('a', { paidAt: at(5, 1) }), customer('b', { paidAt: at(4, 30) })], courses, [], NOW).map((r) => r.customer.id)).toEqual(['a'])
+  })
+})
+
+describe('v11: o\'qish (enrollment) asosidagi qarz', () => {
+  const ielts = { id: 'k1', name: 'IELTS', type: 'course' as const, durationMonths: 6, monthlyPrice: 600_000, status: 'active' as const, createdAt: '2026-01-01T00:00:00.000Z' }
+  const group = { id: 'g1', name: 'IELTS — kechki', courseId: 'k1', room: '', days: ['mon' as const], startTime: '18:00', endTime: '19:30', capacity: 15, startDate: '2026-01-01', status: 'active' as const, createdAt: '' }
+  const student = { id: 'c1', name: 'Aziza', phone: '+998 90 000 00 01', course: 'IELTS', status: 'paid' as const, source: 'instagram' as const, createdAt: '2026-08-20T10:00:00.000Z', paidAt: '2026-09-01T10:00:00.000Z' }
+  const base = { id: 'e1', customerId: 'c1', groupId: 'g1', startDate: '2026-09-01', status: 'active' as const, createdAt: '2026-09-01T10:00:00.000Z' }
+  const pay = (id: string, date: string, amount: number, patch: object = {}) => ({
+    id,
+    type: 'income' as const,
+    amount,
+    method: 'cash' as const,
+    category: 'course_fee' as const,
+    note: '',
+    customerId: 'c1',
+    status: 'paid' as const,
+    date: `${date}T10:00:00`,
+    ...patch,
+  })
+  const ctx = (enrollment: object = {}, settings = { prorateFirstMonth: false, paymentDueDay: 10 }) => ({ groups: [group], enrollments: [{ ...base, ...enrollment }], settings })
+  const debtOn = (date: string, transactions: ReturnType<typeof pay>[], enrollment: object = {}, settings?: { prorateFirstMonth: boolean; paymentDueDay: number }) =>
+    customerDebt(student, [ielts], transactions, new Date(`${date}T12:00:00`), ctx(enrollment, settings))
+
+  it('har oy vaqtida to\'lasa — qarz yo\'q; to\'lov muddati o\'tmagan oy hali qarz emas', () => {
+    const paid = [pay('t1', '2026-09-01', 600_000), pay('t2', '2026-10-05', 600_000)]
+    expect(debtOn('2026-11-07', paid)?.debt).toBe(0)
+    // 11-noyabrdan (muddat — 10-sana) noyabr oyi ham qarz
+    const late = debtOn('2026-11-11', paid)
+    expect(late?.debt).toBe(600_000)
+    expect(late?.expected).toBe(1_800_000)
+    // To'lov formasi uchun: joriy oy bilan qoldiq (muddatidan qat'i nazar)
+    expect(debtOn('2026-11-07', paid)?.dueNow).toBe(600_000)
+  })
+
+  it('ortiqcha to\'lov — avans, keyingi oyga o\'tadi', () => {
+    const row = debtOn('2026-11-15', [pay('t1', '2026-09-01', 1_200_000), pay('t2', '2026-10-03', 900_000)])
+    expect(row?.debt).toBe(0)
+    expect(row?.advance).toBe(300_000)
+  })
+
+  it('chegirma va individual narx', () => {
+    expect(debtOn('2026-09-20', [], { discountPercent: 25 })?.debt).toBe(450_000)
+    expect(debtOn('2026-09-20', [], { priceOverride: 500_000, discountPercent: 10 })?.debt).toBe(450_000)
+  })
+
+  it('pauza oylari hisoblanmaydi, qisman pauza — faol kunlar ulushida', () => {
+    const paid = [pay('t1', '2026-09-01', 600_000)]
+    // Butun oktyabr pauzada — oktyabr kutilmaydi
+    expect(debtOn('2026-10-25', paid, { status: 'paused', pausedFrom: '2026-10-01', pausedTo: '2026-10-31' })?.debt).toBe(0)
+    // Noyabr 16–30 pauza: 15/30 kun faol -> 300 000
+    const partial = debtOn('2026-11-20', [...paid, pay('t2', '2026-10-05', 600_000)], { pausedFrom: '2026-11-16', pausedTo: '2026-11-30' })
+    expect(partial?.debt).toBe(300_000)
+  })
+
+  it('endDate dan keyingi oylar hisoblanmaydi', () => {
+    const row = debtOn('2026-12-20', [pay('t1', '2026-09-01', 600_000)], { status: 'left', endDate: '2026-10-15' })
+    // Sentyabr to'langan, oktyabr (ketgan oyi) to'liq, noyabr-dekabr — yo'q
+    expect(row?.debt).toBe(600_000)
+  })
+
+  it('birinchi oy: "kunlar bo\'yicha" yoqilsa — ulushda, aks holda to\'liq', () => {
+    const start = { startDate: '2026-09-16' }
+    expect(debtOn('2026-09-20', [], start)?.debt).toBe(600_000)
+    expect(debtOn('2026-09-20', [], start, { prorateFirstMonth: true, paymentDueDay: 10 })?.debt).toBe(300_000)
+    // Birinchi oyning muddati — boshlangan kun: o'sha kuni hali qarz emas
+    expect(debtOn('2026-09-16', [], start)?.debt).toBe(0)
+  })
+
+  it('enrollmentId siz eski to\'lovlar shu kurs bo\'yicha faol o\'qishga bog\'lanadi; boshqa o\'qishniki hisoblanmaydi', () => {
+    const python = { ...ielts, id: 'k2', name: 'Python' }
+    const pyGroup = { ...group, id: 'g2', name: 'Python', courseId: 'k2' }
+    const enrollments = [base, { ...base, id: 'e2', groupId: 'g2' }]
+    const transactions = [pay('t1', '2026-09-01', 600_000), pay('t2', '2026-09-02', 600_000, { enrollmentId: 'e2' })]
+    const row = customerDebt(student, [ielts, python], transactions, new Date('2026-09-20T12:00:00'), { groups: [group, pyGroup], enrollments, settings: DEFAULT_DEBT_SETTINGS })
+    expect(row?.ledgers.map((l) => [l.enrollment.id, l.paid])).toEqual([
+      ['e1', 600_000],
+      ['e2', 600_000],
+    ])
+    expect(row?.debt).toBe(0)
+    expect(row?.label).toBe('IELTS — kechki, Python')
+  })
+
+  it('computeDebts: faqat qarzi borlar, kattasidan; 12 oy jadvali', () => {
+    const rows = computeDebts([student], [ielts], [pay('t1', '2026-09-01', 600_000)], new Date('2026-11-20T12:00:00'), ctx())
+    expect(rows).toHaveLength(1)
+    expect(rows[0].debt).toBe(1_200_000)
+    const table = last12Months(rows[0], new Date('2026-11-20T12:00:00'))
+    expect(table.map((m) => [m.period, m.expected, m.paid, m.balance])).toEqual([
+      ['2026-09', 600_000, 600_000, 0],
+      ['2026-10', 600_000, 0, -600_000],
+      ['2026-11', 600_000, 0, -1_200_000],
+    ])
+    expect(monthExpected({ ...base, status: 'paused' }, '2026-11', 600_000, DEFAULT_DEBT_SETTINGS)).toBe(0)
   })
 })

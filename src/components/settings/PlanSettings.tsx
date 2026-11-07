@@ -13,7 +13,7 @@ export function PlanSettings() {
   const { subscription, access, users } = useAuth()
   const { settings } = useDashboard()
   const plan = planOf(subscription.plan)
-  const staff = users.filter((u) => u.status === 'active').length
+  const staff = users.filter((u) => u.status === 'active' && u.role !== 'teacher').length
   const end = subscription.plan === 'trial' ? subscription.trialEndsAt : subscription.paidUntil
   const STATE_LABELS: Record<string, string> = {
     trial: tr('Sinov davri'),

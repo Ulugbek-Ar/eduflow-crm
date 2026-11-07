@@ -30,6 +30,12 @@ export interface Transaction {
   status: TransactionStatus
   // Faqat marketing chiqimi uchun: qaysi manbaga sarflangan (CPL / ROI hisobi)
   source?: CustomerSource
+  // v11: kurs to'lovi qaysi guruhdagi o'qish uchun (qarz va o'qituvchi maoshi hisobi)
+  enrollmentId?: string
+  // v11: maosh xarajati qaysi o'qituvchiga
+  teacherId?: string
+  // v11: qaysi oy uchun ('YYYY-MM'): to'lov chekida va maosh hisobotida
+  period?: string
   date: string
   updatedAt?: string
 }

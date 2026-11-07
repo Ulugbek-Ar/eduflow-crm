@@ -13,14 +13,18 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     expect(labels).toEqual([
       'Umumiy ko\'rinish',
       'Mijozlar va lidlar',
+      'Guruhlar',
+      'Dars jadvali',
       'Moliya va kassa',
       'Kurslar va xizmatlar',
+      'O\'qituvchilar',
       'Tahlil va hisobotlar',
       'Boshqaruv',
       'Sozlamalar',
       'Yordam',
     ])
-    expect(labels).toEqual(NAV_ITEMS.map((item) => item.label))
+    // "Davomat" bo'limi menyuda faqat o'qituvchiga ko'rinadi
+    expect(labels).toEqual(NAV_ITEMS.filter((item) => item.id !== 'attendance').map((item) => item.label))
   })
 
   it('kuzatuvchi va menejer menyusida faqat ruxsat berilgan bo\'limlar', async () => {
@@ -31,7 +35,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     unmount()
     sessionStorage.clear()
     await renderSignedIn(undefined, { role: 'manager' })
-    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar', 'Yordam'])
+    expect(labels()).toEqual(['Umumiy ko\'rinish', 'Mijozlar va lidlar', 'Guruhlar', 'Dars jadvali', 'Moliya va kassa', 'Kurslar va xizmatlar', 'Sozlamalar', 'Yordam'])
   })
 
   it('sidebar yig\'iladi, nomlar tooltip va ekran o\'quvchi uchun qoladi, holat saqlanadi', async () => {

@@ -3,13 +3,22 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useNotifications } from '../../hooks/useNotifications'
+import { useCan } from '../../hooks/useAuth'
 import { cx } from '../../utils/cx'
 import { buildNotifications } from '../../utils/notifications'
 
 export function NotificationBell() {
-  const { customers, transactions, courses, balance, money, setActiveSection, setCustomerFilters, customerFilters } = useDashboard()
+  const { customers, transactions, courses, balance, money, setActiveSection, setCustomerFilters, customerFilters, groups, enrollments, attendance, lessonExceptions, settings } = useDashboard()
+  const can = useCan()
   const { items, unread, markRead, markAllRead, clearAll } = useNotifications(
-    buildNotifications(customers, transactions, balance, money, courses),
+    buildNotifications(customers, transactions, balance, money, courses, undefined, {
+      groups,
+      enrollments,
+      attendance,
+      lessonExceptions,
+      finance: can('payments.view'),
+      settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay },
+    }),
   )
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)

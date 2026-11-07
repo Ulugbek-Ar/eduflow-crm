@@ -1,14 +1,17 @@
 import { tr } from '../i18n'
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { SECTION_PERMISSION } from '../auth/permissions'
+import { sectionAllowed, sectionPermissions } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import { CATEGORY_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
 import { AuthContext, useAuditActor, useCan } from '../hooks/useAuth'
 import { logAudit } from '../services/audit.service'
 import type { AuditAction } from '../services/audit.service'
 import { isTourDone, markTourDone } from '../services/tour.service'
-import { loadTrash, pruneTrash, saveTrash, TRASH_KEY } from '../services/trash.service'
+import { loadTrash, pruneTrash, saveTrash, TRASH_KEY, TRASH_KINDS } from '../services/trash.service'
+import { createEduActions } from './eduActions'
+import { teacherForUser } from '../utils/groups'
+import { loadDemoData } from '../services/demo/load'
 import type { TrashEntry, TrashKind } from '../services/trash.service'
 import { useConfirm } from '../hooks/useConfirm'
 import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
@@ -25,9 +28,10 @@ import {
   saveErrorMessage,
   setDemoMode,
   setItem,
+  LIST_KEYS,
   STORAGE_KEYS,
 } from '../services/storage.service'
-import type { SaveResult, StoredData } from '../services/storage.service'
+import type { ListKey, SaveResult, StoredData } from '../services/storage.service'
 import type { CloudSnapshot, CloudSync } from '../data/supabase'
 import type { Settings } from '../types/dashboard.types'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
@@ -35,7 +39,7 @@ import type { DateRange, ModalState, ModalType, Section, SortState } from '../ty
 import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 import type { Course } from '../types/course.types'
 import { cashBalance } from '../utils/analytics'
-import { normalizeCourseName, usedByCustomers } from '../utils/courses'
+import { courseInUse, normalizeCourseName } from '../utils/courses'
 import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
 import { createSaveMonitor } from '../utils/saveMonitor'
@@ -85,6 +89,10 @@ function modalPermission(modal: NonNullable<ModalState>): Permission {
     course: 'courses.edit',
     transaction: 'payments.create',
     receipt: 'payments.view',
+    group: 'groups.edit',
+    groupDetail: 'groups.view',
+    teacher: 'teachers.manage',
+    import: 'customers.edit',
   }
   if (modal.type === 'transaction' && (modal.payload?.id || modal.payload?.kind === 'expense')) return 'payments.manage'
   return byType[modal.type]
@@ -102,6 +110,9 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const can = useCan()
   const actor = useAuditActor()
   const authMode = useContext(AuthContext)?.mode
+  const authUser = useContext(AuthContext)?.user
+  // AuthProvider bo'lmasa (alohida komponent testlari) — administrator kabi
+  const role = authUser ? authUser.role : 'admin'
   // Demo markazda rol almashtirilsa ham tanishtiruv qayta chiqmaydi
   const tourKey = authMode === 'demo' ? 'demo' : (actor?.userId ?? 'local')
   const [tourOpen, setTourOpen] = useState(() => Boolean(actor) && !isTourDone(tourKey))
@@ -115,6 +126,11 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const [transactions, setTransactions] = useState(initial.data.transactions)
   const [settings, setSettings] = useState(initial.data.settings)
   const [courses, setCourses] = useState(initial.data.courses)
+  const [teachers, setTeachers] = useState(initial.data.teachers)
+  const [groups, setGroups] = useState(initial.data.groups)
+  const [enrollments, setEnrollments] = useState(initial.data.enrollments)
+  const [attendance, setAttendance] = useState(initial.data.attendance)
+  const [lessonExceptions, setLessonExceptions] = useState(initial.data.lessonExceptions)
   const [isDemo, setIsDemo] = useState(() => !cloud && isDemoMode())
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
@@ -161,13 +177,13 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   // Xato bo'lsa holat yangilanmaydi — keyingi o'zgarishda farq qayta yuboriladi
   const synced = useRef(initial.data)
   const queue = useRef<Promise<void>>(Promise.resolve())
-  const pushCloud = useEffectEvent(<K extends 'customers' | 'transactions' | 'courses' | 'settings'>(key: K, next: StoredData[K]) => {
+  const pushCloud = useEffectEvent(<K extends ListKey | 'settings'>(key: K, next: StoredData[K]) => {
     if (!cloud || synced.current[key] === next) return
     queue.current = queue.current.then(async () => {
       const prev = synced.current[key]
       try {
         if (key === 'settings') await cloud.sync.settings(next as Settings)
-        else await (cloud.sync[key] as (a: unknown, b: unknown) => Promise<void>)(prev, next)
+        else await cloud.sync.list(key as ListKey, prev as never, next as never)
         synced.current = { ...synced.current, [key]: next }
         onSaved(key, { ok: true })
       } catch {
@@ -180,6 +196,14 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   useEffect(() => (cloud ? pushCloud('transactions', transactions) : onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions))), [transactions, cloud])
   useEffect(() => (cloud ? pushCloud('settings', settings) : onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings))), [settings, cloud])
   useEffect(() => (cloud ? pushCloud('courses', courses) : onSaved(STORAGE_KEYS.courses, setItem(STORAGE_KEYS.courses, courses))), [courses, cloud])
+  useEffect(() => (cloud ? pushCloud('teachers', teachers) : onSaved(STORAGE_KEYS.teachers, setItem(STORAGE_KEYS.teachers, teachers))), [teachers, cloud])
+  useEffect(() => (cloud ? pushCloud('groups', groups) : onSaved(STORAGE_KEYS.groups, setItem(STORAGE_KEYS.groups, groups))), [groups, cloud])
+  useEffect(() => (cloud ? pushCloud('enrollments', enrollments) : onSaved(STORAGE_KEYS.enrollments, setItem(STORAGE_KEYS.enrollments, enrollments))), [enrollments, cloud])
+  useEffect(() => (cloud ? pushCloud('attendance', attendance) : onSaved(STORAGE_KEYS.attendance, setItem(STORAGE_KEYS.attendance, attendance))), [attendance, cloud])
+  useEffect(
+    () => (cloud ? pushCloud('lessonExceptions', lessonExceptions) : onSaved(STORAGE_KEYS.lessonExceptions, setItem(STORAGE_KEYS.lessonExceptions, lessonExceptions))),
+    [lessonExceptions, cloud],
+  )
   useEffect(() => {
     if (!cloud) onSaved(TRASH_KEY, saveTrash(trash))
   }, [trash, cloud])
@@ -190,7 +214,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       if (cloud || event.storageArea !== localStorage) return
       // Demo rejimda kalitlar boshqa nom maydonida (eduflow-demo:*)
       const is = (key: string) => event.key === null || event.key === physicalKey(key)
-      const watched = [STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings, STORAGE_KEYS.courses, STORAGE_KEYS.demo, TRASH_KEY]
+      const watched = [...LIST_KEYS.map((key) => STORAGE_KEYS[key]), STORAGE_KEYS.settings, STORAGE_KEYS.demo, TRASH_KEY]
       if (!watched.some(is)) return
       if (is(TRASH_KEY)) setTrash(loadTrash())
       if (is(STORAGE_KEYS.demo)) setIsDemo(isDemoMode())
@@ -199,6 +223,11 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       if (is(STORAGE_KEYS.transactions)) setTransactions(data.transactions)
       if (is(STORAGE_KEYS.settings)) setSettings(data.settings)
       if (is(STORAGE_KEYS.courses)) setCourses(data.courses)
+      if (is(STORAGE_KEYS.teachers)) setTeachers(data.teachers)
+      if (is(STORAGE_KEYS.groups)) setGroups(data.groups)
+      if (is(STORAGE_KEYS.enrollments)) setEnrollments(data.enrollments)
+      if (is(STORAGE_KEYS.attendance)) setAttendance(data.attendance)
+      if (is(STORAGE_KEYS.lessonExceptions)) setLessonExceptions(data.lessonExceptions)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -261,6 +290,21 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
         audit('course.restore', entry.item.name, entry.id)
         toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
         break
+      case 'teacher':
+        setTeachers((list) => (list.some((t) => t.id === entry.id) ? list : [...list, entry.item]))
+        audit('teacher.restore', entry.item.name, entry.id)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
+        break
+      case 'group':
+        setGroups((list) => (list.some((g) => g.id === entry.id) ? list : [...list, entry.item]))
+        audit('group.restore', entry.item.name, entry.id)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
+        break
+      case 'enrollment':
+        setEnrollments((list) => (list.some((e) => e.id === entry.id) ? list : [...list, entry.item]))
+        audit('enrollment.restore', entry.label ?? entry.id, entry.id)
+        toast.success(tr('{0} guruhga qaytarildi', { 0: entry.label ?? '' }))
+        break
     }
   }
 
@@ -269,21 +313,116 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const trashed = <K extends TrashKind>(kind: K, id: string, item: Extract<TrashEntry, { kind: K }>['item']) =>
     ({ kind, id, item, deletedAt: new Date().toISOString(), deletedBy: actor?.userName ?? '' }) as TrashEntry
 
+  // ===== O'qituvchi faqat o'z guruhlarini ko'radi; o'quvchilarning telefoni yashirin; to'lovlar — ruxsat bo'yicha =====
+  const ownTeacher = role === 'teacher' ? teacherForUser(authUser?.id, teachers) : undefined
+  const scoped = role === 'teacher'
+  const visibleGroups = scoped ? groups.filter((g) => ownTeacher !== undefined && g.teacherId === ownTeacher.id) : groups
+  const visibleGroupIds = new Set(visibleGroups.map((g) => g.id))
+  // Savatchadagi (o'chirilgan) mijozning o'qishlari ko'rinmaydi — tiklansa qaytadi
+  const liveCustomerIds = new Set(customers.map((c) => c.id))
+  const visibleEnrollments = enrollments.filter((e) => liveCustomerIds.has(e.customerId) && (!scoped || visibleGroupIds.has(e.groupId)))
+  const studentIds = new Set(visibleEnrollments.map((e) => e.customerId))
+  const visibleCustomers = scoped
+    ? customers.filter((c) => studentIds.has(c.id)).map((c): Customer => ({ id: c.id, name: c.name, phone: '', course: c.course, status: c.status, source: c.source, createdAt: c.createdAt }))
+    : customers
+  const visibleTransactions = can('payments.view') ? transactions : []
+
+  const edu = createEduActions({
+    customers,
+    courses,
+    teachers,
+    groups,
+    enrollments,
+    attendance,
+    lessonExceptions,
+    settings,
+    setCustomers,
+    setTeachers,
+    setGroups,
+    setEnrollments,
+    setAttendance,
+    setLessonExceptions,
+    role,
+    ownTeacherId: ownTeacher?.id,
+    actorName: actor?.userName ?? '',
+    can,
+    allowed: (permission) => allowed(permission),
+    audit: (action, summary, entityId) => audit(action, summary, entityId),
+    toast,
+    toTrash: (entry) => toTrash(entry),
+    undo: (entry) => undo(entry),
+  })
+
   const applyData = (data: StoredData) => {
     setCustomers(data.customers)
     setTransactions(data.transactions)
     setSettings(data.settings)
     setCourses(data.courses)
+    setTeachers(data.teachers)
+    setGroups(data.groups)
+    setEnrollments(data.enrollments)
+    setAttendance(data.attendance)
+    setLessonExceptions(data.lessonExceptions)
     setSearch('')
     setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
   }
 
   const value: DashboardContextValue = {
-    customers,
-    transactions,
+    customers: visibleCustomers,
+    transactions: visibleTransactions,
     settings,
     courses,
+    teachers: scoped ? (ownTeacher ? [ownTeacher] : []) : teachers,
+    groups: visibleGroups,
+    enrollments: visibleEnrollments,
+    attendance: scoped ? attendance.filter((r) => visibleGroupIds.has(r.groupId)) : attendance,
+    lessonExceptions: scoped ? lessonExceptions.filter((e) => visibleGroupIds.has(e.groupId)) : lessonExceptions,
+    ownTeacher,
+    ...edu,
+    getGroup: (id) => (id ? groups.find((g) => g.id === id) : undefined),
+    getTeacher: (id) => (id ? teachers.find((t) => t.id === id) : undefined),
+    exportData: () => ({ customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions }),
+    debtContext: { groups: visibleGroups, enrollments: visibleEnrollments, settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay } },
+    logReminders: (customerIds, channel) => {
+      for (const id of customerIds) audit('reminder.sent', `${getCustomer(id)?.name ?? id} · ${channel}`, id)
+    },
+    importCustomers: (plan) => {
+      if (!allowed('customers.edit')) return null
+      const now = new Date().toISOString()
+      // Kurs yaratish — faqat courses.edit ruxsati bilan; nomi bir xil kurs ikkinchi marta yaratilmaydi
+      const known = new Set(courses.map((c) => c.name.toLowerCase()))
+      const newCourses: Course[] = can('courses.edit')
+        ? [...new Set(plan.courses.map(normalizeCourseName))]
+            .filter((name) => name && !known.has(name.toLowerCase()))
+            .map((name) => ({ id: createId('k'), name, type: 'course', durationMonths: 0, monthlyPrice: 0, status: 'active', createdAt: now }))
+        : []
+      const available = new Set([...courses, ...newCourses].map((c) => c.name))
+      const created: Customer[] = plan.create.map((c) => ({ ...c, course: available.has(c.course) ? c.course : '', id: createId('c') }))
+      const patches = new Map(plan.update.map((u) => [u.id, u.patch]))
+      const previous = customers.filter((c) => patches.has(c.id))
+      if (newCourses.length) setCourses((list) => [...list, ...newCourses])
+      setCustomers((list) => [
+        ...created,
+        ...list.map((c) => {
+          const patch = patches.get(c.id)
+          return patch ? withPaidAt(c, { ...c, ...cleanCustomer(patch), updatedAt: now }, now) : c
+        }),
+      ])
+      audit('import.run', tr('{0}: qo\'shildi {1}, yangilandi {2}, o\'tkazib yuborildi {3}', { 0: plan.fileName, 1: created.length, 2: previous.length, 3: plan.skipped }))
+      return { fileName: plan.fileName, createdIds: created.map((c) => c.id), previous, courseIds: newCourses.map((c) => c.id), added: created.length, updated: previous.length, skipped: plan.skipped }
+    },
+    undoImport: (receipt) => {
+      if (!allowed('customers.edit')) return
+      const createdIds = new Set(receipt.createdIds)
+      const previous = new Map(receipt.previous.map((c) => [c.id, c]))
+      setCustomers((list) => list.filter((c) => !createdIds.has(c.id)).map((c) => previous.get(c.id) ?? c))
+      // Import yaratgan kurs — guruh ochilmagan bo'lsa olib tashlanadi
+      const courseIds = new Set(receipt.courseIds)
+      if (courseIds.size) setCourses((list) => list.filter((k) => !courseIds.has(k.id) || groups.some((g) => g.courseId === k.id)))
+      audit('import.undo', tr('{0}: {1} ta mijoz o\'chirildi, {2} tasi qaytarildi', { 0: receipt.fileName, 1: receipt.added, 2: receipt.updated }))
+      toast.success(tr('Import bekor qilindi'))
+    },
     search,
     dateRange,
     activeSection,
@@ -299,8 +438,11 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     setSearch,
     setDateRange,
     setActiveSection: async (section) => {
-      const required = SECTION_PERMISSION[section]
-      if (required && !allowed(required)) return
+      if (!sectionAllowed(role, section)) {
+        const [required] = sectionPermissions(section)
+        if (required) allowed(required)
+        return
+      }
       if (section === activeSection) {
         setSidebarOpen(false)
         return
@@ -440,7 +582,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       if (!allowed('courses.edit')) return
       const course = courses.find((c) => c.id === id)
       if (!course) return
-      if (usedByCustomers(course, customers) > 0) {
+      if (courseInUse(course, customers, groups)) {
         setCourses((list) => list.map((c) => (c.id === id ? { ...c, status: 'archived', updatedAt: new Date().toISOString() } : c)))
         audit('course.archive', course.name, id)
         toast.info(tr('"{0}" mijozlari bor — o\'chirish o\'rniga arxivlandi', { 0: course.name }))
@@ -460,12 +602,16 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     },
     resetData: () => {
       if (!allowed('data.manage')) return
-      const { data, saved } = resetToMock()
-      applyData(data)
-      setIsDemo(true)
-      reportSave('all', saved)
-      audit('data.reset', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
-      if (saved.ok) toast.success(tr('Demo ma\'lumotlar tiklandi'))
+      loadDemoData()
+        .then((demo) => {
+          const { data, saved } = resetToMock(demo)
+          applyData(data)
+          setIsDemo(true)
+          reportSave('all', saved)
+          audit('data.reset', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+          if (saved.ok) toast.success(tr('Demo ma\'lumotlar tiklandi'))
+        })
+        .catch(() => toast.error(tr('Demo yuklanmadi. Internetni tekshirib, qayta urinib ko\'ring.')))
     },
     clearAllData: () => {
       if (!allowed('data.manage')) return
@@ -473,6 +619,11 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       setCustomers(empty.customers)
       setTransactions(empty.transactions)
       setCourses(empty.courses)
+      setTeachers(empty.teachers)
+      setGroups(empty.groups)
+      setEnrollments(empty.enrollments)
+      setAttendance(empty.attendance)
+      setLessonExceptions(empty.lessonExceptions)
       setSearch('')
       setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
       setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
@@ -485,6 +636,9 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       if (!allowed('data.manage')) return
       setCustomers([])
       setTransactions([])
+      setEnrollments([])
+      setAttendance([])
+      setLessonExceptions([])
       setSearch('')
       setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
       setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
@@ -525,14 +679,14 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       if (!entry) return
       setTrash((list) => list.filter((e) => e !== entry))
       cloud?.sync.purge(entry.kind, [entry.id]).catch(() => reportSave('trash', { ok: false, reason: 'network' }))
-      audit('trash.purge', entry.kind === 'transaction' ? txSummary(entry.item) : entry.item.name, id)
+      audit('trash.purge', entry.kind === 'transaction' ? txSummary(entry.item) : entry.kind === 'enrollment' ? (entry.label ?? id) : entry.item.name, id)
       toast.success(tr('Butunlay o\'chirildi'))
     },
     emptyTrash: () => {
       if (!allowed('trash.manage') || trash.length === 0) return
       audit('trash.purge', `Savatcha tozalandi: ${trash.length} ta yozuv`)
       if (cloud) {
-        for (const kind of ['customer', 'transaction', 'course'] as const) {
+        for (const kind of TRASH_KINDS) {
           cloud.sync.purge(kind, trash.filter((e) => e.kind === kind).map((e) => e.id)).catch(() => reportSave('trash', { ok: false, reason: 'network' }))
         }
       }

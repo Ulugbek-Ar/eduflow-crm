@@ -1,10 +1,25 @@
 import { tr } from '../i18n'
-import { createMockCourses, createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
+import { DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Course } from '../types/course.types'
+import type { Teacher } from '../types/teacher.types'
+import type { Enrollment, Group } from '../types/group.types'
+import type { AttendanceRecord, LessonException } from '../types/attendance.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
 import type { LegacyPaymentMethod, PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
-import { isCourse, isCustomer, isRecord, isTransaction, keepValid, sanitizeSettings } from '../utils/guards'
+import {
+  isAttendanceRecord,
+  isCourse,
+  isCustomer,
+  isEnrollment,
+  isGroup,
+  isLessonException,
+  isRecord,
+  isTeacher,
+  isTransaction,
+  keepValid,
+  sanitizeSettings,
+} from '../utils/guards'
 import { APP_NAME, BACKUP_APP_ID } from '../constants/app'
 
 export const STORAGE_KEYS = {
@@ -16,6 +31,14 @@ export const STORAGE_KEYS = {
   version: 'apex:version',
   // Demo ma'lumot bilan boshlangan (Header'da belgi va tozalash tugmasi ko'rinadi)
   demo: 'apex:demo',
+  // v11: o'qituvchilar, guruhlar, o'qish (enrollment), davomat, bekor qilingan darslar
+  teachers: 'apex:teachers',
+  groups: 'apex:groups',
+  enrollments: 'apex:enrollments',
+  attendance: 'apex:attendance',
+  lessonExceptions: 'apex:lesson-exceptions',
+  // v10 -> v11 migratsiyasidan oldin avtomatik olingan JSON zaxira (Sozlamalar -> Ma'lumotlar'dan yuklab olinadi)
+  preMigrationBackup: 'apex:backup-pre-v11',
 } as const
 
 type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
@@ -28,15 +51,26 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v7 — tranzaksiyada to'lov turi (LEGACY_METHOD_MAP), status va marketing manbasi;
 // v8 — sozlamalarda logotip rasmi (settings.logoImage);
 // v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt);
-// v10 — kurs davomiyligi noma'lum bo'lsa 0 ("muddatsiz"), v6 migratsiyasidagi "1 oy" tuzatiladi
-export const SCHEMA_VERSION = 10
+// v10 — kurs davomiyligi noma'lum bo'lsa 0 ("muddatsiz"), v6 migratsiyasidagi "1 oy" tuzatiladi;
+// v11 — o'qituvchilar, guruhlar, enrollment, davomat; "To'lov qildi" o'quvchilari kurs bo'yicha "1-guruh"ga yoziladi,
+//       Course.activeGroups olib tashlanadi (guruhlardan hisoblanadi); tranzaksiyada enrollmentId, teacherId, period
+export const SCHEMA_VERSION = 11
 
 export interface StoredData {
   customers: Customer[]
   transactions: Transaction[]
   courses: Course[]
   settings: Settings
+  teachers: Teacher[]
+  groups: Group[]
+  enrollments: Enrollment[]
+  attendance: AttendanceRecord[]
+  lessonExceptions: LessonException[]
 }
+
+// StoredData'dagi ro'yxat kalitlari (sozlamalardan tashqari) — saqlash, sinxron va tablar orasida bir xil tartibda
+export const LIST_KEYS = ['customers', 'transactions', 'courses', 'teachers', 'groups', 'enrollments', 'attendance', 'lessonExceptions'] as const
+export type ListKey = (typeof LIST_KEYS)[number]
 
 export interface LoadResult {
   data: StoredData
@@ -310,19 +344,104 @@ export function migrateCourses(rawSettings: unknown, customers: readonly Custome
     // Davomiylik noma'lum — "muddatsiz" (0): kurs muddati tugadi deb qarzdorlar yashirinib qolmasin
     durationMonths: 0,
     monthlyPrice: 0,
-    activeGroups: 0,
     status: 'active',
     createdAt: now.toISOString(),
   }))
 }
 
 // v9 -> v10: v6 migratsiyasi yaratgan kurslarda (aynan: kurs, 1 oy, narx 0, 0 guruh) davomiylik aslida
-// noma'lum edi — "muddatsiz" qilinadi. Faqat v10 dan eski ma'lumotga qo'llanadi (yangi 1 oylik kurslarga tegmaydi)
+// noma'lum edi — "muddatsiz" qilinadi. Faqat v10 dan eski ma'lumotga qo'llanadi (yangi 1 oylik kurslarga tegmaydi).
+// activeGroups v11 da olib tashlangan, lekin eski yozuvlarda bor — xom qiymat tekshiriladi
 export function fixLegacyCourseDuration(courses: readonly Course[], fromVersion: number): Course[] {
   if (fromVersion >= 10) return [...courses]
-  return courses.map((c) =>
-    c.type === 'course' && c.durationMonths === 1 && c.monthlyPrice === 0 && c.activeGroups === 0 ? { ...c, durationMonths: 0 } : c,
-  )
+  return courses.map((c) => {
+    const legacyGroups = (c as Course & { activeGroups?: unknown }).activeGroups
+    return c.type === 'course' && c.durationMonths === 1 && c.monthlyPrice === 0 && (legacyGroups === 0 || legacyGroups === undefined) ? { ...c, durationMonths: 0 } : c
+  })
+}
+
+// v11: eski maydonni olib tashlash (faol guruhlar soni guruhlardan hisoblanadi)
+export function stripLegacyCourseFields(courses: readonly Course[]): Course[] {
+  return courses.map((c) => {
+    if (!('activeGroups' in c)) return c
+    const { activeGroups: _legacy, ...rest } = c as Course & { activeGroups?: unknown }
+    return rest
+  })
+}
+
+// 'YYYY-MM-DD' (mahalliy vaqt bo'yicha)
+export function isoDay(iso: string | Date): string {
+  const d = typeof iso === 'string' ? new Date(iso) : iso
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// v10 -> v11: "To'lov qildi" bosqichidagi, hali hech qaysi guruhga yozilmagan o'quvchilar kurs bo'yicha
+// "{Kurs} — 1-guruh"ga yoziladi (Du/Cho/Ju, 14:00–15:30, o'qituvchisiz, boshlanishi — eng erta paidAt), har biriga
+// paidAt dan boshlanadigan enrollment. Idempotent: id'lar deterministik (g-<kurs>-1, e-<mijoz>), mavjudlari takrorlanmaydi
+export function migrateStudentsToGroups(
+  customers: readonly Customer[],
+  courses: readonly Course[],
+  groups: readonly Group[],
+  enrollments: readonly Enrollment[],
+  now = new Date(),
+): { groups: Group[]; enrollments: Enrollment[] } {
+  const nextGroups = [...groups]
+  const nextEnrollments = [...enrollments]
+  const enrolled = new Set(enrollments.map((e) => e.customerId))
+  const groupIds = new Set(groups.map((g) => g.id))
+  const enrollmentIds = new Set(enrollments.map((e) => e.id))
+  const createdAt = now.toISOString()
+  for (const course of courses) {
+    const students = customers.filter((c) => c.status === 'paid' && c.course === course.name && !enrolled.has(c.id))
+    if (students.length === 0) continue
+    const groupId = `g-${course.id}-1`
+    const startDays = students.map((c) => isoDay(c.paidAt ?? c.createdAt))
+    if (!groupIds.has(groupId)) {
+      nextGroups.push({
+        id: groupId,
+        name: `${course.name} — 1-guruh`,
+        courseId: course.id,
+        room: '',
+        days: ['mon', 'wed', 'fri'],
+        startTime: '14:00',
+        endTime: '15:30',
+        capacity: Math.max(12, students.length),
+        startDate: startDays.reduce((min, day) => (day < min ? day : min)),
+        status: 'active',
+        createdAt,
+      })
+      groupIds.add(groupId)
+    }
+    for (const [index, student] of students.entries()) {
+      const id = `e-${student.id}`
+      if (enrollmentIds.has(id)) continue
+      nextEnrollments.push({ id, customerId: student.id, groupId, startDate: startDays[index], status: 'active', createdAt })
+      enrollmentIds.add(id)
+      enrolled.add(student.id)
+    }
+  }
+  return { groups: nextGroups, enrollments: nextEnrollments }
+}
+
+// Davomat: (guruh, o'quvchi, sana) noyob — takror bo'lsa eng oxirgi o'zgargani qoladi
+function uniqueAttendance(records: readonly AttendanceRecord[]): AttendanceRecord[] {
+  const byKey = new Map<string, AttendanceRecord>()
+  for (const r of records) {
+    const key = `${r.groupId}|${r.customerId}|${r.date}`
+    const known = byKey.get(key)
+    if (!known || known.updatedAt < r.updatedAt) byKey.set(key, r)
+  }
+  return [...byKey.values()]
+}
+
+function uniqueExceptions(items: readonly LessonException[]): LessonException[] {
+  const seen = new Set<string>()
+  return items.filter((e) => {
+    const key = `${e.groupId}|${e.date}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 // Kurs nomlari takrorlanmasligi kerak (mijoz kursga nom orqali bog'lanadi)
@@ -338,10 +457,19 @@ function uniqueCourseNames(courses: readonly Course[]): Course[] {
 
 // Istalgan (eski yoki buzuq) xom ma'lumotdan joriy sxemaga mos ma'lumot yasaydi
 // fromVersion — ma'lumot qaysi sxema versiyasida yozilgan (versiyaga bog'liq migratsiyalar uchun); noma'lum bo'lsa joriy
-export function normalizeData(
-  raw: { customers: unknown; transactions: unknown; settings: unknown; courses?: unknown },
-  fromVersion: number = SCHEMA_VERSION,
-): LoadResult {
+export interface RawData {
+  customers: unknown
+  transactions: unknown
+  settings: unknown
+  courses?: unknown
+  teachers?: unknown
+  groups?: unknown
+  enrollments?: unknown
+  attendance?: unknown
+  lessonExceptions?: unknown
+}
+
+export function normalizeData(raw: RawData, fromVersion: number = SCHEMA_VERSION): LoadResult {
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
   const valid = keepValid(rawTransactions, isTransaction)
@@ -350,12 +478,34 @@ export function normalizeData(
   const settings = sanitizeSettings(raw.settings)
   // Kurslar massivi bo'lsa (v6+) — tekshiriladi; bo'lmasa (eski ma'lumot/zaxira) — migratsiya
   const rawCourses = Array.isArray(raw.courses) ? raw.courses : null
-  const courses = rawCourses
-    ? fixLegacyCourseDuration(uniqueCourseNames(keepValid(rawCourses, isCourse)), fromVersion)
-    : migrateCourses(raw.settings, customers)
+  const courses = stripLegacyCourseFields(
+    rawCourses ? fixLegacyCourseDuration(uniqueCourseNames(keepValid(rawCourses, isCourse)), fromVersion) : migrateCourses(raw.settings, customers),
+  )
+  // v11 ro'yxatlari: bo'lmasa — bo'sh
+  const list = (value: unknown) => (Array.isArray(value) ? value : [])
+  const teachers = keepValid(list(raw.teachers), isTeacher)
+  let groups = keepValid(list(raw.groups), isGroup)
+  let enrollments = keepValid(list(raw.enrollments), isEnrollment)
+  const attendance = uniqueAttendance(keepValid(list(raw.attendance), isAttendanceRecord))
+  const lessonExceptions = uniqueExceptions(keepValid(list(raw.lessonExceptions), isLessonException))
+  // v10 -> v11: guruhlar hali yo'q bo'lsa — o'quvchilar kurs bo'yicha guruhlarga yoziladi
+  if (fromVersion < 11 && !Array.isArray(raw.groups)) {
+    const migrated = migrateStudentsToGroups(customers, courses, groups, enrollments)
+    groups = migrated.groups
+    enrollments = migrated.enrollments
+  }
+  const invalid = (rawList: unknown, kept: readonly unknown[]) => (Array.isArray(rawList) ? Math.max(0, rawList.length - kept.length) : 0)
   return {
-    data: { customers, transactions, courses, settings },
-    dropped: rawCustomers.length - customers.length + (rawTransactions.length - valid.length) + (rawCourses ? rawCourses.length - courses.length : 0),
+    data: { customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions },
+    dropped:
+      rawCustomers.length -
+      customers.length +
+      (rawTransactions.length - valid.length) +
+      (rawCourses ? rawCourses.length - courses.length : 0) +
+      invalid(raw.teachers, teachers) +
+      (fromVersion < 11 ? 0 : invalid(raw.groups, groups) + invalid(raw.enrollments, enrollments)) +
+      invalid(raw.attendance, attendance) +
+      invalid(raw.lessonExceptions, lessonExceptions),
   }
 }
 
@@ -363,10 +513,8 @@ export function normalizeData(
 
 export function saveAll(data: StoredData): SaveResult {
   return combineResults([
-    setItem(STORAGE_KEYS.customers, data.customers),
-    setItem(STORAGE_KEYS.transactions, data.transactions),
+    ...LIST_KEYS.map((key) => setItem(STORAGE_KEYS[key], data[key])),
     setItem(STORAGE_KEYS.settings, data.settings),
-    setItem(STORAGE_KEYS.courses, data.courses),
     setItem(STORAGE_KEYS.seeded, true),
     setItem(STORAGE_KEYS.version, SCHEMA_VERSION),
   ])
@@ -374,26 +522,37 @@ export function saveAll(data: StoredData): SaveResult {
 
 // "Bo'sh boshlash": kurslar ham bo'sh — Kurslar va xizmatlar bo'limida qo'shiladi
 export function createEmptyData(): StoredData {
-  return { customers: [], transactions: [], courses: [], settings: { ...DEFAULT_SETTINGS } }
-}
-
-export function createMockData(): StoredData {
-  const transactions = createMockTransactions()
   return {
-    customers: fillPaidAt(createMockCustomers(), transactions),
-    transactions,
-    courses: createMockCourses(),
+    customers: [],
+    transactions: [],
+    courses: [],
     settings: { ...DEFAULT_SETTINGS },
+    teachers: [],
+    groups: [],
+    enrollments: [],
+    attendance: [],
+    lessonExceptions: [],
   }
 }
 
-export function readStored(fromVersion: number = SCHEMA_VERSION): LoadResult {
-  return normalizeData({
+// Saqlangan xom qiymatlar (normalizatsiyasiz) — migratsiyadan oldingi zaxira uchun
+function readRaw(): RawData {
+  return {
     customers: readJson(STORAGE_KEYS.customers),
     transactions: readJson(STORAGE_KEYS.transactions),
     settings: readJson(STORAGE_KEYS.settings),
     courses: readJson(STORAGE_KEYS.courses),
-  }, fromVersion)
+    teachers: readJson(STORAGE_KEYS.teachers),
+    groups: readJson(STORAGE_KEYS.groups),
+    enrollments: readJson(STORAGE_KEYS.enrollments),
+    attendance: readJson(STORAGE_KEYS.attendance),
+    lessonExceptions: readJson(STORAGE_KEYS.lessonExceptions),
+  }
+}
+
+
+export function readStored(fromVersion: number = SCHEMA_VERSION): LoadResult {
+  return normalizeData(readRaw(), fromVersion)
 }
 
 // ===== Birinchi ishga tushish va demo rejim =====
@@ -414,9 +573,10 @@ export function setDemoMode(demo: boolean): SaveResult {
 // Tanlov ekranidan: 'empty' — bo'sh baza, 'demo' — namunaviy ma'lumot.
 // Boshqa tabda allaqachon tanlangan bo'lsa, mavjud ma'lumot ustidan yozilmaydi.
 // Administrator ro'yxatdan o'tishda kiritgan sozlamalar (markaz nomi) saqlanib qoladi.
-export function startFresh(mode: 'empty' | 'demo'): SaveResult {
+// demo — tayyor demo ma'lumot (services/demo/load.ts: loadDemoData), bo'lmasa bo'sh baza
+export function startFresh(mode: 'empty' | 'demo', demo?: StoredData): SaveResult {
   if (!isFirstRun()) return { ok: true }
-  const data = mode === 'demo' ? createMockData() : createEmptyData()
+  const data = mode === 'demo' && demo ? demo : createEmptyData()
   const stored = readJson(STORAGE_KEYS.settings)
   const saved = saveAll(stored === undefined ? data : { ...data, settings: sanitizeSettings(stored) })
   return combineResults([saved, setDemoMode(mode === 'demo')])
@@ -439,7 +599,12 @@ export function updateStoredSettings(patch: Partial<Settings>): SaveResult {
 export function loadData(): LoadResult {
   if (isFirstRun()) return { data: createEmptyData(), dropped: 0 }
   const version = readJson(STORAGE_KEYS.version)
-  const result = readStored(typeof version === 'number' ? version : 1)
+  const fromVersion = typeof version === 'number' ? version : 1
+  // v11 gacha bo'lgan ma'lumot: migratsiyadan oldin xom holati zaxiraga (bir marta; mavjud zaxira ustidan yozilmaydi)
+  if (fromVersion < 11 && readJson(STORAGE_KEYS.preMigrationBackup) === undefined) {
+    setItem(STORAGE_KEYS.preMigrationBackup, { app: BACKUP_APP_ID, version: fromVersion, exportedAt: new Date().toISOString(), ...readRaw() })
+  }
+  const result = readStored(fromVersion)
   if (version !== SCHEMA_VERSION || result.dropped > 0) {
     const saved = saveAll(result.data)
     if (!saved.ok) return { ...result, saveError: saved.reason }
@@ -447,8 +612,8 @@ export function loadData(): LoadResult {
   return result
 }
 
-export function resetToMock(): { data: StoredData; saved: SaveResult } {
-  const data = createMockData()
+// data — services/demo/load.ts dagi loadDemoData() natijasi
+export function resetToMock(data: StoredData): { data: StoredData; saved: SaveResult } {
   return { data, saved: combineResults([saveAll(data), setDemoMode(true)]) }
 }
 
@@ -481,8 +646,24 @@ export function parseBackup(text: string): BackupParseResult {
   }
   const fromVersion = typeof json.version === 'number' ? json.version : 1
   const { data, dropped } = normalizeData(
-    { customers: json.customers, transactions: json.transactions, settings: json.settings, courses: json.courses },
+    {
+      customers: json.customers,
+      transactions: json.transactions,
+      settings: json.settings,
+      courses: json.courses,
+      teachers: json.teachers,
+      groups: json.groups,
+      enrollments: json.enrollments,
+      attendance: json.attendance,
+      lessonExceptions: json.lessonExceptions,
+    },
     fromVersion,
   )
   return { ok: true, data, dropped, exportedAt: typeof json.exportedAt === 'string' ? json.exportedAt : undefined }
+}
+
+// Migratsiyadan oldingi zaxira (v10 -> v11) — bor bo'lsa, Sozlamalar -> Ma'lumotlar'da yuklab olinadi
+export function readPreMigrationBackup(): Record<string, unknown> | null {
+  const value = readJson(STORAGE_KEYS.preMigrationBackup)
+  return isRecord(value) ? value : null
 }

@@ -119,6 +119,11 @@ export function CustomerTable() {
             ))}
           </div>
           {canEdit && (
+            <Button variant="ghost" icon="upload" onClick={() => openModal({ type: 'import' })}>
+              {tr('Import')}
+            </Button>
+          )}
+          {canEdit && (
             <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
               {tr('Yangi mijoz')}
             </Button>
@@ -178,12 +183,17 @@ export function CustomerTable() {
         customers.length === 0 ? (
           <EmptyState
             title={tr('Hali mijoz yo\'q')}
-            description={tr('Birinchi mijozingizni qo\'shing — u shu yerda paydo bo\'ladi.')}
+            description={tr('Birinchi mijozingizni qo\'shing yoki ro\'yxatni Excel/CSV fayldan import qiling.')}
             action={
               canEdit && (
-                <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
-                  {tr('Mijoz qo\'shish')}
-                </Button>
+                <div className="toolbar">
+                  <Button icon="plus" onClick={() => openModal({ type: 'customer' })}>
+                    {tr('Mijoz qo\'shish')}
+                  </Button>
+                  <Button variant="ghost" icon="upload" onClick={() => openModal({ type: 'import' })}>
+                    {tr('Excel/CSV\'dan import')}
+                  </Button>
+                </div>
               )
             }
           />

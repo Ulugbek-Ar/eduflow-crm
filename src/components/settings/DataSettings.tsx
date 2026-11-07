@@ -5,7 +5,7 @@ import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
 import { useStorageUsage } from '../../hooks/useStorageUsage'
 import { dateStamp, downloadJson } from '../../services/export.service'
-import { createBackup, parseBackup, STORAGE_LIMIT_BYTES } from '../../services/storage.service'
+import { createBackup, parseBackup, readPreMigrationBackup, STORAGE_LIMIT_BYTES } from '../../services/storage.service'
 import type { StoredData } from '../../services/storage.service'
 import { cx } from '../../utils/cx'
 import { formatKilobytes, formatPercent } from '../../utils/format'
@@ -26,15 +26,17 @@ const USAGE_WARNING_PERCENT = 80
 const LIMIT_MB = STORAGE_LIMIT_BYTES / 1024 / 1024
 
 export function DataSettings() {
-  const { customers, transactions, courses, settings, resetData, clearAllData, replaceData, formatDate, logExport } = useDashboard()
+  const { customers, transactions, courses, resetData, clearAllData, replaceData, formatDate, logExport, exportData } = useDashboard()
   const storageUsage = useStorageUsage()
+  // Bulutli rejimda lokal zaxira yo'q (null)
+  const [preMigration] = useState(readPreMigrationBackup)
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [error, setError] = useState('')
 
   const handleBackup = () => {
-    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup({ customers, transactions, courses, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup(exportData()))
     logExport('To\'liq zaxira (JSON)', 'backup')
   }
 
@@ -131,6 +133,29 @@ export function DataSettings() {
           {tr('Yuklab olish')}
         </Button>
       </div>
+
+      {preMigration && (
+        <div className="setting-row">
+          <div>
+            <strong>{tr('Migratsiyadan oldingi zaxira')}</strong>
+            <p className="muted">
+              {tr('v{0} dan v11 ga (guruhlar va davomat) o\'tishdan oldin avtomatik olingan nusxa. Kerak bo\'lsa, "Zaxiradan tiklash" bilan qaytariladi.', {
+                0: typeof preMigration.version === 'number' ? preMigration.version : '?',
+              })}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            icon="download"
+            onClick={() => {
+              downloadJson(`${BACKUP_FILE_PREFIX}-migratsiyadan-oldin-${dateStamp()}.json`, preMigration)
+              logExport(tr('Migratsiyadan oldingi zaxira (JSON)'), 'backup')
+            }}
+          >
+            {tr('Yuklab olish')}
+          </Button>
+        </div>
+      )}
 
       <div className="setting-row">
         <div>

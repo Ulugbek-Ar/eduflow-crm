@@ -17,7 +17,9 @@ interface StaffFormModalProps {
   // Bo'lmasa — yangi xodim
   editing?: PublicUser
   onClose: () => void
-  onCreated?: (user: { fullName: string; login: string; password: string }) => void
+  onCreated?: (user: { fullName: string; login: string; password: string; id?: string }) => void
+  // O'qituvchiga kirish yaratish: ism tayyor, rol — o'qituvchi (o'zgartirilmaydi)
+  preset?: { fullName: string; title: string; teacherId: string }
 }
 
 export function RolePicker({ value, onChange, disabled }: { value: Role; onChange: (role: Role) => void; disabled?: boolean }) {
@@ -37,13 +39,13 @@ export function RolePicker({ value, onChange, disabled }: { value: Role; onChang
   )
 }
 
-export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalProps) {
+export function StaffFormModal({ editing, onClose, onCreated, preset }: StaffFormModalProps) {
   const { addUser, updateUser, user: me } = useAuth()
   const [form, setForm] = useState(() => ({
-    fullName: editing?.fullName ?? '',
-    title: editing?.title ?? '',
+    fullName: editing?.fullName ?? preset?.fullName ?? '',
+    title: editing?.title ?? preset?.title ?? '',
     login: editing?.login ?? '',
-    role: editing?.role ?? ('manager' as Role),
+    role: editing?.role ?? (preset ? 'teacher' : ('manager' as Role)),
     password: editing ? '' : generateTempPassword(),
   }))
   const [errors, setErrors] = useState<Partial<Record<Field | 'role', string>>>({})
@@ -60,7 +62,7 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
     setBusy(true)
     const result = editing
       ? updateUser(editing.id, { fullName: form.fullName, title: form.title, role: form.role })
-      : await addUser({ fullName: form.fullName, title: form.title, login: form.login, role: form.role, password: form.password })
+      : await addUser({ fullName: form.fullName, title: form.title, login: form.login, role: form.role, password: form.password, teacherId: preset?.teacherId })
     setBusy(false)
     if (!result.ok) {
       const field = result.field ?? 'fullName'
@@ -68,13 +70,13 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
       document.querySelector<HTMLElement>(`#staff-form [name="${field}"]`)?.focus()
       return
     }
-    if (!editing) onCreated?.({ fullName: form.fullName.trim(), login: form.login.trim(), password: form.password })
+    if (!editing) onCreated?.({ fullName: form.fullName.trim(), login: form.login.trim(), password: form.password, id: 'userId' in result && typeof result.userId === 'string' ? result.userId : undefined })
     onClose()
   }
 
   return (
     <Modal
-      title={editing ? tr('Xodimni tahrirlash') : tr('Yangi xodim')}
+      title={editing ? tr('Xodimni tahrirlash') : preset ? tr('O\'qituvchiga kirish yaratish') : tr('Yangi xodim')}
       description={editing ? undefined : tr('Xodim shu login va vaqtinchalik parol bilan kiradi, so\'ng o\'z parolini o\'rnatadi')}
       onClose={onClose}
       footer={
@@ -132,7 +134,8 @@ export function StaffFormModal({ editing, onClose, onCreated }: StaffFormModalPr
             </div>
           </div>
         )}
-        <RolePicker value={form.role} onChange={(role) => update('role', role)} disabled={self} />
+        {!preset && <RolePicker value={form.role} onChange={(role) => update('role', role)} disabled={self} />}
+        {preset && <p className="notice notice-info">{tr('Rol: O\'qituvchi — faqat o\'z guruhlari, dars jadvali va davomatini ko\'radi. Tarif xodimlar limitiga kirmaydi.')}</p>}
         {self && <small className="field-hint">{tr('O\'z rolingizni boshqa administrator o\'zgartiradi.')}</small>}
         {errors.role && (
           <small className="field-error" role="alert">

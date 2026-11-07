@@ -44,7 +44,8 @@ export interface AuthContextValue {
   changeOwnCredentials: (currentPassword: string, newLogin: string, newPassword: string) => Promise<ActionResult>
   updateOwnProfile: (fullName: string, title: string) => ActionResult
   users: PublicUser[]
-  addUser: (input: NewUserInput) => Promise<ActionResult>
+  // Muvaffaqiyatda yangi xodim id'si (o'qituvchi yozuviga bog'lash uchun)
+  addUser: (input: NewUserInput) => Promise<ActionResult & { userId?: string }>
   updateUser: (id: string, patch: UserPatch) => ActionResult
   // Natijada yangi vaqtinchalik parol (faqat bir marta ko'rsatiladi)
   resetPassword: (id: string) => Promise<{ ok: true; password: string } | { ok: false; error: string }>

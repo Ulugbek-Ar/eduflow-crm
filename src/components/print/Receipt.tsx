@@ -51,6 +51,18 @@ export function Receipt({ data, settings, money }: { data: ReceiptData; settings
             <dd>{customer.course}</dd>
           </div>
         )}
+        {data.groupName && (
+          <div>
+            <dt>{tr('Guruh')}</dt>
+            <dd>{data.groupName}</dd>
+          </div>
+        )}
+        {data.periodLabel && (
+          <div>
+            <dt>{tr('Oy')}</dt>
+            <dd>{data.periodLabel}</dd>
+          </div>
+        )}
         <div>
           <dt>{tr('To\'lov turi')}</dt>
           <dd>{METHOD_LABELS[t.method]}</dd>

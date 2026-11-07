@@ -2,6 +2,9 @@
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
+import type { AttendanceRecord, LessonException } from '../types/attendance.types'
+import type { Enrollment, Group, Weekday } from '../types/group.types'
+import type { PayRule, Teacher } from '../types/teacher.types'
 
 export type Row = Record<string, unknown>
 
@@ -56,6 +59,9 @@ export function transactionToRow(t: Transaction, org: string): Row {
     source: t.source ?? null,
     date: t.date,
     updated_at: t.updatedAt ?? null,
+    enrollment_id: t.enrollmentId ?? null,
+    teacher_id: t.teacherId ?? null,
+    period: t.period ?? null,
   }
 }
 
@@ -74,6 +80,9 @@ export function rowToTransaction(r: Row): Transaction {
   if (opt(r.customer_name)) t.customerName = String(r.customer_name)
   if (opt(r.source)) t.source = r.source as Transaction['source']
   if (opt(r.updated_at)) t.updatedAt = String(r.updated_at)
+  if (opt(r.enrollment_id)) t.enrollmentId = String(r.enrollment_id)
+  if (opt(r.teacher_id)) t.teacherId = String(r.teacher_id)
+  if (opt(r.period)) t.period = String(r.period)
   return t
 }
 
@@ -85,7 +94,6 @@ export function courseToRow(c: Course, org: string): Row {
     type: c.type,
     duration_months: c.durationMonths,
     monthly_price: c.monthlyPrice,
-    active_groups: c.activeGroups,
     status: c.status,
     created_at: c.createdAt,
     updated_at: c.updatedAt ?? null,
@@ -99,10 +107,158 @@ export function rowToCourse(r: Row): Course {
     type: r.type as Course['type'],
     durationMonths: Number(r.duration_months),
     monthlyPrice: Number(r.monthly_price),
-    activeGroups: Number(r.active_groups),
     status: r.status as Course['status'],
     createdAt: String(r.created_at),
   }
   if (opt(r.updated_at)) c.updatedAt = String(r.updated_at)
   return c
+}
+
+// ===== v11: o'qituvchi, guruh, o'qish, davomat, bekor qilingan dars =====
+
+// Postgres 'time' -> 'HH:MM' ("14:00:00" -> "14:00")
+const hhmm = (value: unknown) => String(value ?? '').slice(0, 5)
+// Postgres 'date' -> 'YYYY-MM-DD'
+const day = (value: unknown) => String(value ?? '').slice(0, 10)
+
+export function teacherToRow(t: Teacher, org: string): Row {
+  return {
+    organization_id: org,
+    id: t.id,
+    name: t.name,
+    phone: t.phone,
+    subjects: t.subjects,
+    pay_rule: t.payRule,
+    user_id: t.userId ?? null,
+    status: t.status,
+    created_at: t.createdAt,
+    updated_at: t.updatedAt ?? null,
+  }
+}
+
+export function rowToTeacher(r: Row): Teacher {
+  const t: Teacher = {
+    id: String(r.id),
+    name: String(r.name),
+    phone: String(r.phone ?? ''),
+    subjects: Array.isArray(r.subjects) ? r.subjects.map(String) : [],
+    payRule: (r.pay_rule ?? { type: 'fixed', amount: 0 }) as PayRule,
+    status: r.status as Teacher['status'],
+    createdAt: String(r.created_at),
+  }
+  if (opt(r.user_id)) t.userId = String(r.user_id)
+  if (opt(r.updated_at)) t.updatedAt = String(r.updated_at)
+  return t
+}
+
+export function groupToRow(g: Group, org: string): Row {
+  return {
+    organization_id: org,
+    id: g.id,
+    name: g.name,
+    course_id: g.courseId,
+    teacher_id: g.teacherId ?? null,
+    room: g.room,
+    days: g.days,
+    start_time: g.startTime,
+    end_time: g.endTime,
+    capacity: g.capacity,
+    start_date: g.startDate,
+    end_date: g.endDate ?? null,
+    status: g.status,
+    created_at: g.createdAt,
+    updated_at: g.updatedAt ?? null,
+  }
+}
+
+export function rowToGroup(r: Row): Group {
+  const g: Group = {
+    id: String(r.id),
+    name: String(r.name),
+    courseId: String(r.course_id),
+    room: String(r.room ?? ''),
+    days: (Array.isArray(r.days) ? r.days : []) as Weekday[],
+    startTime: hhmm(r.start_time),
+    endTime: hhmm(r.end_time),
+    capacity: Number(r.capacity),
+    startDate: day(r.start_date),
+    status: r.status as Group['status'],
+    createdAt: String(r.created_at),
+  }
+  if (opt(r.teacher_id)) g.teacherId = String(r.teacher_id)
+  if (opt(r.end_date)) g.endDate = day(r.end_date)
+  if (opt(r.updated_at)) g.updatedAt = String(r.updated_at)
+  return g
+}
+
+export function enrollmentToRow(e: Enrollment, org: string): Row {
+  return {
+    organization_id: org,
+    id: e.id,
+    customer_id: e.customerId,
+    group_id: e.groupId,
+    start_date: e.startDate,
+    end_date: e.endDate ?? null,
+    price_override: e.priceOverride ?? null,
+    discount_percent: e.discountPercent ?? null,
+    status: e.status,
+    paused_from: e.pausedFrom ?? null,
+    paused_to: e.pausedTo ?? null,
+    created_at: e.createdAt,
+    updated_at: e.updatedAt ?? null,
+  }
+}
+
+export function rowToEnrollment(r: Row): Enrollment {
+  const e: Enrollment = {
+    id: String(r.id),
+    customerId: String(r.customer_id),
+    groupId: String(r.group_id),
+    startDate: day(r.start_date),
+    status: r.status as Enrollment['status'],
+    createdAt: String(r.created_at),
+  }
+  if (opt(r.end_date)) e.endDate = day(r.end_date)
+  if (opt(r.price_override)) e.priceOverride = Number(r.price_override)
+  if (opt(r.discount_percent)) e.discountPercent = Number(r.discount_percent)
+  if (opt(r.paused_from)) e.pausedFrom = day(r.paused_from)
+  if (opt(r.paused_to)) e.pausedTo = day(r.paused_to)
+  if (opt(r.updated_at)) e.updatedAt = String(r.updated_at)
+  return e
+}
+
+export function attendanceToRow(a: AttendanceRecord, org: string): Row {
+  return {
+    organization_id: org,
+    id: a.id,
+    group_id: a.groupId,
+    customer_id: a.customerId,
+    date: a.date,
+    status: a.status,
+    note: a.note ?? null,
+    marked_by: a.markedBy ?? null,
+    updated_at: a.updatedAt,
+  }
+}
+
+export function rowToAttendance(r: Row): AttendanceRecord {
+  const a: AttendanceRecord = {
+    id: String(r.id),
+    groupId: String(r.group_id),
+    customerId: String(r.customer_id),
+    date: day(r.date),
+    status: r.status as AttendanceRecord['status'],
+    updatedAt: String(r.updated_at),
+  }
+  if (opt(r.note)) a.note = String(r.note)
+  if (opt(r.marked_by)) a.markedBy = String(r.marked_by)
+  return a
+}
+
+export function exceptionToRow(e: LessonException, org: string): Row {
+  return { organization_id: org, id: e.id, group_id: e.groupId, date: e.date, reason: e.reason }
+}
+
+export function rowToException(r: Row): LessonException {
+  return { id: String(r.id), groupId: String(r.group_id), date: day(r.date), reason: String(r.reason ?? '') }
 }

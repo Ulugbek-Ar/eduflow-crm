@@ -217,6 +217,12 @@
   margin-top: 28px;
 }
 
+.lp-shot-phone {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
 .lp-shots figcaption {
   margin-top: 10px;
   color: var(--text-secondary);
@@ -338,6 +344,22 @@
   font-size: 0.9rem;
 }
 
+.lp-footer-contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-footer-contacts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-text);
+}
+
 .lp-footer nav {
   display: flex;
   flex-wrap: wrap;
@@ -412,6 +434,8 @@
   }
 
   .lp-shot-phone {
+    grid-column: auto;
+    grid-row: auto;
     max-width: 280px;
     margin: 0 auto !important;
   }

@@ -1,14 +1,36 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { APP_NAME } from '../constants/app'
 import { Icon } from '../constants/navigation'
 import type { IconName } from '../constants/navigation'
 import { PLANS, TRIAL_DAYS } from '../constants/plans'
-import { SUPPORT_CONTACTS } from '../constants/support'
+import { contactLinks, DEMO_ONLY, hasSupportContacts, MAIN_SITE_URL } from '../constants/support'
 import { tr } from '../i18n'
 import { routeHref } from '../router'
 import { formatNumber } from '../utils/format'
 import { LanguageSwitch } from '../components/ui/LanguageSwitch'
+import { landingCtas } from './apply'
+import type { CtaAction } from './apply'
 import './landing.css'
+
+const ApplyModal = lazy(() => import('./ApplyModal').then((m) => ({ default: m.ApplyModal })))
+
+// Tugma yoki havola: ariza oynasini ochadi yoki manzilga olib boradi
+function Cta({ action, className, onApply, icon }: { action: CtaAction; className: string; onApply: () => void; icon?: IconName }) {
+  if (action.kind === 'apply') {
+    return (
+      <button type="button" className={className} onClick={onApply} aria-haspopup="dialog">
+        {icon && <Icon name={icon} size={16} />}
+        {action.label}
+      </button>
+    )
+  }
+  return (
+    <a className={className} href={action.href}>
+      {icon && <Icon name={icon} size={16} />}
+      {action.label}
+    </a>
+  )
+}
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}landing/${name}`
 
@@ -40,14 +62,19 @@ const AUDIENCE: Array<{ icon: IconName; title: string }> = [
   { icon: 'calendar', title: tr('Abituriyent tayyorlov') },
 ]
 
+// Har bir da'vo ishlaydigan funksiyaga mos (README → "Bo'limlar")
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'kanban', title: tr('Lidlar voronkasi'), text: tr('Har bir qo\'ng\'iroq va so\'rov yo\'qolmaydi: Yangi → Bog\'lanildi → O\'ylayapti → To\'lov qildi.') },
-  { icon: 'receipt', title: tr('To\'lov va chek'), text: tr('To\'lovni bir daqiqada yozing va 80 mm yoki A4 chek chop eting — summa so\'z bilan.') },
-  { icon: 'alert', title: tr('Qarzdorlar avtomatik'), text: tr('Kurs narxi va muddatiga qarab kim qancha qarzligi o\'zi hisoblanadi.') },
-  { icon: 'dollar', title: tr('Kassa va xarajatlar'), text: tr('Ijara, maosh, reklama — kassada qancha pul borligini doim bilasiz.') },
-  { icon: 'barChart', title: tr('Hisobotlar'), text: tr('Qaysi reklama o\'zini oqladi, qaysi kurs ko\'p daromad keltiradi — Excel\'ga bir tugmada.') },
-  { icon: 'shield', title: tr('Xodimlar va rollar'), text: tr('Menejer, kassir, kuzatuvchi — har biri faqat o\'ziga kerakli narsani ko\'radi.') },
-  { icon: 'activity', title: tr('Amallar jurnali'), text: tr('Kim qachon nima qilgani yozib boriladi. O\'chirilgan narsa 30 kun savatchada turadi.') },
+  { icon: 'layers', title: tr('Guruhlar'), text: tr('Sig\'im, xona va vaqt ziddiyatlari tekshiriladi. O\'quvchini ko\'chirish, pauza, chegirma va individual narx.') },
+  { icon: 'calendar', title: tr('Dars jadvali'), text: tr('Hafta kunlari yoki xonalar bo\'yicha jadval, ziddiyatlar qizil bilan belgilanadi, A4 chop etish.') },
+  { icon: 'checkSquare', title: tr('Davomat'), text: tr('O\'qituvchi telefonda bir bosishda belgilaydi: keldi, kelmadi, kechikdi, sababli. Oylik setka va foiz.') },
+  { icon: 'receipt', title: tr('To\'lov va chek'), text: tr('Guruh va oy tanlanadi, summa qoldiq bilan o\'zi to\'ladi. 80 mm yoki A4 chek — summa so\'z bilan.') },
+  { icon: 'alert', title: tr('Qarzdorlar va eslatmalar'), text: tr('Qarz har bir guruh bo\'yicha o\'zi hisoblanadi. Qarzdorga tayyor matn — nusxa, Telegram yoki SMS.') },
+  { icon: 'briefcase', title: tr('O\'qituvchi maoshi'), text: tr('Belgilangan summa, tushumdan foiz yoki o\'quvchi boshiga — oylik hisob, to\'lash va eksport.') },
+  { icon: 'barChart', title: tr('Kassa va hisobotlar'), text: tr('Kirim, chiqim va balans; qaysi reklama o\'zini oqladi — CSV va Excel\'ga bir tugmada.') },
+  { icon: 'upload', title: tr('Excel\'dan import'), text: tr('Eski ro\'yxatni CSV yoki Excel\'dan ko\'chiring: ustunlar o\'zi moslashadi, takrorlar oldindan ko\'rinadi.') },
+  { icon: 'shield', title: tr('Xodimlar va rollar'), text: tr('Administrator, menejer, kassir, o\'qituvchi, kuzatuvchi — har biri faqat o\'ziga kerakli narsani ko\'radi.') },
+  { icon: 'activity', title: tr('Jurnal va savatcha'), text: tr('Kim qachon nima qilgani yozib boriladi. O\'chirilgan narsa 30 kun savatchada turadi.') },
   { icon: 'phone', title: tr('Telefonda qulay'), text: tr('Pastki menyu, katta tugmalar, qorong\'i mavzu. O\'zbek va rus tilida.') },
 ]
 
@@ -68,7 +95,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: tr('Excel\'dagi eski ro\'yxatimni ko\'chirsa bo\'ladimi?'),
-    a: tr('Ha. Ulanishda yordam beramiz: mijozlar va to\'lovlarni ko\'chirib beramiz.'),
+    a: tr('Ha. Mijozlar bo\'limidagi "Import" CSV yoki Excel faylni o\'qiydi: ustunlar o\'zi moslashadi, takror va xatoli qatorlar oldindan ko\'rinadi, xohlasangiz importni bekor qilasiz.'),
+  },
+  {
+    q: tr('O\'qituvchilar ham tizimga kiradimi?'),
+    a: tr('Ha. O\'qituvchi faqat o\'z guruhlari, jadvali va davomatini ko\'radi — mijozlar telefoni va moliya unga yopiq. O\'qituvchi kirishlari tarifdagi xodimlar soniga kirmaydi.'),
   },
   {
     q: tr('Sinov muddati tugasa nima bo\'ladi?'),
@@ -105,11 +136,15 @@ export function LandingPage() {
     document.title = `${APP_NAME} — ${tr('o\'quv markazlari uchun CRM')}`
   }, [])
 
-  const contacts = [
-    SUPPORT_CONTACTS.telegram && { label: 'Telegram', value: SUPPORT_CONTACTS.telegram, href: `https://t.me/${SUPPORT_CONTACTS.telegram.replace(/^@/, '')}` },
-    SUPPORT_CONTACTS.phone && { label: tr('Telefon'), value: SUPPORT_CONTACTS.phone, href: `tel:${SUPPORT_CONTACTS.phone.replace(/\s/g, '')}` },
-    SUPPORT_CONTACTS.email && { label: 'Email', value: SUPPORT_CONTACTS.email, href: `mailto:${SUPPORT_CONTACTS.email}` },
-  ].filter((c): c is { label: string; value: string; href: string } => Boolean(c))
+  const [applyOpen, setApplyOpen] = useState(false)
+  const contacts = contactLinks()
+  const trialLabel = tr('{0} kun bepul sinash', { 0: TRIAL_DAYS })
+  const ctas = landingCtas(
+    { demoOnly: DEMO_ONLY, mainSiteUrl: MAIN_SITE_URL, hasContacts: hasSupportContacts(), appHref: routeHref('app'), demoHref: routeHref('app', '?demo=1') },
+    trialLabel,
+  )
+  const openApply = () => setApplyOpen(true)
+  const primaryIcon: IconName | undefined = ctas.primary.kind === 'link' && ctas.primary.href.includes('demo=1') ? 'play' : undefined
 
   return (
     <div className="lp">
@@ -123,16 +158,11 @@ export function LandingPage() {
             <p className="lp-eyebrow">{tr('O\'quv markazlari uchun CRM')}</p>
             <h1 id="hero-title">{tr('O\'quv markazingizni bitta panelda boshqaring')}</h1>
             <p className="lp-lead">
-              {tr('Lidlar, to\'lovlar, qarzdorlar, kassa va hisobotlar — daftar va Excel\'siz. Administrator 10 daqiqada o\'rganadi.')}
+              {tr('Lidlar, guruhlar va dars jadvali, davomat, to\'lovlar va qarzdorlar, o\'qituvchi maoshi — daftar va Excel\'siz. Administrator 10 daqiqada o\'rganadi.')}
             </p>
             <div className="lp-cta">
-              <a className="btn btn-primary lp-btn-lg" href={routeHref('app')}>
-                {tr('{0} kun bepul sinash', { 0: TRIAL_DAYS })}
-              </a>
-              <a className="btn btn-ghost lp-btn-lg" href={routeHref('app', '?demo=1')}>
-                <Icon name="play" size={16} />
-                {tr('Demo\'ni ko\'rish')}
-              </a>
+              <Cta action={ctas.primary} className="btn btn-primary lp-btn-lg" onApply={openApply} icon={primaryIcon} />
+              {ctas.secondary && <Cta action={ctas.secondary} className="btn btn-ghost lp-btn-lg" onApply={openApply} icon={ctas.secondary.kind === 'link' ? 'play' : 'mail'} />}
             </div>
             <p className="lp-note muted">{tr('Karta talab qilinmaydi · O\'zbek va rus tilida · Telefon va kompyuterda')}</p>
           </div>
@@ -196,6 +226,14 @@ export function LandingPage() {
               <Shot name="mobile" widths={[390]} width={390} height={844} sizes="280px" alt={tr('Telefondagi ko\'rinish')} />
               <figcaption>{tr('Telefonda')}</figcaption>
             </figure>
+            <figure>
+              <Shot name="schedule" widths={[720, 1440]} width={1440} height={900} sizes={SHOT_SIZES} alt={tr('Haftalik dars jadvali: guruhlar kun va vaqt bo\'yicha')} />
+              <figcaption>{tr('Dars jadvali')}</figcaption>
+            </figure>
+            <figure>
+              <Shot name="attendance" widths={[720, 1440]} width={1440} height={900} sizes={SHOT_SIZES} alt={tr('Guruh kartasi: oylik davomat setkasi')} />
+              <figcaption>{tr('Guruh va davomat')}</figcaption>
+            </figure>
           </div>
         </section>
 
@@ -225,9 +263,11 @@ export function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <a className={plan.highlighted ? 'btn btn-primary' : 'btn btn-ghost'} href={routeHref('app')}>
-                  {plan.id === 'trial' ? tr('Bepul boshlash') : tr('Sinovdan boshlash')}
-                </a>
+                <Cta
+                  action={ctas.plan.kind === 'link' && ctas.plan.label === trialLabel ? { ...ctas.plan, label: plan.id === 'trial' ? tr('Bepul boshlash') : tr('Sinovdan boshlash') } : ctas.plan}
+                  className={plan.highlighted ? 'btn btn-primary' : 'btn btn-ghost'}
+                  onApply={openApply}
+                />
               </article>
             ))}
           </div>
@@ -253,17 +293,13 @@ export function LandingPage() {
           <h2 id="final-title">{tr('Bugunoq boshlang')}</h2>
           <p>{tr('Ro\'yxatdan o\'ting, kurslaringizni kiriting va birinchi to\'lovni yozing — hammasi 10 daqiqada.')}</p>
           <div className="lp-cta">
-            <a className="btn btn-primary lp-btn-lg" href={routeHref('app')}>
-              {tr('{0} kun bepul sinash', { 0: TRIAL_DAYS })}
-            </a>
-            <a className="btn btn-ghost lp-btn-lg" href={routeHref('app', '?demo=1')}>
-              {tr('Demo\'ni ko\'rish')}
-            </a>
+            <Cta action={ctas.primary} className="btn btn-primary lp-btn-lg" onApply={openApply} />
+            {ctas.secondary && <Cta action={ctas.secondary} className="btn btn-ghost lp-btn-lg" onApply={openApply} />}
           </div>
           {contacts.length > 0 && (
             <ul className="lp-contacts" aria-label={tr('Bog\'lanish')}>
               {contacts.map((c) => (
-                <li key={c.label}>
+                <li key={c.kind}>
                   <span className="muted">{c.label}:</span>{' '}
                   <a href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
                     {c.value}
@@ -279,12 +315,29 @@ export function LandingPage() {
         <span>
           © {APP_NAME} · {tr('O\'zbekistonda ishlab chiqilgan')}
         </span>
+        {contacts.length > 0 && (
+          <ul className="lp-footer-contacts" aria-label={tr('Sotuvchi bilan bog\'lanish')}>
+            {contacts.map((c) => (
+              <li key={c.kind}>
+                <a href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
+                  <Icon name={c.kind === 'phone' ? 'phone' : 'mail'} size={14} />
+                  {c.value}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
         <nav aria-label={tr('Huquqiy ma\'lumot')}>
           <a href={routeHref('privacy')}>{tr('Maxfiylik siyosati')}</a>
           <a href={routeHref('terms')}>{tr('Foydalanish shartlari')}</a>
           <a href={routeHref('app')}>{tr('Kirish')}</a>
         </nav>
       </footer>
+      {applyOpen && (
+        <Suspense fallback={null}>
+          <ApplyModal onClose={() => setApplyOpen(false)} siteUrl={typeof window === 'undefined' ? '' : `${window.location.origin}${routeHref('landing')}`} />
+        </Suspense>
+      )}
     </div>
   )
 }

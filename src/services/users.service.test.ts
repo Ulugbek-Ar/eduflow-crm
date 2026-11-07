@@ -171,7 +171,7 @@ describe('o\'z hisobi', () => {
 describe('demo xodimlar', () => {
   it('har rol uchun bittadan, tekshiruvdan o\'tadi, parol bilan kirib bo\'lmaydi', () => {
     const staff = createDemoStaff()
-    expect(staff.map((u) => u.role)).toEqual(['admin', 'manager', 'cashier', 'viewer'])
+    expect(staff.map((u) => u.role)).toEqual(['admin', 'manager', 'cashier', 'viewer', 'teacher'])
     expect(staff.every(isStaffUser)).toBe(true)
   })
 })

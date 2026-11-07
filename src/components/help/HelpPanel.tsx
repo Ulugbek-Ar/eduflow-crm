@@ -15,7 +15,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: tr('To\'lovni qanday qabul qilaman?'),
-    a: tr('"Qo\'shish" → "To\'lov qabul qilish". Summani yozing, mijozni tanlang va "Saqlash"ni bosing. Qarzdorlar ro\'yxatidagi "To\'lov" tugmasi summani o\'zi to\'ldiradi.'),
+    a: tr('"Qo\'shish" → "To\'lov qabul qilish". Mijozni tanlang — guruh va oy tanlanadi, summa shu oy qoldig\'i bilan o\'zi to\'ldiriladi. Kerak bo\'lsa o\'zgartirib, "Saqlash"ni bosing.'),
+  },
+  {
+    q: tr('Excel\'dagi mijozlar ro\'yxatini qanday kiritaman?'),
+    a: tr('Mijozlar va lidlar → "Import". CSV yoki Excel (.xlsx) faylni tanlang — ustunlar o\'zi moslashtiriladi, xatoli va takror qatorlar oldindan ko\'rinadi. Xato bo\'lsa, "Importni bekor qilish" hammasini avvalgi holiga qaytaradi. Namuna fayl — shu oynadagi "Shablon".'),
   },
   {
     q: tr('Mijoz "To\'lov qildi" bosqichiga qachon o\'tadi?'),
@@ -23,7 +27,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: tr('Qarzdorlar qanday hisoblanadi?'),
-    a: tr('Kursning oylik narxi × o\'qigan oylar soni − to\'langan summa. Shuning uchun Kurslar bo\'limida har kursning narxi va davomiyligini to\'g\'ri kiriting.'),
+    a: tr('Har bir guruh bo\'yicha: o\'qish boshlangan oydan buyon to\'lov muddati o\'tgan oylar summasi minus shu guruh uchun to\'langan. Oylik summa — kurs (yoki individual) narxi minus chegirma, pauza kunlari hisoblanmaydi. Muddat — Sozlamalar → O\'quv jarayoni (standart: har oyning 10-sanasi).'),
+  },
+  {
+    q: tr('Qarzdorga eslatmani qanday yuboraman?'),
+    a: tr('Moliya → Qarzdorliklar: qatordagi "Eslatma" tayyor matn beradi — nusxa oling yoki Telegram, SMS orqali yuboring. Bir nechtasini belgilab, hammasini bitta nusxada olish mumkin. Matn shabloni — Sozlamalar → O\'quv jarayoni.'),
   },
   {
     q: tr('Xato o\'chirib yubordim. Qaytarsa bo\'ladimi?'),

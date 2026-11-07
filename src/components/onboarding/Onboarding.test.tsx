@@ -62,6 +62,11 @@ describe('Sozlash ustasi', () => {
     const { user } = await openWizard()
     for (let i = 0; i < 3; i++) await next(user)
     const backup = createBackup({
+      teachers: [],
+      groups: [],
+      enrollments: [],
+      attendance: [],
+      lessonExceptions: [],
       customers: [makeCustomer({ name: 'Zaxiradagi Mijoz' })],
       transactions: [makeTransaction()],
       courses: [],

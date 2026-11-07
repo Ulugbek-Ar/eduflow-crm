@@ -25,6 +25,14 @@ export function useQuickAdd(): QuickAddAction[] {
       allowed: can('customers.edit'),
     },
     {
+      id: 'group',
+      label: tr('Yangi guruh'),
+      description: tr('Kurs, o\'qituvchi, kunlar, vaqt va xona'),
+      icon: 'layers',
+      run: () => openModal({ type: 'group' }),
+      allowed: can('groups.edit'),
+    },
+    {
       id: 'income',
       label: tr('To\'lov qabul qilish'),
       description: tr('Kurs to\'lovi yoki boshqa kirim'),

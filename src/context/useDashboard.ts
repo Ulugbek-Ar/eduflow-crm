@@ -5,12 +5,38 @@ import type { DateRange, ModalState, Section, Settings, SortState } from '../typ
 import type { StoredData } from '../services/storage.service'
 import type { TrashEntry, TrashKind } from '../services/trash.service'
 import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
+import type { AttendanceRecord, LessonException } from '../types/attendance.types'
+import type { Enrollment, Group } from '../types/group.types'
+import type { Teacher } from '../types/teacher.types'
+import type { EduActions } from './eduActions'
+import type { DebtContext } from '../utils/debts'
+import type { ImportPlan, ImportReceipt } from '../utils/import/customers'
 
-export interface DashboardContextValue {
+// Guruh/o'qish/o'qituvchi/davomat amallari — context/eduActions.ts
+export interface DashboardContextValue extends EduActions {
+  // O'qituvchi rolida: faqat o'z guruhlaridagi o'quvchilar (telefonsiz); to'lovlar — payments.view bo'lsa
   customers: Customer[]
   transactions: Transaction[]
   settings: Settings
   courses: Course[]
+  teachers: Teacher[]
+  groups: Group[]
+  enrollments: Enrollment[]
+  attendance: AttendanceRecord[]
+  lessonExceptions: LessonException[]
+  // O'qituvchi sifatida kirgan bo'lsa — uning yozuvi
+  ownTeacher: Teacher | undefined
+  getGroup: (id?: string) => Group | undefined
+  getTeacher: (id?: string) => Teacher | undefined
+  // To'liq ma'lumot (JSON zaxira uchun; rol bo'yicha filtrsiz)
+  exportData: () => StoredData
+  // Qarz hisobi uchun (utils/debts.ts): guruhlar, o'qishlar, to'lov muddati va birinchi oy qoidasi
+  debtContext: DebtContext
+  // "Eslatildi": har mijoz uchun jurnalga yozuv (qarzdorlar ro'yxatida "Oxirgi eslatma")
+  logReminders: (customerIds: readonly string[], channel: string) => void
+  // Excel/CSV import: bitta jurnal yozuvi; bekor qilish — yaratilganlar o'chadi, yangilanganlar avvalgi holiga qaytadi
+  importCustomers: (plan: ImportPlan) => ImportReceipt | null
+  undoImport: (receipt: ImportReceipt) => void
   search: string
   dateRange: DateRange
   activeSection: Section

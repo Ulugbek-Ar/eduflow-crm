@@ -21,11 +21,40 @@ const FOCUSABLE =
 
 // Bir vaqtda ochiq modallar soni: body scroll faqat oxirgisi yopilganda qaytariladi
 let openModals = 0
+// Ochiq oynalar (eng ustidagisi — oxirgi). Fokus yo'qolsa (bosilgan tugma ro'yxatdan yo'qoldi va h.k.) Escape va Tab
+// eng ustidagi oynaga tegishli bo'ladi
+const stack: HTMLElement[] = []
 
 export function Modal({ title, description, onClose, children, footer, size = 'md', variant = 'dialog', role = 'dialog' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef(onClose)
   const titleId = useId()
   const descriptionId = useId()
+
+  useEffect(() => {
+    closeRef.current = onClose
+  })
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    stack.push(dialog)
+    const onLostFocusKey = (event: globalThis.KeyboardEvent) => {
+      if (stack[stack.length - 1] !== dialog || event.target !== document.body) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRef.current()
+      } else if (event.key === 'Tab') {
+        event.preventDefault()
+        ;(dialog.querySelector<HTMLElement>(FOCUSABLE) ?? dialog).focus()
+      }
+    }
+    document.addEventListener('keydown', onLostFocusKey)
+    return () => {
+      document.removeEventListener('keydown', onLostFocusKey)
+      stack.splice(stack.indexOf(dialog), 1)
+    }
+  }, [])
 
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null

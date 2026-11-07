@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../constants/mockData'
+import { createMockData } from './demo/data'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import { computeDebts } from '../utils/debts'
@@ -9,7 +10,6 @@ import { isCourse, isCustomer, isSettings, isTransaction, sanitizeSettings } fro
 import {
   combineResults,
   createBackup,
-  createMockData,
   estimateStorageUsage,
   fillCustomerNames,
   fillPaidAt,
@@ -26,7 +26,10 @@ import {
   setDemoMode,
   startFresh,
   loadData,
+  migrateStudentsToGroups,
+  normalizeData,
   parseBackup,
+  readPreMigrationBackup,
   readJson,
   saveAll,
   saveErrorMessage,
@@ -201,7 +204,7 @@ describe('parseBackup', () => {
     const result = parseBackup(text)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.data.customers).toHaveLength(15)
+    expect(result.data.customers).toHaveLength(data.customers.length)
     expect(result.data.transactions).toHaveLength(data.transactions.length)
     expect(result.dropped).toBe(1)
     expect(result.exportedAt).toBe(backup.exportedAt)
@@ -294,17 +297,18 @@ describe('birinchi ishga tushish va demo rejim', () => {
   })
 
   it('"Demo ma\'lumot": namunaviy ma\'lumot yoziladi va demo bayrog\'i qo\'yiladi', () => {
-    startFresh('demo')
+    startFresh('demo', createMockData())
     expect(isDemoMode()).toBe(true)
-    const { data } = loadData()
-    expect(data.customers).toHaveLength(15)
+    const { data, dropped } = loadData()
+    expect(dropped).toBe(0)
+    expect(data.customers.length).toBeGreaterThan(100)
     expect(data.transactions.every(isTransaction)).toBe(true)
   })
 
   it('tanlov allaqachon qilingan bo\'lsa, mavjud ma\'lumot ustidan yozilmaydi', () => {
     startFresh('empty')
     localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify([validCustomer]))
-    startFresh('demo')
+    startFresh('demo', createMockData())
     expect(isDemoMode()).toBe(false)
     expect(loadData().data.customers).toHaveLength(1)
   })
@@ -323,7 +327,7 @@ describe('birinchi ishga tushish va demo rejim', () => {
   })
 
   it('demo rejim bayrog\'i: resetToMock yoqadi, setDemoMode(false) o\'chiradi', () => {
-    resetToMock()
+    resetToMock(createMockData())
     expect(isDemoMode()).toBe(true)
     setDemoMode(false)
     expect(isDemoMode()).toBe(false)
@@ -402,7 +406,7 @@ describe('v5 -> v6: kurslar entity', () => {
     expect(data.courses.map((c) => c.name)).toEqual(['IELTS', 'Python', 'Robototexnika'])
     expect(data.courses.every(isCourse)).toBe(true)
     // Davomiylik noma'lum — muddatsiz (0)
-    expect(data.courses[0]).toMatchObject({ type: 'course', durationMonths: 0, monthlyPrice: 0, activeGroups: 0, status: 'active' })
+    expect(data.courses[0]).toMatchObject({ type: 'course', durationMonths: 0, monthlyPrice: 0, status: 'active' })
     expect(readJson(STORAGE_KEYS.courses)).toHaveLength(3)
     expect(readJson(STORAGE_KEYS.settings)).not.toHaveProperty('courses')
   })
@@ -459,7 +463,7 @@ describe('v6 -> v7: to\'lov turi va status', () => {
     expect(transactions.every(isTransaction)).toBe(true)
     expect(transactions.some((t) => t.status === 'pending')).toBe(true)
     expect(transactions.some((t) => t.status === 'cancelled')).toBe(true)
-    expect(new Set(transactions.filter((t) => t.source).map((t) => t.source))).toEqual(new Set(['instagram', 'telegram']))
+    expect(new Set(transactions.filter((t) => t.source).map((t) => t.source))).toEqual(new Set(['instagram', 'telegram', 'website']))
   })
 })
 
@@ -532,5 +536,112 @@ describe('v9 -> v10: kurs davomiyligi "muddatsiz"', () => {
     const rows = computeDebts([paidLongAgo], [{ ...(legacy as Course), durationMonths: 0, monthlyPrice: 650000 }], [])
     expect(rows).toHaveLength(1)
     expect(rows[0].debt).toBe(650000)
+  })
+})
+
+describe('v10 -> v11: guruhlar, o\'qish, davomat', () => {
+  // v10 dagi haqiqiy ko'rinish: kursda activeGroups bor, guruh/o'qish kalitlari yo'q
+  const v10Courses = [
+    { id: 'k1', name: 'IELTS', type: 'course', durationMonths: 6, monthlyPrice: 650_000, activeGroups: 3, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'k2', name: 'Python', type: 'course', durationMonths: 4, monthlyPrice: 900_000, activeGroups: 1, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' },
+    { id: 'k3', name: 'Rus tili', type: 'course', durationMonths: 6, monthlyPrice: 450_000, activeGroups: 0, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' },
+  ]
+  const student = (id: string, course: string, paidAt: string, status = 'paid') => ({
+    id,
+    name: `O'quvchi ${id}`,
+    phone: `+998 90 000 00 ${id.slice(-2).padStart(2, '0')}`,
+    course,
+    status,
+    source: 'instagram',
+    createdAt: '2026-08-01T10:00:00.000Z',
+    ...(status === 'paid' ? { paidAt } : {}),
+  })
+  const v10Customers = [
+    student('c1', 'IELTS', '2026-09-10T10:00:00.000Z'),
+    student('c2', 'IELTS', '2026-08-15T12:00:00.000Z'),
+    student('c3', 'Python', '2026-10-01T09:00:00.000Z'),
+    student('c4', 'Python', '', 'new'),
+    student('c5', 'Rus tili', '', 'cancelled'),
+  ]
+
+  function seedV10() {
+    seedV1(v10Customers, [], { ...DEFAULT_SETTINGS })
+    localStorage.setItem(STORAGE_KEYS.courses, JSON.stringify(v10Courses))
+    localStorage.setItem(STORAGE_KEYS.version, '10')
+  }
+
+  it('"To\'lov qildi" o\'quvchilari kurs bo\'yicha "{Kurs} — 1-guruh"ga yoziladi (Du/Cho/Ju, 14:00–15:30, o\'qituvchisiz)', () => {
+    seedV10()
+    const { data, dropped } = loadData()
+    expect(dropped).toBe(0)
+    expect(readJson(STORAGE_KEYS.version)).toBe(SCHEMA_VERSION)
+    expect(data.groups.map((g) => g.name).sort()).toEqual(['IELTS — 1-guruh', 'Python — 1-guruh'])
+    const ielts = data.groups.find((g) => g.courseId === 'k1')
+    expect(ielts).toMatchObject({ days: ['mon', 'wed', 'fri'], startTime: '14:00', endTime: '15:30', startDate: '2026-08-15', status: 'active', room: '' })
+    expect(ielts?.teacherId).toBeUndefined()
+    // Har o'quvchiga paidAt dan boshlanadigan o'qish; lid va bekor qilinganlar yozilmaydi
+    expect(data.enrollments.map((e) => [e.customerId, e.groupId, e.startDate, e.status])).toEqual([
+      ['c1', ielts?.id, '2026-09-10', 'active'],
+      ['c2', ielts?.id, '2026-08-15', 'active'],
+      ['c3', data.groups.find((g) => g.courseId === 'k2')?.id, '2026-10-01', 'active'],
+    ])
+    // Course.activeGroups olib tashlandi
+    expect(data.courses.every((c) => !('activeGroups' in c))).toBe(true)
+    expect((readJson(STORAGE_KEYS.courses) as object[]).every((c) => !('activeGroups' in c))).toBe(true)
+  })
+
+  it('migratsiyadan oldin avtomatik JSON zaxira saqlanadi (bir marta)', () => {
+    seedV10()
+    loadData()
+    const backup = readPreMigrationBackup()
+    expect(backup).toMatchObject({ app: 'eduflow-crm', version: 10 })
+    const courses = backup?.courses as Array<{ activeGroups: number }> | undefined
+    expect(courses?.[0]?.activeGroups).toBe(3)
+    expect(backup?.customers).toHaveLength(5)
+    // Zaxira oddiy JSON zaxira sifatida tiklanadi
+    const restored = parseBackup(JSON.stringify(backup))
+    expect(restored.ok && restored.data.enrollments).toHaveLength(3)
+  })
+
+  it('idempotent: qayta yuklash va qayta migratsiya hech narsani takrorlamaydi', () => {
+    seedV10()
+    const first = loadData().data
+    const second = loadData().data
+    expect(second.groups).toEqual(first.groups)
+    expect(second.enrollments).toEqual(first.enrollments)
+    const again = migrateStudentsToGroups(first.customers, first.courses, first.groups, first.enrollments)
+    expect(again.groups).toEqual(first.groups)
+    expect(again.enrollments).toEqual(first.enrollments)
+    // v10 ma'lumotiga ikki marta qo'llansa ham natija bir xil
+    const raw = { customers: v10Customers, transactions: [], settings: {}, courses: v10Courses }
+    const a = normalizeData(raw, 10).data
+    const b = normalizeData({ ...raw, groups: a.groups, enrollments: a.enrollments }, 10).data
+    expect(b.groups.map((g) => g.id)).toEqual(a.groups.map((g) => g.id))
+    expect(b.enrollments.map((e) => e.id)).toEqual(a.enrollments.map((e) => e.id))
+  })
+
+  it('v11 ma\'lumoti: buzuq guruh/o\'qish/davomat tashlanadi, davomat (guruh, o\'quvchi, sana) bo\'yicha noyob', () => {
+    const group = { id: 'g1', name: 'IELTS', courseId: 'k1', room: '', days: ['mon'], startTime: '09:00', endTime: '10:30', capacity: 12, startDate: '2026-09-01', status: 'active', createdAt: '2026-09-01T00:00:00.000Z' }
+    const mark = { id: 'd1', groupId: 'g1', customerId: 'c1', date: '2026-11-02', status: 'present', updatedAt: '2026-11-02T10:00:00.000Z' }
+    const { data, dropped } = normalizeData({
+      customers: [],
+      transactions: [],
+      settings: {},
+      courses: [],
+      groups: [group, { ...group, id: 'g2', endTime: '08:00' }, { ...group, id: 'g3', days: [] }],
+      enrollments: [{ id: 'e1', customerId: 'c1', groupId: 'g1', startDate: '2026-13-01', status: 'active', createdAt: '2026-09-01T00:00:00.000Z' }],
+      attendance: [mark, { ...mark, id: 'd2', status: 'absent', updatedAt: '2026-11-02T11:00:00.000Z' }, { ...mark, id: 'd3', status: 'sick' }],
+      teachers: [{ id: 'p1', name: 'X', phone: '', subjects: [], payRule: { type: 'percent', percent: 140 }, status: 'active', createdAt: '2026-01-01T00:00:00.000Z' }],
+    })
+    expect(data.groups.map((g) => g.id)).toEqual(['g1'])
+    expect(data.enrollments).toEqual([])
+    expect(data.attendance).toEqual([{ ...mark, id: 'd2', status: 'absent', updatedAt: '2026-11-02T11:00:00.000Z' }])
+    expect(data.teachers).toEqual([])
+    expect(dropped).toBe(6)
+  })
+
+  it('sozlamalar v11 maydonlari standart qiymat bilan to\'ldiriladi', () => {
+    expect(sanitizeSettings({})).toMatchObject({ attendanceEditDays: 3, prorateFirstMonth: false, paymentDueDay: 10 })
+    expect(sanitizeSettings({ attendanceEditDays: 7, paymentDueDay: 31 })).toMatchObject({ attendanceEditDays: 7, paymentDueDay: 10 })
   })
 })

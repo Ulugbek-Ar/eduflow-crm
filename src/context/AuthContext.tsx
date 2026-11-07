@@ -10,6 +10,7 @@ import { logAudit } from '../services/audit.service'
 import type { AuditAction } from '../services/audit.service'
 import { isCloudEnabled } from '../data/config'
 import { closeDemoWorkspace, openDemoWorkspace } from '../services/demo.service'
+import { loadDemoData } from '../services/demo/load'
 import { computeAccess, loadSubscription, startTrialIfMissing } from '../services/subscription.service'
 import {
   endSession,
@@ -209,13 +210,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     users: users.map(staff.toPublicUser),
     addUser: async (input) => {
       if (!allowed('staff.manage')) return DENIED
-      const activeCount = users.filter((u) => u.status === 'active').length
-      if (access.staffLimit !== null && activeCount >= access.staffLimit) {
+      // O'qituvchi kirishlari tarif limitiga kirmaydi (markazda o'qituvchilar ko'p bo'ladi)
+      const activeCount = users.filter((u) => u.status === 'active' && u.role !== 'teacher').length
+      if (input.role !== 'teacher' && access.staffLimit !== null && activeCount >= access.staffLimit) {
         return { ok: false, error: tr('Tarifingizda {0} tagacha xodim. Ko\'proq xodim uchun tarifni almashtiring.', { 0: access.staffLimit }) }
       }
       const result = await staff.addUser(input)
-      if (result.ok) audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
-      return fromResult(result)
+      if (!result.ok) return result
+      audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
+      setUsers(result.users)
+      return { ok: true, userId: result.user.id }
     },
     updateUser: (id, patch) => {
       if (!current || !allowed('staff.manage')) return DENIED
@@ -271,12 +275,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessions(listSessions())
     },
     enterDemo: (role = 'admin') => {
-      if (session) endSession(session.id)
-      const demoStaff = openDemoWorkspace()
-      const user = demoStaff.find((u) => u.role === role) ?? demoStaff[0]
-      setMode('demo')
-      setSubscription(loadSubscription())
-      begin(user, demoStaff)
+      loadDemoData()
+        .then((data) => {
+          // Seans haqiqiy nom maydonida yopiladi, keyin demo'ga o'tiladi
+          if (session) endSession(session.id)
+          const demoStaff = openDemoWorkspace(data)
+          const user = demoStaff.find((u) => u.role === role) ?? demoStaff[0]
+          setMode('demo')
+          setSubscription(loadSubscription())
+          begin(user, demoStaff)
+        })
+        .catch(() => toast.error(tr('Demo yuklanmadi. Internetni tekshirib, qayta urinib ko\'ring.')))
     },
     exitDemo: leaveDemo,
     switchDemoRole: (role) => {
