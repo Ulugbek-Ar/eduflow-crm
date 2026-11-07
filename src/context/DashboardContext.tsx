@@ -9,6 +9,7 @@ import { logAudit } from '../services/audit.service'
 import type { AuditAction } from '../services/audit.service'
 import { isTourDone, markTourDone } from '../services/tour.service'
 import { loadTrash, pruneTrash, saveTrash, TRASH_KEY } from '../services/trash.service'
+import { loadDemoData } from '../services/demo/load'
 import type { TrashEntry, TrashKind } from '../services/trash.service'
 import { useConfirm } from '../hooks/useConfirm'
 import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
@@ -460,12 +461,16 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     },
     resetData: () => {
       if (!allowed('data.manage')) return
-      const { data, saved } = resetToMock()
-      applyData(data)
-      setIsDemo(true)
-      reportSave('all', saved)
-      audit('data.reset', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
-      if (saved.ok) toast.success(tr('Demo ma\'lumotlar tiklandi'))
+      loadDemoData()
+        .then((demo) => {
+          const { data, saved } = resetToMock(demo)
+          applyData(data)
+          setIsDemo(true)
+          reportSave('all', saved)
+          audit('data.reset', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+          if (saved.ok) toast.success(tr('Demo ma\'lumotlar tiklandi'))
+        })
+        .catch(() => toast.error(tr('Demo yuklanmadi. Internetni tekshirib, qayta urinib ko\'ring.')))
     },
     clearAllData: () => {
       if (!allowed('data.manage')) return

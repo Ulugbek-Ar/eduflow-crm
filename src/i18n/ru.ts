@@ -1013,4 +1013,5 @@ export const RU: Readonly<Record<string, string>> = {
   "Telefon: {0}": "Телефон: {0}",
   "Markaz: {0}": "Центр: {0}",
   "O'quvchilar soni: {0}": "Количество учеников: {0}",
+  "Demo yuklanmadi. Internetni tekshirib, qayta urinib ko'ring.": "Демо не загрузилось. Проверьте интернет и попробуйте снова.",
 }

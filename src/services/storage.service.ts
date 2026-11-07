@@ -1,5 +1,5 @@
 import { tr } from '../i18n'
-import { createMockCourses, createMockCustomers, createMockTransactions, DEFAULT_SETTINGS } from '../constants/mockData'
+import { DEFAULT_SETTINGS } from '../constants/mockData'
 import type { Course } from '../types/course.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
@@ -377,15 +377,6 @@ export function createEmptyData(): StoredData {
   return { customers: [], transactions: [], courses: [], settings: { ...DEFAULT_SETTINGS } }
 }
 
-export function createMockData(): StoredData {
-  const transactions = createMockTransactions()
-  return {
-    customers: fillPaidAt(createMockCustomers(), transactions),
-    transactions,
-    courses: createMockCourses(),
-    settings: { ...DEFAULT_SETTINGS },
-  }
-}
 
 export function readStored(fromVersion: number = SCHEMA_VERSION): LoadResult {
   return normalizeData({
@@ -414,9 +405,10 @@ export function setDemoMode(demo: boolean): SaveResult {
 // Tanlov ekranidan: 'empty' — bo'sh baza, 'demo' — namunaviy ma'lumot.
 // Boshqa tabda allaqachon tanlangan bo'lsa, mavjud ma'lumot ustidan yozilmaydi.
 // Administrator ro'yxatdan o'tishda kiritgan sozlamalar (markaz nomi) saqlanib qoladi.
-export function startFresh(mode: 'empty' | 'demo'): SaveResult {
+// demo — tayyor demo ma'lumot (services/demo/load.ts: loadDemoData), bo'lmasa bo'sh baza
+export function startFresh(mode: 'empty' | 'demo', demo?: StoredData): SaveResult {
   if (!isFirstRun()) return { ok: true }
-  const data = mode === 'demo' ? createMockData() : createEmptyData()
+  const data = mode === 'demo' && demo ? demo : createEmptyData()
   const stored = readJson(STORAGE_KEYS.settings)
   const saved = saveAll(stored === undefined ? data : { ...data, settings: sanitizeSettings(stored) })
   return combineResults([saved, setDemoMode(mode === 'demo')])
@@ -447,8 +439,8 @@ export function loadData(): LoadResult {
   return result
 }
 
-export function resetToMock(): { data: StoredData; saved: SaveResult } {
-  const data = createMockData()
+// data — services/demo/load.ts dagi loadDemoData() natijasi
+export function resetToMock(data: StoredData): { data: StoredData; saved: SaveResult } {
   return { data, saved: combineResults([saveAll(data), setDemoMode(true)]) }
 }
 

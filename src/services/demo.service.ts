@@ -3,7 +3,7 @@
 import type { StaffUser } from '../types/user.types'
 import { logAudit, resetAuditCache } from './audit.service'
 import type { AuditAction } from './audit.service'
-import { clearDemoStorage, createMockData, saveAll, setDemoMode, setStorageNamespace } from './storage.service'
+import { clearDemoStorage, saveAll, setDemoMode, setStorageNamespace } from './storage.service'
 import type { StoredData } from './storage.service'
 import { displayName, saveDemoStaff } from './users.service'
 
@@ -28,10 +28,11 @@ function seedDemoAudit(staff: readonly StaffUser[], data: StoredData, now = Date
   for (const [user, action, summary, hoursAgo] of rows) logAudit(actor(user), action, summary, undefined, new Date(now - hoursAgo * HOUR))
 }
 
-export function openDemoWorkspace(): StaffUser[] {
+// data — services/demo/load.ts dagi loadDemoData() natijasi (generator alohida bo'lakda: avval yuklanadi,
+// keyin nom maydoni almashadi — yuklanmasa hech narsa o'zgarmaydi)
+export function openDemoWorkspace(data: StoredData): StaffUser[] {
   setStorageNamespace('demo')
   clearDemoStorage()
-  const data = createMockData()
   saveAll(data)
   setDemoMode(true)
   const staff = saveDemoStaff()

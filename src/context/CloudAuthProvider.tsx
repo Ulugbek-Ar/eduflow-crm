@@ -13,6 +13,7 @@ import { tr } from '../i18n'
 import { setAuditBackend } from '../services/audit.service'
 import { validatePassword } from '../services/auth.service'
 import { openDemoWorkspace } from '../services/demo.service'
+import { loadDemoData } from '../services/demo/load'
 import { startSession } from '../services/sessions.service'
 import { computeAccess } from '../services/subscription.service'
 import type { Subscription } from '../services/subscription.service'
@@ -163,9 +164,13 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       cloudApi.signOut('others').catch((error) => toast.error(message(error)))
     },
     enterDemo: (role = 'admin') => {
-      const demoStaff = openDemoWorkspace()
-      startSession((demoStaff.find((u) => u.role === role) ?? demoStaff[0]).id)
-      window.location.reload()
+      loadDemoData()
+        .then((data) => {
+          const demoStaff = openDemoWorkspace(data)
+          startSession((demoStaff.find((u) => u.role === role) ?? demoStaff[0]).id)
+          window.location.reload()
+        })
+        .catch(() => toast.error(tr('Demo yuklanmadi. Internetni tekshirib, qayta urinib ko\'ring.')))
     },
     exitDemo: () => undefined,
     switchDemoRole: () => undefined,

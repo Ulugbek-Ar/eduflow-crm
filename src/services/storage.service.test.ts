@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '../constants/mockData'
+import { createMockData } from './demo/data'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import { computeDebts } from '../utils/debts'
@@ -9,7 +10,6 @@ import { isCourse, isCustomer, isSettings, isTransaction, sanitizeSettings } fro
 import {
   combineResults,
   createBackup,
-  createMockData,
   estimateStorageUsage,
   fillCustomerNames,
   fillPaidAt,
@@ -201,7 +201,7 @@ describe('parseBackup', () => {
     const result = parseBackup(text)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.data.customers).toHaveLength(15)
+    expect(result.data.customers).toHaveLength(data.customers.length)
     expect(result.data.transactions).toHaveLength(data.transactions.length)
     expect(result.dropped).toBe(1)
     expect(result.exportedAt).toBe(backup.exportedAt)
@@ -294,17 +294,18 @@ describe('birinchi ishga tushish va demo rejim', () => {
   })
 
   it('"Demo ma\'lumot": namunaviy ma\'lumot yoziladi va demo bayrog\'i qo\'yiladi', () => {
-    startFresh('demo')
+    startFresh('demo', createMockData())
     expect(isDemoMode()).toBe(true)
-    const { data } = loadData()
-    expect(data.customers).toHaveLength(15)
+    const { data, dropped } = loadData()
+    expect(dropped).toBe(0)
+    expect(data.customers.length).toBeGreaterThan(100)
     expect(data.transactions.every(isTransaction)).toBe(true)
   })
 
   it('tanlov allaqachon qilingan bo\'lsa, mavjud ma\'lumot ustidan yozilmaydi', () => {
     startFresh('empty')
     localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify([validCustomer]))
-    startFresh('demo')
+    startFresh('demo', createMockData())
     expect(isDemoMode()).toBe(false)
     expect(loadData().data.customers).toHaveLength(1)
   })
@@ -323,7 +324,7 @@ describe('birinchi ishga tushish va demo rejim', () => {
   })
 
   it('demo rejim bayrog\'i: resetToMock yoqadi, setDemoMode(false) o\'chiradi', () => {
-    resetToMock()
+    resetToMock(createMockData())
     expect(isDemoMode()).toBe(true)
     setDemoMode(false)
     expect(isDemoMode()).toBe(false)
@@ -459,7 +460,7 @@ describe('v6 -> v7: to\'lov turi va status', () => {
     expect(transactions.every(isTransaction)).toBe(true)
     expect(transactions.some((t) => t.status === 'pending')).toBe(true)
     expect(transactions.some((t) => t.status === 'cancelled')).toBe(true)
-    expect(new Set(transactions.filter((t) => t.source).map((t) => t.source))).toEqual(new Set(['instagram', 'telegram']))
+    expect(new Set(transactions.filter((t) => t.source).map((t) => t.source))).toEqual(new Set(['instagram', 'telegram', 'website']))
   })
 })
 
