@@ -10,6 +10,7 @@ import type { Enrollment, Group } from '../types/group.types'
 import type { Teacher } from '../types/teacher.types'
 import type { EduActions } from './eduActions'
 import type { DebtContext } from '../utils/debts'
+import type { ImportPlan, ImportReceipt } from '../utils/import/customers'
 
 // Guruh/o'qish/o'qituvchi/davomat amallari — context/eduActions.ts
 export interface DashboardContextValue extends EduActions {
@@ -33,6 +34,9 @@ export interface DashboardContextValue extends EduActions {
   debtContext: DebtContext
   // "Eslatildi": har mijoz uchun jurnalga yozuv (qarzdorlar ro'yxatida "Oxirgi eslatma")
   logReminders: (customerIds: readonly string[], channel: string) => void
+  // Excel/CSV import: bitta jurnal yozuvi; bekor qilish — yaratilganlar o'chadi, yangilanganlar avvalgi holiga qaytadi
+  importCustomers: (plan: ImportPlan) => ImportReceipt | null
+  undoImport: (receipt: ImportReceipt) => void
   search: string
   dateRange: DateRange
   activeSection: Section

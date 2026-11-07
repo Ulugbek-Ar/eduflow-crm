@@ -96,6 +96,13 @@ bilan sinxron.
   bosqich menyusi yoki `Alt + ←/→`, `Enter` — kartani ochish). Mobilda Kanban faqat o'z ichida gorizontal aylanadi
 - Yangi mijoz: Ism, Telefon (`+998 XX XXX XX XX` maskasi, takroriy raqam taqiqlanadi), Manba, Kurs/Xizmat, Izoh
 - Qidiruv va filtrlar: bosqich, manba, kurs, qo'shilgan sana oralig'i
+- **Excel/CSV'dan import** (`customers.edit`): .csv (UTF-8 yoki Windows-1251, ajratgich `,` `;` tab o'zi aniqlanadi), .xlsx va
+  EduFlow shabloni (.xls, XML) — 5 MB va 5000 qatorgacha, kutubxonasiz o'qiladi (`src/utils/import/`). Sarlavhalar o'zbek, rus
+  va ingliz sinonimlari bo'yicha moslashtiriladi (Ism / Имя / Name / F.I.O, Telefon / Телефон / Phone, Kurs, Manba, Holat,
+  Izoh, Sana), birinchi 20 qator oldindan ko'rsatiladi, xatolar qator darajasida. Telefon `+998 XX XXX XX XX` ga keltiriladi;
+  takrorlar fayl ichida va bazada aniqlanadi (o'tkazib yuborish yoki yangilash); noma'lum kurs uchun "kurs yaratish" taklif
+  qilinadi (ruxsat bo'lmasa — nomi izohga yoziladi). Natija: qo'shildi / yangilandi / o'tkazib yuborildi, o'tkazilganlar
+  CSV'si, jurnalga bitta yozuv va "Importni bekor qilish". Shablon — CSV va Excel
 - Mijoz kartasi: bosqichni shu yerning o'zida o'zgartirish, guruhlari (har biri bo'yicha qarz yoki avans, davomat),
   oxirgi 12 oy jadvali (kutilgan / to'langan / balans), to'lovlar tarixi (statuslari bilan), jami to'langan;
   tahrirlash, tasdiqlash bilan o'chirish (to'lovlar jurnalda "Ism (o'chirilgan)" ko'rinishida qoladi).

@@ -291,6 +291,8 @@ export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise
   }
 }
 
+const UPSERT_CHUNK = 500
+
 // Holat o'zgarishini serverga yuborish: yangi/o'zgarganlar — upsert, olib tashlanganlar — savatchaga (trash_move).
 // Savatchada turgan id qayta paydo bo'lsa — tiklash (trash_restore)
 export class CloudSync {
@@ -306,8 +308,11 @@ export class CloudSync {
     const sb = getClient()
     const table = TABLES[kind]
     if (changes.upserts.length) {
-      const { error } = await sb.from(table).upsert(changes.upserts.map((item) => toRow(item, this.org)), { onConflict: 'organization_id,id' })
-      fail(error)
+      // Katta import (5000 qatorgacha) bitta so'rovga sig'masin: 500 tadan
+      for (let i = 0; i < changes.upserts.length; i += UPSERT_CHUNK) {
+        const { error } = await sb.from(table).upsert(changes.upserts.slice(i, i + UPSERT_CHUNK).map((item) => toRow(item, this.org)), { onConflict: 'organization_id,id' })
+        fail(error)
+      }
       const restored = changes.upserts.filter((item) => this.trashed.has(`${kind}:${item.id}`)).map((item) => item.id)
       if (restored.length) {
         const { error: restoreError } = await sb.rpc('trash_restore', { p_table: table, p_ids: restored })

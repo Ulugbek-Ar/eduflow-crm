@@ -136,6 +136,7 @@ const TeacherToday = lazy(() => loadTodayLessons().then((m) => ({ default: m.Tea
 const AttendancePanel = lazy(() => loadAttendancePanel().then((m) => ({ default: m.AttendancePanel })))
 const SchedulePanel = lazy(() => loadSchedulePanel().then((m) => ({ default: m.SchedulePanel })))
 const TeacherFormModal = lazy(() => loadTeacherForm().then((m) => ({ default: m.TeacherFormModal })))
+const ImportDialog = lazy(() => loadWithRetry(() => import('./components/customers/import/ImportDialog')).then((m) => ({ default: m.ImportDialog })))
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
@@ -235,6 +236,7 @@ function Shell() {
         {modal?.type === 'receipt' && <ReceiptModal key={modal.payload.id} transactionId={modal.payload.id} />}
         {modal?.type === 'group' && <GroupFormModal key={modal.payload?.id ?? 'new'} groupId={modal.payload?.id} />}
         {modal?.type === 'teacher' && <TeacherFormModal key={modal.payload?.id ?? 'new'} teacherId={modal.payload?.id} />}
+        {modal?.type === 'import' && <ImportDialog />}
         {modal?.type === 'groupDetail' && <GroupDetail key={modal.payload.id} groupId={modal.payload.id} tab={modal.payload.tab} />}
         {modal?.type === 'transaction' && (
           <TransactionFormModal

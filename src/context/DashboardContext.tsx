@@ -92,6 +92,7 @@ function modalPermission(modal: NonNullable<ModalState>): Permission {
     group: 'groups.edit',
     groupDetail: 'groups.view',
     teacher: 'teachers.manage',
+    import: 'customers.edit',
   }
   if (modal.type === 'transaction' && (modal.payload?.id || modal.payload?.kind === 'expense')) return 'payments.manage'
   return byType[modal.type]
@@ -385,6 +386,42 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     debtContext: { groups: visibleGroups, enrollments: visibleEnrollments, settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay } },
     logReminders: (customerIds, channel) => {
       for (const id of customerIds) audit('reminder.sent', `${getCustomer(id)?.name ?? id} · ${channel}`, id)
+    },
+    importCustomers: (plan) => {
+      if (!allowed('customers.edit')) return null
+      const now = new Date().toISOString()
+      // Kurs yaratish — faqat courses.edit ruxsati bilan; nomi bir xil kurs ikkinchi marta yaratilmaydi
+      const known = new Set(courses.map((c) => c.name.toLowerCase()))
+      const newCourses: Course[] = can('courses.edit')
+        ? [...new Set(plan.courses.map(normalizeCourseName))]
+            .filter((name) => name && !known.has(name.toLowerCase()))
+            .map((name) => ({ id: createId('k'), name, type: 'course', durationMonths: 0, monthlyPrice: 0, status: 'active', createdAt: now }))
+        : []
+      const available = new Set([...courses, ...newCourses].map((c) => c.name))
+      const created: Customer[] = plan.create.map((c) => ({ ...c, course: available.has(c.course) ? c.course : '', id: createId('c') }))
+      const patches = new Map(plan.update.map((u) => [u.id, u.patch]))
+      const previous = customers.filter((c) => patches.has(c.id))
+      if (newCourses.length) setCourses((list) => [...list, ...newCourses])
+      setCustomers((list) => [
+        ...created,
+        ...list.map((c) => {
+          const patch = patches.get(c.id)
+          return patch ? withPaidAt(c, { ...c, ...cleanCustomer(patch), updatedAt: now }, now) : c
+        }),
+      ])
+      audit('import.run', tr('{0}: qo\'shildi {1}, yangilandi {2}, o\'tkazib yuborildi {3}', { 0: plan.fileName, 1: created.length, 2: previous.length, 3: plan.skipped }))
+      return { fileName: plan.fileName, createdIds: created.map((c) => c.id), previous, courseIds: newCourses.map((c) => c.id), added: created.length, updated: previous.length, skipped: plan.skipped }
+    },
+    undoImport: (receipt) => {
+      if (!allowed('customers.edit')) return
+      const createdIds = new Set(receipt.createdIds)
+      const previous = new Map(receipt.previous.map((c) => [c.id, c]))
+      setCustomers((list) => list.filter((c) => !createdIds.has(c.id)).map((c) => previous.get(c.id) ?? c))
+      // Import yaratgan kurs — guruh ochilmagan bo'lsa olib tashlanadi
+      const courseIds = new Set(receipt.courseIds)
+      if (courseIds.size) setCourses((list) => list.filter((k) => !courseIds.has(k.id) || groups.some((g) => g.courseId === k.id)))
+      audit('import.undo', tr('{0}: {1} ta mijoz o\'chirildi, {2} tasi qaytarildi', { 0: receipt.fileName, 1: receipt.added, 2: receipt.updated }))
+      toast.success(tr('Import bekor qilindi'))
     },
     search,
     dateRange,

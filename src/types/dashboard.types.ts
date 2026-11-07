@@ -34,6 +34,7 @@ export type ModalState =
   | { type: 'group'; payload?: { id?: string } }
   | { type: 'groupDetail'; payload: { id: string; tab?: GroupTab } }
   | { type: 'teacher'; payload?: { id?: string } }
+  | { type: 'import' }
   | null
 
 export type GroupTab = 'students' | 'attendance' | 'payments'

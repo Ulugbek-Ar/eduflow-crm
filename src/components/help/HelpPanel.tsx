@@ -18,6 +18,10 @@ const FAQ: Array<{ q: string; a: string }> = [
     a: tr('"Qo\'shish" → "To\'lov qabul qilish". Mijozni tanlang — guruh va oy tanlanadi, summa shu oy qoldig\'i bilan o\'zi to\'ldiriladi. Kerak bo\'lsa o\'zgartirib, "Saqlash"ni bosing.'),
   },
   {
+    q: tr('Excel\'dagi mijozlar ro\'yxatini qanday kiritaman?'),
+    a: tr('Mijozlar va lidlar → "Import". CSV yoki Excel (.xlsx) faylni tanlang — ustunlar o\'zi moslashtiriladi, xatoli va takror qatorlar oldindan ko\'rinadi. Xato bo\'lsa, "Importni bekor qilish" hammasini avvalgi holiga qaytaradi. Namuna fayl — shu oynadagi "Shablon".'),
+  },
+  {
     q: tr('Mijoz "To\'lov qildi" bosqichiga qachon o\'tadi?'),
     a: tr('Mijoz kartasida yoki ro\'yxatdagi rangli bosqich tugmasini bosib, "To\'lov qildi"ni tanlang. Kanban ko\'rinishida kartani sudrab ham o\'tkazish mumkin.'),
   },
