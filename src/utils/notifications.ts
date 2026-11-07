@@ -5,6 +5,19 @@ import type { Transaction } from '../types/finance.types'
 import type { Course } from '../types/course.types'
 import { filterByPeriod, getPeriod, sumExpense, sumIncome } from './analytics'
 import { computeDebts, totalDebt } from './debts'
+import type { AttendanceRecord, LessonException } from '../types/attendance.types'
+import type { Enrollment, Group } from '../types/group.types'
+import { absentStreaks, todayLessons, unmarkedLessons } from './attendance'
+import { dayString } from './groups'
+
+// v11: davomat eslatmalari uchun ma'lumot; finance: false — moliyaviy eslatmalar (qarz, chiqim, balans) ko'rsatilmaydi
+export interface EduNotificationData {
+  groups: readonly Group[]
+  enrollments: readonly Enrollment[]
+  attendance: readonly AttendanceRecord[]
+  lessonExceptions: readonly LessonException[]
+  finance?: boolean
+}
 
 export interface AppNotification {
   // Holat o'zgarsa id ham o'zgaradi va eslatma qaytadan "o'qilmagan" bo'ladi
@@ -30,10 +43,39 @@ export function buildNotifications(
   money: (amount: number) => string,
   courses: readonly Course[] = [],
   now = new Date(),
+  edu?: EduNotificationData,
 ): AppNotification[] {
   const result: AppNotification[] = []
+  const finance = edu?.finance ?? true
 
-  const debts = computeDebts(customers, courses, transactions, now)
+  if (edu) {
+    const today = dayString(now)
+    const streaks = absentStreaks(edu.enrollments, edu.attendance, today)
+    if (streaks.length > 0) {
+      result.push({
+        id: `absent-streak:${today}:${streaks.map((s) => `${s.groupId}/${s.customerId}`).sort().join(',')}`,
+        tone: 'warning',
+        title: tr('{0} ta o\'quvchi ketma-ket 3 darsga kelmadi', { 0: streaks.length }),
+        description: tr('Ota-onasi bilan bog\'laning — guruh kartasidagi "Davomat"da ko\'rinadi'),
+        target: 'groups',
+      })
+    }
+    const unmarked = unmarkedLessons(todayLessons(edu.groups, edu.enrollments, edu.attendance, edu.lessonExceptions, today, now.getHours() * 60 + now.getMinutes()))
+    if (unmarked.length > 0) {
+      result.push({
+        id: `unmarked:${today}:${unmarked.map((s) => s.group.id).sort().join(',')}`,
+        tone: 'info',
+        title: tr('Dars tugadi, lekin davomat belgilanmagan: {0} ta', { 0: unmarked.length }),
+        description: unmarked
+          .slice(0, 3)
+          .map((s) => `${s.group.startTime} ${s.group.name}`)
+          .join(', '),
+        target: 'groups',
+      })
+    }
+  }
+
+  const debts = finance ? computeDebts(customers, courses, transactions, now) : []
   if (debts.length > 0) {
     result.push({
       id: `debts:${now.getFullYear()}-${now.getMonth() + 1}:${debts.map((d) => `${d.customer.id}=${d.debt}`).join(',')}`,
@@ -63,7 +105,7 @@ export function buildNotifications(
   const month = filterByPeriod(transactions, (t) => t.date, getPeriod('month', now))
   const income = sumIncome(month)
   const expense = sumExpense(month)
-  if (expense > income) {
+  if (finance && expense > income) {
     result.push({
       id: `expense-over:${now.getFullYear()}-${now.getMonth() + 1}`,
       tone: 'danger',
@@ -73,7 +115,7 @@ export function buildNotifications(
     })
   }
 
-  if (balance < 0) {
+  if (finance && balance < 0) {
     result.push({
       id: `negative-balance:${dayKey(now)}`,
       tone: 'danger',

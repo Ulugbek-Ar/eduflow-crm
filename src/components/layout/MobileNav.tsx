@@ -16,13 +16,21 @@ const ITEMS: Array<{ id: Section; label: string; icon: IconName }> = [
   { id: 'finance', label: tr('Moliya'), icon: 'dollar' },
 ]
 
+// O'qituvchi: Bugun · Guruhlarim · Jadval · Davomat · Menyu
+const TEACHER_ITEMS: Array<{ id: Section; label: string; icon: IconName }> = [
+  { id: 'overview', label: tr('Bugun'), icon: 'overview' },
+  { id: 'groups', label: tr('Guruhlarim'), icon: 'layers' },
+  { id: 'attendance', label: tr('Davomat'), icon: 'checkSquare' },
+]
+
 // Telefonda pastki menyu: eng ko'p ishlatiladigan bo'limlar, "Qo'shish" va to'liq menyu — bosh barmoq yetadigan joyda
 export function MobileNav() {
   const { activeSection, setActiveSection, toggleSidebar, sidebarOpen } = useDashboard()
   const { user } = useAuth()
   const actions = useQuickAdd()
   const [sheetOpen, setSheetOpen] = useState(false)
-  const items = ITEMS.filter((item) => canOpenSection(user?.role, item.id))
+  const teacher = user?.role === 'teacher'
+  const items = (teacher ? TEACHER_ITEMS : ITEMS).filter((item) => canOpenSection(user?.role, item.id))
   const [first, ...rest] = items
 
   const navButton = (item: (typeof ITEMS)[number]) => (
@@ -43,7 +51,7 @@ export function MobileNav() {
       <nav className="mobile-nav" aria-label={tr('Pastki menyu')}>
         {first && navButton(first)}
         {rest[0] && navButton(rest[0])}
-        {actions.length > 0 && (
+        {!teacher && actions.length > 0 && (
           <button type="button" className="mobile-nav-item mobile-nav-add" aria-haspopup="dialog" aria-expanded={sheetOpen} onClick={() => setSheetOpen(true)}>
             <span className="mobile-nav-plus" aria-hidden="true">
               <Icon name="plus" size={22} />

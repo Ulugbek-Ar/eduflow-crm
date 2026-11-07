@@ -10,7 +10,7 @@ import type { Enrollment } from '../../types/group.types'
 import { attendanceRate, rateLabel, recordsFor } from '../../utils/attendance'
 import { incomesByEnrollment } from '../../utils/attribution'
 import { cx } from '../../utils/cx'
-import { ENROLLMENT_STATUS_LABELS, enrollmentMonthlyFee, GROUP_STATUS_LABELS, occupiesSeat, scheduleLabel, seatsTaken } from '../../utils/groups'
+import { addDays, ENROLLMENT_STATUS_LABELS, enrollmentMonthlyFee, GROUP_STATUS_LABELS, occupiesSeat, scheduleLabel, seatsTaken } from '../../utils/groups'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Combobox } from '../ui/Combobox'
@@ -18,6 +18,7 @@ import { DateInput } from '../ui/DateInput'
 import { Modal } from '../ui/Modal'
 import { Capacity } from './Capacity'
 import { EnrollmentDialog } from './EnrollmentDialog'
+import { AttendanceGrid } from '../attendance/AttendanceGrid'
 import type { EnrollmentAction } from './EnrollmentDialog'
 import './groups.css'
 
@@ -136,6 +137,7 @@ export function GroupDetail({ groupId, tab: initialTab = 'students' }: { groupId
 
   const tabs: Array<{ id: GroupTab; label: string }> = [
     { id: 'students', label: tr('O\'quvchilar ({0})', { 0: taken }) },
+    ...(can('attendance.view') ? [{ id: 'attendance' as const, label: tr('Davomat') }] : []),
     ...(can('payments.view') ? [{ id: 'payments' as const, label: tr('Shu oy to\'lovlari') }] : []),
   ]
 
@@ -188,6 +190,10 @@ export function GroupDetail({ groupId, tab: initialTab = 'students' }: { groupId
         <div>
           <dt>{tr('Oylik narx')}</dt>
           <dd>{course ? money(course.monthlyPrice) : '—'}</dd>
+        </div>
+        <div>
+          <dt>{tr('Davomat (30 kun)')}</dt>
+          <dd>{rateLabel(attendanceRate(recordsFor(attendance, { groupId: group.id, from: addDays(today, -30), to: today })))}</dd>
         </div>
       </dl>
 
@@ -288,6 +294,12 @@ export function GroupDetail({ groupId, tab: initialTab = 'students' }: { groupId
               })}
             </ul>
           )}
+        </div>
+      )}
+
+      {tab === 'attendance' && (
+        <div role="tabpanel">
+          <AttendanceGrid groupId={group.id} />
         </div>
       )}
 

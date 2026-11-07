@@ -148,6 +148,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'overview', label: tr('Umumiy ko\'rinish'), icon: 'overview' },
   { id: 'customers', label: tr('Mijozlar va lidlar'), icon: 'customers' },
   { id: 'groups', label: tr('Guruhlar'), icon: 'layers' },
+  // Faqat o'qituvchi menyusida (permissions.ts: canOpenSection)
+  { id: 'attendance', label: tr('Davomat'), icon: 'checkSquare' },
   { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
   { id: 'courses', label: tr('Kurslar va xizmatlar'), icon: 'bookOpen' },
   { id: 'teachers', label: tr('O\'qituvchilar'), icon: 'briefcase' },
@@ -156,6 +158,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'settings', label: tr('Sozlamalar'), icon: 'settings' },
   { id: 'help', label: tr('Yordam'), icon: 'info' },
 ]
+
+// O'qituvchi menyusida ba'zi bo'limlar o'z nomi bilan
+const TEACHER_LABELS: Partial<Record<Section, string>> = { overview: tr('Bugun'), groups: tr('Guruhlarim') }
+
+export function sectionLabel(section: Section, role?: string): string {
+  if (role === 'teacher' && TEACHER_LABELS[section]) return TEACHER_LABELS[section]
+  return NAV_ITEMS.find((item) => item.id === section)?.label ?? ''
+}
 
 // Interfeys yorliqlari
 export const DATE_RANGE_LABELS: Record<DateRange, string> = {

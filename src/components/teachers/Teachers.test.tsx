@@ -37,7 +37,8 @@ describe('O\'qituvchilar va maosh', () => {
     expect((within(dialog).getByLabelText(/Ism familiya/) as HTMLInputElement).value).toBe('Nodira Saidova')
     await user.type(within(dialog).getByLabelText(/^Login/), 'nodira')
     await user.click(within(dialog).getByRole('button', { name: 'Qo\'shish' }))
-    expect(await screen.findByRole('dialog', { name: 'O\'qituvchiga kirish yaratildi' })).toBeTruthy()
+    // Parol xeshi (PBKDF2) yuklangan mashinada sekin — kutish uzoqroq
+    expect(await screen.findByRole('dialog', { name: 'O\'qituvchiga kirish yaratildi' }, { timeout: 10_000 })).toBeTruthy()
     const users = stored<{ id: string; login: string; role: string; mustChange: boolean }>('apex:users')
     const created = users.find((u) => u.login === 'nodira')
     expect(created).toMatchObject({ role: 'teacher', mustChange: true })

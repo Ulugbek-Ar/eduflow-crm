@@ -22,7 +22,8 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
       'Sozlamalar',
       'Yordam',
     ])
-    expect(labels).toEqual(NAV_ITEMS.map((item) => item.label))
+    // "Davomat" bo'limi menyuda faqat o'qituvchiga ko'rinadi
+    expect(labels).toEqual(NAV_ITEMS.filter((item) => item.id !== 'attendance').map((item) => item.label))
   })
 
   it('kuzatuvchi va menejer menyusida faqat ruxsat berilgan bo\'limlar', async () => {

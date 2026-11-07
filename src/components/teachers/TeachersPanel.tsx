@@ -19,6 +19,8 @@ import { EmptyState } from '../ui/EmptyState'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { formatAmountInput, parseAmount } from '../../utils/format'
+import { rateLabel, teacherAttendanceRate } from '../../utils/attendance'
+import { addDays } from '../../utils/groups'
 import './teachers.css'
 
 type Tab = 'teachers' | 'payroll'
@@ -48,7 +50,7 @@ export function TeachersPanel() {
 }
 
 function TeacherList() {
-  const { teachers, groups, enrollments, money, openModal, removeTeacher, updateTeacher, search } = useDashboard()
+  const { teachers, groups, enrollments, attendance, money, openModal, removeTeacher, updateTeacher, search } = useDashboard()
   const { users, can: authCan } = useAuth()
   const confirm = useConfirm()
   const today = useToday()
@@ -106,6 +108,9 @@ function TeacherList() {
                 <th scope="col" className="align-right">
                   {tr('O\'quvchilar')}
                 </th>
+                <th scope="col" className="align-right col-optional">
+                  {tr('Davomat (30 kun)')}
+                </th>
                 <th scope="col">{tr('Maosh qoidasi')}</th>
                 <th scope="col">{tr('Kirish huquqi')}</th>
                 <th scope="col">
@@ -138,6 +143,9 @@ function TeacherList() {
                     <td data-label={tr('Guruhlar')}>{own.length ? own.map((g) => g.name).join(', ') : <span className="muted">—</span>}</td>
                     <td data-label={tr('O\'quvchilar')} className="align-right">
                       {formatNumber(students)}
+                    </td>
+                    <td data-label={tr('Davomat (30 kun)')} className="align-right col-optional">
+                      {rateLabel(teacherAttendanceRate(teacher.id, groups, attendance, addDays(today, -30), today))}
                     </td>
                     <td data-label={tr('Maosh qoidasi')}>{payRuleLabel(teacher.payRule, money)}</td>
                     <td data-label={tr('Kirish huquqi')}>

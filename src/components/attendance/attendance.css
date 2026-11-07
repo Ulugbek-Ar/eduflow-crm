@@ -1,0 +1,267 @@
+/* Davomat: oylik setka va bugungi dars ro'yxati (alohida bo'lak) */
+.att-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.att-toolbar .toolbar {
+  gap: 8px;
+}
+
+.att-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.att-grid {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+}
+
+.att-grid th,
+.att-grid td {
+  padding: 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.att-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.att-grid .att-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 150px;
+  max-width: 190px;
+  overflow: hidden;
+  padding: 4px 10px;
+  background: var(--surface);
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.att-grid thead .att-name {
+  z-index: 2;
+  background: var(--surface-muted);
+}
+
+.att-grid th.is-today {
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.att-day small {
+  display: block;
+  font-weight: 500;
+}
+
+.att-cell {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.att-cell:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.att-cell:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.att-cell.is-present {
+  border-color: transparent;
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.att-cell.is-late {
+  border-color: transparent;
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.att-cell.is-absent {
+  border-color: transparent;
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.att-cell.is-excused {
+  border-color: transparent;
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
+.att-out {
+  color: var(--neutral);
+}
+
+.att-rate {
+  min-width: 56px;
+  font-weight: 600;
+}
+
+.att-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.att-legend .att-cell {
+  width: 22px;
+  height: 22px;
+  margin-right: 4px;
+  font-size: 0.7rem;
+  cursor: default;
+}
+
+/* Mobil: bugungi dars — katta tugmalar */
+.lesson-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lesson-student {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.lesson-student strong {
+  font-size: 1rem;
+}
+
+.lesson-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.lesson-buttons button {
+  min-height: 44px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lesson-buttons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.lesson-buttons button[aria-pressed='true'].is-present {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success-text);
+}
+
+.lesson-buttons button[aria-pressed='true'].is-late {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.lesson-buttons button[aria-pressed='true'].is-absent {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.lesson-buttons button[aria-pressed='true'].is-excused {
+  border-color: var(--info);
+  background: var(--info-soft);
+  color: var(--info-text);
+}
+
+.lesson-cards {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lesson-card {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.lesson-card.is-unmarked {
+  border-color: var(--warning);
+}
+
+.lesson-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.lesson-time small {
+  display: block;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.lesson-card .meta {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+  .lesson-card {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .lesson-card > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.lesson-tabs {
+  display: flex;
+  flex-wrap: wrap;
+}

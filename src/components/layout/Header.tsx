@@ -1,6 +1,6 @@
 import { tr } from '../../i18n'
 import { useState } from 'react'
-import { Icon, NAV_ITEMS } from '../../constants/navigation'
+import { Icon, sectionLabel } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth, useCan } from '../../hooks/useAuth'
 import { useQuickAdd } from '../../hooks/useQuickAdd'
@@ -23,7 +23,7 @@ import { SearchResults } from './SearchResults'
 import { ThemeToggle } from './ThemeToggle'
 import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
-const LIST_SECTIONS: readonly Section[] = ['customers', 'finance', 'courses']
+const LIST_SECTIONS: readonly Section[] = ['customers', 'finance', 'courses', 'groups', 'teachers']
 
 export function Header() {
   const {
@@ -49,7 +49,7 @@ export function Header() {
   const confirm = useConfirm()
   const can = useCan()
   // Alohida demo markazda yuqoridagi demo tasmasi bor — bu belgi faqat haqiqiy bazadagi namunaviy ma'lumot uchun
-  const { mode } = useAuth()
+  const { mode, user } = useAuth()
   const quickAdd = useQuickAdd()
   const [resultsOpen, setResultsOpen] = useState(false)
   // Telefonda qidiruv tugma orqali ochiladi (header bitta qatorda qoladi)
@@ -58,7 +58,7 @@ export function Header() {
   // Bu bo'limlar ro'yxatni o'zi filtrlaydi; qolganlarida natijalar oynasi chiqadi
   const showResults = resultsOpen && !LIST_SECTIONS.includes(activeSection) && search.trim().length >= 2
 
-  const title = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
+  const title = sectionLabel(activeSection, user?.role)
   const options = { delimiter: settings.csvDelimiter }
 
   // Eksport joriy filtr, qidiruv va saralash bo'yicha ko'rinib turgan ro'yxatdan olinadi

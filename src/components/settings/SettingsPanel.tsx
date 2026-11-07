@@ -45,6 +45,7 @@ const SAMPLE_DATE = new Date(2026, 0, 31, 12).toISOString()
 const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null }> = [
   { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
+  { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
   { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
@@ -192,6 +193,23 @@ export function SettingsPanel() {
                   value={form.csvDelimiter}
                   onChange={(e) => update('csvDelimiter', e.target.value as CsvDelimiter)}
                   options={(Object.keys(DELIMITERS) as CsvDelimiter[]).map((d) => ({ value: d, label: DELIMITERS[d] }))}
+                />
+              </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard id="learning" title={tr('O\'quv jarayoni')} description={tr('Davomat, to\'lov muddati va qarz hisobi')}>
+            <div className="form">
+              <div className="form-row">
+                <Input
+                  label={tr('O\'qituvchi davomatni necha kun orqagacha tahrirlaydi')}
+                  type="number"
+                  min={0}
+                  max={60}
+                  inputMode="numeric"
+                  value={String(form.attendanceEditDays)}
+                  hint={tr('Bugun + shuncha kun (0 — faqat bugun). Administrator va menejer istalgan kunni tahrirlaydi.')}
+                  onChange={(e) => update('attendanceEditDays', Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))))}
                 />
               </div>
             </div>

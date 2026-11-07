@@ -24,7 +24,7 @@ import { CloudDataGate, CloudLoading, CloudSignUpScreen } from './components/aut
 import { DemoOnlyScreen } from './components/auth/DemoOnlyScreen'
 import { isCloudEnabled } from './data/config'
 import { ToastProvider } from './components/ui/Toast'
-import { NAV_ITEMS } from './constants/navigation'
+import { sectionLabel } from './constants/navigation'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { DashboardProvider } from './context/DashboardContext'
@@ -38,16 +38,23 @@ import { canOpenSection } from './auth/permissions'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   // Ruxsat yo'q bo'lim (masalan, rol o'zgargan) — bosh sahifa ko'rsatiladi
   const section = canOpenSection(user?.role, activeSection) ? activeSection : 'overview'
 
   switch (section) {
     case 'overview':
+      // O'qituvchi: "Bugun" — darslar va davomat (moliya ko'rsatkichlarisiz)
+      if (user?.role === 'teacher') return <TeacherToday />
       return (
         <div className="stack">
           <GettingStarted />
           <KpiCards />
+          {can('groups.view') && (
+            <Suspense fallback={null}>
+              <TodayLessons />
+            </Suspense>
+          )}
           <div className="overview-grid">
             <RevenueChart />
             <SourceDistribution />
@@ -62,6 +69,8 @@ function ActiveSection() {
       return <CustomerTable />
     case 'groups':
       return <GroupsPanel />
+    case 'attendance':
+      return <AttendancePanel />
     case 'finance':
       return (
         <div className="stack">
@@ -100,6 +109,8 @@ const loadGroupsPanel = (opts?: { reload: boolean }) => loadWithRetry(() => impo
 const loadGroupDetail = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupDetail'), opts)
 const loadGroupForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/groups/GroupFormModal'), opts)
 const loadTeachersPanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/teachers/TeachersPanel'), opts)
+const loadTodayLessons = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/attendance/TodayLessons'), opts)
+const loadAttendancePanel = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/attendance/AttendancePanel'), opts)
 const loadTeacherForm = (opts?: { reload: boolean }) => loadWithRetry(() => import('./components/teachers/TeacherFormModal'), opts)
 
 const TransactionTable = lazy(() => loadTransactionTable().then((m) => ({ default: m.TransactionTable })))
@@ -117,6 +128,9 @@ const GroupsPanel = lazy(() => loadGroupsPanel().then((m) => ({ default: m.Group
 const GroupDetail = lazy(() => loadGroupDetail().then((m) => ({ default: m.GroupDetail })))
 const GroupFormModal = lazy(() => loadGroupForm().then((m) => ({ default: m.GroupFormModal })))
 const TeachersPanel = lazy(() => loadTeachersPanel().then((m) => ({ default: m.TeachersPanel })))
+const TodayLessons = lazy(() => loadTodayLessons().then((m) => ({ default: m.TodayLessons })))
+const TeacherToday = lazy(() => loadTodayLessons().then((m) => ({ default: m.TeacherToday })))
+const AttendancePanel = lazy(() => loadAttendancePanel().then((m) => ({ default: m.AttendancePanel })))
 const TeacherFormModal = lazy(() => loadTeacherForm().then((m) => ({ default: m.TeacherFormModal })))
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
@@ -146,7 +160,8 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 function Shell() {
   const { modal, activeSection, openModal, sidebarCollapsed, tourOpen, endTour } = useDashboard()
-  const { can } = useAuth()
+  const { can, user } = useAuth()
+  const userRole = user?.role
 
   useEffect(() => {
     const timer = window.setTimeout(prefetchChunks, 1200)
@@ -154,9 +169,9 @@ function Shell() {
   }, [])
 
   useEffect(() => {
-    const label = NAV_ITEMS.find((item) => item.id === activeSection)?.label ?? ''
+    const label = sectionLabel(activeSection, userRole)
     document.title = pageTitle(label)
-  }, [activeSection])
+  }, [activeSection, userRole])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
