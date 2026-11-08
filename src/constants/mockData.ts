@@ -37,6 +37,9 @@ export const DEFAULT_SETTINGS: Settings = {
   paymentDueDay: 10,
   reminderTemplateUz: DEFAULT_REMINDER_UZ,
   reminderTemplateRu: DEFAULT_REMINDER_RU,
+  paymeMerchantId: '',
+  clickServiceId: '',
+  clickMerchantId: '',
 }
 
 // [nom, turi, davomiyligi (oy), oylik narx, holati]

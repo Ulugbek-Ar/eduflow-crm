@@ -234,6 +234,9 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             inputMode="numeric"
             value={form.amount}
             error={errors.amount}
+            // Payme/Click orqali kelgan kirim summasi provayderdagi bilan bir xil qolishi kerak
+            readOnly={Boolean(editing?.provider)}
+            hint={editing?.provider ? tr('{0} orqali kelgan — summani o\'zgartirib bo\'lmaydi', { 0: editing.provider === 'payme' ? 'Payme' : 'Click' }) : undefined}
             onChange={(e) => {
               setAmountTouched(true)
               update('amount', formatAmountInput(e.target.value))

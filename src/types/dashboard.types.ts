@@ -68,4 +68,8 @@ export interface Settings {
   // v11: qarz eslatmasi shablonlari ({ism} {summa} {kurs} {guruh} {oy} {markaz} {telefon})
   reminderTemplateUz: string
   reminderTemplateRu: string
+  // v1.2 (bulut): onlayn to'lov havolalari uchun ochiq id'lar; '' — ulanmagan. Kalitlar faqat serverda
+  paymeMerchantId: string
+  clickServiceId: string
+  clickMerchantId: string
 }

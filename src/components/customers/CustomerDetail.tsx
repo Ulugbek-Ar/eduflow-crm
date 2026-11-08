@@ -1,6 +1,6 @@
 import { tr } from '../../i18n'
 import { useState } from 'react'
-import { FUNNEL_STAGES, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
+import { FUNNEL_STAGES, methodLabel, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
 import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuditActor, useCan } from '../../hooks/useAuth'
@@ -273,7 +273,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
               <div>
                 <strong>{t.note || tr('To\'lov')}</strong>
                 <small className="muted">
-                  {formatDate(t.date)} · {METHOD_LABELS[t.method]} · {TX_STATUS_LABELS[t.status]}
+                  {formatDate(t.date)} · {methodLabel(t)} · {TX_STATUS_LABELS[t.status]}
                 </small>
               </div>
               <span className={t.status !== 'paid' ? 'muted' : t.type === 'income' ? 'text-success' : 'text-danger'}>

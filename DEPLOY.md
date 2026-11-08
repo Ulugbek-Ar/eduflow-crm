@@ -169,3 +169,47 @@ Repozitoriya → *Settings → Secrets and variables → Actions → **Variables
 - [ ] O'qituvchi: *O'qituvchilar* → "Kirish yaratish" → o'qituvchi kiradi → faqat o'z guruhlari va davomati ko'rinadi.
 - [ ] JSON zaxira yuklab olinadi va boshqa brauzerda tiklanadi.
 - [ ] Telefonda (390 px) asosiy oqim: lid → guruhga qo'shish → davomat → to'lov → chek.
+
+---
+
+## 6. Onlayn to'lov: Payme va Click (ixtiyoriy, faqat bulutli rejim)
+
+Ota-ona eslatmadagi havola yoki Payme/Click ilovasi orqali o'quvchi telefoni bilan to'laydi — to'lov
+markaz kassasiga **avtomatik kirim** bo'lib tushadi (karta, "To'langan", o'quvchining guruhiga bog'lanadi), ilovada
+bir daqiqa ichida ko'rinadi va bildirishnoma chiqadi. Kalitlar faqat serverda (`integration_secrets`, ilovaga yopiq).
+
+- [ ] Migratsiya qo'llangan bo'lsin (`supabase db push` — `20261108000000_online_payments.sql`). **Avval migratsiya,
+      keyin yangi frontend** (Vercel deploy).
+- [ ] Funksiyalarni joylang (Payme va Click o'z kaliti/imzosi bilan tekshiriladi — Supabase JWT o'chiq, `supabase/config.toml`):
+
+```bash
+supabase functions deploy integrations
+```
+
+```bash
+supabase functions deploy payme --no-verify-jwt
+```
+
+```bash
+supabase functions deploy click --no-verify-jwt
+```
+
+**Payme** ([business.paycom.uz](https://business.paycom.uz) — kassa yaratilgan bo'lsin):
+
+- [ ] Ilovada *Sozlamalar → Integratsiyalar → Payme*: **Merchant ID** (kassa id, 24 belgi) va **kassa kaliti** →
+      "Payme'ni ulash". Test (sandbox) kaliti va MXIK (IKPU) kodi — ixtiyoriy (MXIK berilsa, Payme fiskal chek uchun
+      `detail` oladi).
+- [ ] Payme kabinetida kassa sozlamalari: **Endpoint** — ilova ko'rsatgan manzil
+      (`https://<loyiha>.supabase.co/functions/v1/payme?org=<markaz id>`), **hisob maydoni** — `phone`
+      ("Telefon raqami", 9 xona).
+- [ ] Sandbox ([test.paycom.uz](https://test.paycom.uz)): endpoint va test kaliti bilan barcha ssenariylar (CheckPerform,
+      Create, Perform, Cancel, CheckTransaction, GetStatement) o'tishini tekshiring, so'ng kassani ishchi rejimga o'tkazing.
+
+**Click** ([merchant.click.uz](https://merchant.click.uz) — xizmat yaratilgan bo'lsin):
+
+- [ ] Ilovada *Sozlamalar → Integratsiyalar → Click*: **Service ID**, **Merchant ID** va **Secret key** → "Click'ni ulash".
+- [ ] Click kabinetida **Prepare URL** va **Complete URL** — ikkalasi ham ilova ko'rsatgan manzil
+      (`https://<loyiha>.supabase.co/functions/v1/click?org=<markaz id>`). Hisob (`merchant_trans_id`) — o'quvchi telefoni.
+
+Tekshirish: qarzdor o'quvchiga eslatma oching — matnda to'lov havolasi bo'ladi; sandbox'da to'lab ko'ring, bir
+daqiqada *Moliya*da "Karta · Payme" (yoki Click) kirimi va jurnalda "Payme" nomidan yozuv paydo bo'ladi.

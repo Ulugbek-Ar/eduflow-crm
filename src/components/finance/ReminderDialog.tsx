@@ -3,7 +3,9 @@ import { useDashboard } from '../../context/useDashboard'
 import { getLang, LANG_LABELS, tr } from '../../i18n'
 import type { Lang } from '../../i18n'
 import type { DebtRow } from '../../utils/debts'
-import { fillTemplate, monthName, smsUrl, telegramShare } from '../../utils/reminders'
+import { useCloudOrgId } from '../../hooks/useCloudOrg'
+import { onlinePaymentsEnabled, paymentLink } from '../../utils/paymentLinks'
+import { fillTemplate, monthName, smsUrl, telegramShare, withPaymentLink } from '../../utils/reminders'
 import { cx } from '../../utils/cx'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -22,13 +24,17 @@ async function copy(text: string): Promise<boolean> {
 // Birinchi amal bajarilganda "Eslatildi" jurnalga yoziladi (qarzdorlar ro'yxatida "Oxirgi eslatma: N kun oldin")
 export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: () => void }) {
   const { settings, money, logReminders } = useDashboard()
+  // Onlayn to'lov (bulut, Payme yoki Click ulangan): har bir xabarga shu o'quvchining to'lov havolasi
+  const linksAvailable = useCloudOrgId() !== null && onlinePaymentsEnabled(settings)
+  const [withLink, setWithLink] = useState(true)
   const [lang, setLang] = useState<Lang>(getLang())
   const [status, setStatus] = useState('')
   const [logged, setLogged] = useState(false)
   const template = lang === 'ru' ? settings.reminderTemplateRu : settings.reminderTemplateUz
   const [now] = useState(() => new Date())
-  const messageFor = (row: DebtRow) =>
-    fillTemplate(template, {
+  const messageFor = (row: DebtRow) => {
+    const link = linksAvailable ? paymentLink(settings, row.customer.phone, row.debt, lang) : null
+    const text = fillTemplate(template, {
       ism: row.customer.name,
       summa: money(row.debt),
       kurs: row.course.name,
@@ -36,7 +42,10 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
       oy: monthName(now, lang),
       markaz: settings.orgName,
       telefon: settings.phone,
+      havola: link && withLink ? link : '',
     })
+    return withPaymentLink(template, text, link, lang, withLink)
+  }
   const single = rows.length === 1 ? rows[0] : null
   const text = single ? messageFor(single) : rows.map((r) => `${r.customer.name} (${r.customer.phone}):\n${messageFor(r)}`).join('\n\n')
 
@@ -66,6 +75,15 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
             </button>
           ))}
         </div>
+        {linksAvailable && (
+          <label className="check-field">
+            <input type="checkbox" checked={withLink} onChange={(e) => setWithLink(e.target.checked)} />
+            <span>
+              {tr('To\'lov havolasini qo\'shish (Payme / Click)')}
+              <small className="muted cell-block">{tr('Ota-ona havola orqali to\'lasa, to\'lov kassaga avtomatik kirim bo\'ladi')}</small>
+            </span>
+          </label>
+        )}
         <Textarea label={tr('Xabar matni')} value={text} readOnly rows={single ? 5 : 9} onFocus={(e) => e.target.select()} />
         <div className="reminder-actions">
           <Button

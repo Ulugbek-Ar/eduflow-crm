@@ -1,12 +1,13 @@
 import { changeLang, getLang, LANG_LABELS, tr } from '../../i18n'
 import type { Lang } from '../../i18n'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
 import type { Permission } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
 import { useCan } from '../../hooks/useAuth'
+import { useCloudOrgId } from '../../hooks/useCloudOrg'
 import { useTheme } from '../../hooks/useTheme'
 import type { ThemePreference } from '../../hooks/useTheme'
 import type { CsvDelimiter, Currency, DateFormat, Settings } from '../../types/dashboard.types'
@@ -22,6 +23,9 @@ import { LogoUpload } from './LogoUpload'
 import { PlanSettings } from './PlanSettings'
 import { ProfileSettings } from './ProfileSettings'
 import { SecuritySettings } from './SecuritySettings'
+
+// Faqat bulutli rejimda yuklanadi (Supabase mijozi lokal rejimda kerak emas)
+const IntegrationsSettings = lazy(() => import('./IntegrationsSettings').then((m) => ({ default: m.IntegrationsSettings })))
 
 const CURRENCIES: Record<Currency, string> = {
   UZS: tr('O\'zbek so\'mi (UZS)'),
@@ -48,6 +52,7 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: P
   { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
   { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
+  { id: 'integrations', label: tr('Integratsiyalar'), icon: 'card', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
   { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
@@ -74,6 +79,7 @@ export function SettingsPanel() {
   const { settings, updateSettings, setUnsavedChanges } = useDashboard()
   const can = useCan()
   const canManage = can('settings.manage')
+  const cloudOrgId = useCloudOrgId()
   const { preference, setPreference } = useTheme()
   const [form, setForm] = useState<Settings>(settings)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -254,6 +260,20 @@ export function SettingsPanel() {
             </div>
           </SettingsCard>
         </form>
+        )}
+
+        {canManage && (
+          <SettingsCard id="integrations" title={tr('Onlayn to\'lov (Payme, Click)')} description={tr('Ota-ona havola orqali to\'laydi — to\'lov kassaga avtomatik kirim bo\'lib tushadi')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <IntegrationsSettings orgId={cloudOrgId} />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('Onlayn to\'lov bulutli rejimda ishlaydi: Payme va Click to\'lovni serverga (Supabase Edge Function) yuboradi, kalitlar ham faqat serverda saqlanadi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
         )}
 
         <SettingsCard id="appearance" title={tr('Ko\'rinish')} description={tr('Faqat shu qurilmada: darhol qo\'llanadi')}>

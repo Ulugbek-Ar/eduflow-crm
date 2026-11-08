@@ -16,6 +16,8 @@ export type ExpenseCategory = 'rent' | 'salary' | 'marketing' | 'equipment' | 'u
 
 export type TransactionCategory = IncomeCategory | ExpenseCategory
 
+export type PaymentProvider = 'payme' | 'click'
+
 export interface Transaction {
   id: string
   type: TransactionType
@@ -36,6 +38,9 @@ export interface Transaction {
   teacherId?: string
   // v11: qaysi oy uchun ('YYYY-MM'): to'lov chekida va maosh hisobotida
   period?: string
+  // v1.2: onlayn to'lov tizimi orqali avtomatik yozilgan kirim (Payme / Click) va uning tranzaksiya id'si
+  provider?: PaymentProvider
+  providerRef?: string
   date: string
   updatedAt?: string
 }

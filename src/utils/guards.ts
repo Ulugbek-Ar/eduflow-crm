@@ -113,7 +113,9 @@ export function isTransaction(value: unknown): value is Transaction {
     (value.updatedAt === undefined || isIsoDate(value.updatedAt)) &&
     (value.enrollmentId === undefined || isText(value.enrollmentId)) &&
     (value.teacherId === undefined || isText(value.teacherId)) &&
-    (value.period === undefined || isPeriod(value.period))
+    (value.period === undefined || isPeriod(value.period)) &&
+    (value.provider === undefined || value.provider === 'payme' || value.provider === 'click') &&
+    (value.providerRef === undefined || isText(value.providerRef))
   )
 }
 
@@ -145,7 +147,10 @@ export function isSettings(value: unknown): value is Settings {
     typeof value.prorateFirstMonth === 'boolean' &&
     isWholeNumber(value.paymentDueDay, 1, 28) &&
     typeof value.reminderTemplateUz === 'string' &&
-    typeof value.reminderTemplateRu === 'string'
+    typeof value.reminderTemplateRu === 'string' &&
+    typeof value.paymeMerchantId === 'string' &&
+    typeof value.clickServiceId === 'string' &&
+    typeof value.clickMerchantId === 'string'
   )
 }
 
@@ -282,6 +287,10 @@ export function sanitizeSettings(value: unknown): Settings {
     paymentDueDay: isWholeNumber(raw.paymentDueDay, 1, 28) ? raw.paymentDueDay : DEFAULT_SETTINGS.paymentDueDay,
     reminderTemplateUz: isText(raw.reminderTemplateUz) ? raw.reminderTemplateUz.slice(0, 1000) : DEFAULT_REMINDER_UZ,
     reminderTemplateRu: isText(raw.reminderTemplateRu) ? raw.reminderTemplateRu.slice(0, 1000) : DEFAULT_REMINDER_RU,
+    // v1.2: onlayn to'lov id'lari (Payme merchant — 24 belgili hex, Click — raqamlar)
+    paymeMerchantId: typeof raw.paymeMerchantId === 'string' && /^[0-9a-f]{24}$/i.test(raw.paymeMerchantId) ? raw.paymeMerchantId : '',
+    clickServiceId: typeof raw.clickServiceId === 'string' && /^\d{1,10}$/.test(raw.clickServiceId) ? raw.clickServiceId : '',
+    clickMerchantId: typeof raw.clickMerchantId === 'string' && /^\d{1,10}$/.test(raw.clickMerchantId) ? raw.clickMerchantId : '',
   }
 }
 

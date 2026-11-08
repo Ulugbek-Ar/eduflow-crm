@@ -2,7 +2,7 @@ import { tr } from '../i18n'
 import { createElement } from 'react'
 import type { CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange, Section } from '../types/dashboard.types'
-import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategory, TransactionStatus, TransactionType } from '../types/finance.types'
+import type { ExpenseCategory, IncomeCategory, PaymentMethod, Transaction, TransactionCategory, TransactionStatus, TransactionType } from '../types/finance.types'
 
 // Ikonlar: 24x24 viewBox, stroke uslubida chiziladigan path'lar
 export const ICONS = {
@@ -198,6 +198,12 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: tr('Naqd'),
   card: tr('Karta'),
   transfer: tr('O\'tkazma'),
+}
+
+// To'lov turi; onlayn to'lov tizimi orqali kelgan bo'lsa — nomi bilan ("Karta · Payme")
+export function methodLabel(t: Pick<Transaction, 'method' | 'provider'>): string {
+  const base = METHOD_LABELS[t.method]
+  return t.provider ? `${base} · ${t.provider === 'payme' ? 'Payme' : 'Click'}` : base
 }
 
 export const TX_STATUS_LABELS: Record<TransactionStatus, string> = {

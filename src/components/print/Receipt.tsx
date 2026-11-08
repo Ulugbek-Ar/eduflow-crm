@@ -1,5 +1,5 @@
 import { tr } from '../../i18n'
-import { METHOD_LABELS } from '../../constants/navigation'
+import { methodLabel } from '../../constants/navigation'
 import type { Settings } from '../../types/dashboard.types'
 import type { Transaction } from '../../types/finance.types'
 import { amountInWords } from '../../utils/amountWords'
@@ -65,7 +65,7 @@ export function Receipt({ data, settings, money }: { data: ReceiptData; settings
         )}
         <div>
           <dt>{tr('To\'lov turi')}</dt>
-          <dd>{METHOD_LABELS[t.method]}</dd>
+          <dd>{methodLabel(t)}</dd>
         </div>
         {t.note && (
           <div>

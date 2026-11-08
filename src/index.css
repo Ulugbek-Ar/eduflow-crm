@@ -2987,6 +2987,41 @@ a.btn {
   border-radius: var(--radius-sm);
 }
 
+.copy-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.copy-field > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.integration {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.integration + .integration {
+  margin-top: 4px;
+}
+
+.integration-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.integration-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .check-field {
   display: flex;
   align-items: flex-start;

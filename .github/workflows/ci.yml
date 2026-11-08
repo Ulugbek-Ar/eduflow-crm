@@ -77,3 +77,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash supabase/tests/run-local.sh
+
+  functions:
+    name: Edge Function'lar (deno check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check --no-lock supabase/functions/*/index.ts

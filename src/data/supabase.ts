@@ -352,6 +352,20 @@ export class CloudSync {
     }
   }
 
+  // Onlayn to'lovlar (Payme/Click Edge Function'lari yozgan kirimlar): shu vaqtdan keyin o'zgarganlari
+  async providerPayments(since: string): Promise<StoredData['transactions']> {
+    const { data, error } = await getClient()
+      .from('transactions')
+      .select('*')
+      .not('provider', 'is', null)
+      .is('deleted_at', null)
+      .gt('updated_at', since)
+      .order('updated_at')
+      .limit(500)
+    fail(error)
+    return ((data ?? []) as Row[]).map(rowToTransaction)
+  }
+
   // DashboardContext: istalgan ro'yxat o'zgarishi
   list<K extends ListKey>(key: K, prev: StoredData[K], next: StoredData[K]): Promise<void> {
     switch (key) {

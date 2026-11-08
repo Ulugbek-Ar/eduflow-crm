@@ -62,6 +62,8 @@ export function transactionToRow(t: Transaction, org: string): Row {
     enrollment_id: t.enrollmentId ?? null,
     teacher_id: t.teacherId ?? null,
     period: t.period ?? null,
+    // Onlayn to'lov maydonlari faqat shunday kirimda yuboriladi (migratsiya qo'llanmagan bazada oddiy kirim ishlayveradi)
+    ...(t.provider ? { provider: t.provider, provider_ref: t.providerRef ?? null } : {}),
   }
 }
 
@@ -83,6 +85,8 @@ export function rowToTransaction(r: Row): Transaction {
   if (opt(r.enrollment_id)) t.enrollmentId = String(r.enrollment_id)
   if (opt(r.teacher_id)) t.teacherId = String(r.teacher_id)
   if (opt(r.period)) t.period = String(r.period)
+  if (r.provider === 'payme' || r.provider === 'click') t.provider = r.provider
+  if (opt(r.provider_ref)) t.providerRef = String(r.provider_ref)
   return t
 }
 

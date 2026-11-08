@@ -43,7 +43,7 @@ import { courseInUse, normalizeCourseName } from '../utils/courses'
 import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
 import { createSaveMonitor } from '../utils/saveMonitor'
-import { EMPTY_TRANSACTION_FILTERS } from '../utils/transactions'
+import { EMPTY_TRANSACTION_FILTERS, mergeRemote } from '../utils/transactions'
 import { DashboardContext } from './useDashboard'
 import type { DashboardContextValue } from './useDashboard'
 
@@ -207,6 +207,45 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   useEffect(() => {
     if (!cloud) onSaved(TRASH_KEY, saveTrash(trash))
   }, [trash, cloud])
+
+  // Bulut: onlayn to'lovlar (Payme/Click) serverda yoziladi — har daqiqada va oynaga qaytilganda olib kelinadi.
+  // Olib kelingan yozuvlar "yuborilgan" holatga ham qo'shiladi (serverga qayta yozilmaydi)
+  const providerSince = useRef('')
+  const pollProviders = useEffectEvent(async () => {
+    if (!cloud) return
+    if (!providerSince.current) {
+      const latest = transactions.reduce((max, t) => (t.provider && t.updatedAt && t.updatedAt > max ? t.updatedAt : max), '')
+      providerSince.current = latest || new Date(Date.now() - 10 * 60_000).toISOString()
+    }
+    try {
+      const remote = await cloud.sync.providerPayments(providerSince.current)
+      if (remote.length === 0) return
+      providerSince.current = remote.reduce((max, t) => (t.updatedAt && t.updatedAt > max ? t.updatedAt : max), providerSince.current)
+      const known = new Set(transactions.map((t) => t.id))
+      synced.current = { ...synced.current, transactions: mergeRemote(synced.current.transactions, remote) }
+      setTransactions((list) => mergeRemote(list, remote))
+      for (const t of remote) {
+        if (known.has(t.id) || t.status !== 'paid') continue
+        toast.success(tr('{0} orqali to\'lov: {1} — {2}', { 0: t.provider === 'click' ? 'Click' : 'Payme', 1: formatMoney(t.amount, settings.currency), 2: t.customerName ?? '' }))
+      }
+    } catch {
+      // Tarmoq yoki migratsiya hali qo'llanmagan — keyingi safar qayta urinadi
+    }
+  })
+  useEffect(() => {
+    if (!cloud) return
+    const tick = () => void pollProviders()
+    const timer = window.setInterval(tick, 60_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    tick()
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [cloud])
 
   // Boshqa tabda o'zgargan ma'lumotni shu tabga olib kelish (storage event faqat boshqa tablarda chiqadi)
   useEffect(() => {
