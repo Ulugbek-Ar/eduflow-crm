@@ -309,11 +309,34 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+-- 7c) v1.2: SMS jurnali — yozuvni faqat service_role qo'shadi; administrator va kassir ko'radi, o'qituvchi ko'rmaydi
+insert into public.sms_log (organization_id, customer_id, phone, text, kind, status, provider_id)
+values (current_setting('test.org_a')::uuid, 'c1', '998901234567', 'Eslatma', 'reminder', 'sent', 'eskiz-1');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  if (select count(*) from public.sms_log) <> 1 then raise exception 'FAIL: administrator SMS jurnalini ko''rmadi'; end if;
+  begin
+    insert into public.sms_log (organization_id, phone, text, kind, status) values (public.current_org_id(), '998901234567', 'soxta', 'test', 'sent');
+    raise exception 'FAIL: administrator SMS jurnaliga qo''lda yozdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e3');
+do $$ begin
+  if (select count(*) from public.sms_log) <> 1 then raise exception 'FAIL: kassir SMS jurnalini ko''rmadi'; end if;
+end $$;
+reset role;
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e1');
+do $$ begin
+  if exists (select 1 from public.sms_log) then raise exception 'FAIL: o''qituvchi SMS jurnalini ko''rdi'; end if;
+end $$;
+reset role;
 -- B markazi A ning provayder tranzaksiyalarini ko'rmaydi
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
 do $$ begin
   if exists (select 1 from public.payment_transactions) then raise exception 'FAIL: B markazi A ning Payme tranzaksiyasini ko''rdi'; end if;
   if exists (select 1 from public.transactions where provider is not null) then raise exception 'FAIL: B markazi A ning Payme kirimini ko''rdi'; end if;
+  if exists (select 1 from public.sms_log) then raise exception 'FAIL: B markazi A ning SMS jurnalini ko''rdi'; end if;
 end $$;
 reset role;
 
