@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { courseToRow, customerToRow, enrollmentToRow, groupToRow, transactionToRow } from '../data/mappers'
+import { attendanceToRow, courseToRow, customerToRow, enrollmentToRow, groupToRow, transactionToRow } from '../data/mappers'
 import { generateDemo } from '../services/demo/generator'
-import { computeDebts, DEFAULT_DEBT_SETTINGS } from '../utils/debts'
-import { debtorReminders, tashkentNow } from './engine'
+import { attendanceRate, recordsFor } from '../utils/attendance'
+import { computeDebts, customerDebt, DEFAULT_DEBT_SETTINGS } from '../utils/debts'
+import { customerReports, debtorReminders, tashkentNow } from './engine'
 import type { OrgRows } from './engine'
 
 const ORG = '11111111-2222-3333-4444-555555555555'
@@ -17,6 +18,7 @@ function demoRows(now: Date): { rows: OrgRows; demo: ReturnType<typeof generateD
     transactions: demo.transactions.map((t) => transactionToRow(t, ORG)),
     groups: demo.groups.map((g) => groupToRow(g, ORG)),
     enrollments: demo.enrollments.map((e) => enrollmentToRow(e, ORG)),
+    attendance: demo.attendance.map((a) => attendanceToRow(a, ORG)),
   }
   return { rows, demo }
 }
@@ -53,10 +55,27 @@ describe('server hisobi (engine)', () => {
 
   it('yig\'ma (generated/engine.js) manbadagi bilan bir xil ishlaydi va eksportlar .d.ts bilan mos', async () => {
     const bundle = (await import('../../supabase/functions/_shared/generated/engine.js')) as Record<string, unknown>
-    expect(Object.keys(bundle).sort()).toEqual(['debtorReminders', 'tashkentNow'])
+    expect(Object.keys(bundle).sort()).toEqual(['customerReports', 'debtorReminders', 'tashkentNow'])
     const now = new Date('2026-11-20T09:00:00')
     const { rows } = demoRows(now)
     const fromBundle = (bundle.debtorReminders as typeof debtorReminders)(rows, { now, lang: 'uz', withLink: false })
     expect(fromBundle).toEqual(debtorReminders(rows, { now, lang: 'uz', withLink: false }))
+  })
+
+  it('o\'quvchi hisoboti (Telegram bot): qarz ilovadagidek, faol guruhlar va oxirgi 30 kun davomati', () => {
+    const now = new Date('2026-11-20T09:00:00')
+    const { rows, demo } = demoRows(now)
+    const [debtor] = debtorReminders(rows, { now, lang: 'uz', withLink: false })
+    const [r] = customerReports(rows, [debtor.customerId, 'yoq'], { now, lang: 'uz' })
+    const customer = demo.customers.find((c) => c.id === debtor.customerId)
+    expect(customer).toBeDefined()
+    if (!customer) return
+    const own = demo.enrollments.filter((e) => e.customerId === customer.id)
+    expect(r.debt).toBe(customerDebt(customer, demo.courses, demo.transactions, now, { groups: demo.groups, enrollments: own, settings: DEFAULT_DEBT_SETTINGS })?.debt)
+    expect(r.groups.length).toBeGreaterThan(0)
+    const month = recordsFor(demo.attendance, { customerId: customer.id, from: '2026-10-21', to: '2026-11-20' })
+    expect(r.attendance.present + r.attendance.late + r.attendance.absent + r.attendance.excused).toBe(month.length)
+    expect(r.attendance.rate).toBe(attendanceRate(month))
+    expect(r.attendance.recent.length).toBeLessThanOrEqual(5)
   })
 })

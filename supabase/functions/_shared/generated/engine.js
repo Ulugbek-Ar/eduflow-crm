@@ -89,6 +89,19 @@ function rowToEnrollment(r) {
 	if (opt(r.updated_at)) e.updatedAt = String(r.updated_at);
 	return e;
 }
+function rowToAttendance(r) {
+	const a = {
+		id: String(r.id),
+		groupId: String(r.group_id),
+		customerId: String(r.customer_id),
+		date: day(r.date),
+		status: r.status,
+		updatedAt: String(r.updated_at)
+	};
+	if (opt(r.note)) a.note = String(r.note);
+	if (opt(r.marked_by)) a.markedBy = String(r.marked_by);
+	return a;
+}
 // src/server/i18n-stub.ts
 function tr(text, params) {
 	if (!params) return text;
@@ -124,6 +137,20 @@ function enrollmentMonthlyFee(enrollment, course) {
 	const base = enrollment.priceOverride ?? course?.monthlyPrice ?? 0;
 	const discount = Math.min(100, Math.max(0, enrollment.discountPercent ?? 0));
 	return Math.round(base * (1 - discount / 100));
+}
+tr("Keldi"), tr("Kechikdi"), tr("Kelmadi"), tr("Sababli");
+function attendanceRate(records) {
+	let came = 0;
+	let total = 0;
+	for (const r of records) {
+		if (r.status === "excused") continue;
+		total++;
+		if (r.status === "present" || r.status === "late") came++;
+	}
+	return total > 0 ? came / total * 100 : null;
+}
+function recordsFor(records, filter) {
+	return records.filter((r) => (!filter.customerId || r.customerId === filter.customerId) && (!filter.groupId || r.groupId === filter.groupId) && (!filter.from || r.date >= filter.from) && (!filter.to || r.date <= filter.to));
 }
 // src/utils/analytics.ts
 function inPeriod(iso, period) {
@@ -362,6 +389,14 @@ function rowFor(customer, courses, transactions, p, now) {
 		ledgers
 	};
 }
+function customerDebt(customer, courses, transactions, now = /* @__PURE__ */ new Date(), ctx = {}) {
+	const own = (ctx.enrollments ?? []).filter((e) => e.customerId === customer.id);
+	const relevant = own.length ? transactions.filter((t) => t.customerId === customer.id) : transactions;
+	return rowFor(customer, courses, relevant, prepare([customer], courses, relevant, {
+		...ctx,
+		enrollments: own
+	}), now);
+}
 function computeDebts(customers, courses, transactions, now = /* @__PURE__ */ new Date(), ctx = {}) {
 	const p = prepare(customers, courses, transactions, ctx);
 	return customers.map((c) => rowFor(c, courses, transactions, p, now)).filter((row) => row !== null && row.debt > 0).sort((a, b) => b.debt - a.debt || a.customer.name.localeCompare(b.customer.name));
@@ -597,7 +632,74 @@ function debtorReminders(rows, options) {
 		};
 	});
 }
+function customerReports(rows, customerIds, options) {
+	const settings = sanitizeSettings(rows.settings);
+	const customers = alive(rows.customers).map(rowToCustomer);
+	const courses = alive(rows.courses).map(rowToCourse);
+	const transactions = alive(rows.transactions).map(rowToTransaction);
+	const groups = alive(rows.groups).map(rowToGroup);
+	const enrollments = alive(rows.enrollments).map(rowToEnrollment);
+	const attendance = (rows.attendance ?? []).map(rowToAttendance);
+	const today = dayString(options.now);
+	const from = addDays(today, -30);
+	const ctx = {
+		groups,
+		enrollments,
+		settings: {
+			prorateFirstMonth: settings.prorateFirstMonth,
+			paymentDueDay: settings.paymentDueDay
+		}
+	};
+	const groupName = (id) => groups.find((g) => g.id === id)?.name ?? "—";
+	return customerIds.flatMap((id) => {
+		const customer = customers.find((c) => c.id === id);
+		if (!customer) return [];
+		const debt = customerDebt(customer, courses, transactions, options.now, {
+			...ctx,
+			enrollments: enrollments.filter((e) => e.customerId === id)
+		});
+		const own = enrollments.filter((e) => e.customerId === id && enrollmentActiveOn(e, today));
+		const records = recordsFor(attendance, {
+			customerId: id,
+			from,
+			to: today
+		}).sort((a, b) => b.date.localeCompare(a.date));
+		const count = (status) => records.filter((r) => r.status === status).length;
+		const amount = debt?.debt ?? 0;
+		return [{
+			customerId: id,
+			name: customer.name,
+			debt: amount,
+			advance: debt?.advance ?? 0,
+			monthly: debt?.monthly ?? 0,
+			link: amount > 0 ? paymentLink(settings, customer.phone, amount, options.lang) : null,
+			currency: settings.currency,
+			groups: own.flatMap((e) => {
+				const g = groups.find((x) => x.id === e.groupId);
+				return g ? [{
+					name: g.name,
+					days: g.days,
+					startTime: g.startTime,
+					endTime: g.endTime,
+					room: g.room
+				}] : [];
+			}),
+			attendance: {
+				present: count("present"),
+				late: count("late"),
+				absent: count("absent"),
+				excused: count("excused"),
+				rate: attendanceRate(records),
+				recent: records.slice(0, 5).map((r) => ({
+					date: r.date,
+					status: r.status,
+					group: groupName(r.groupId)
+				}))
+			}
+		}];
+	});
+}
 function tashkentNow(utcMs) {
 	return new Date(utcMs + 18e6);
 }
-export { debtorReminders, tashkentNow };
+export { customerReports, debtorReminders, tashkentNow };

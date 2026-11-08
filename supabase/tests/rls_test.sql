@@ -331,12 +331,56 @@ do $$ begin
   if exists (select 1 from public.sms_log) then raise exception 'FAIL: o''qituvchi SMS jurnalini ko''rdi'; end if;
 end $$;
 reset role;
+-- 7d) v1.2: Telegram bot — ota-ona bog'lanishi va xabarlar navbati (dars qoldirildi, to'lov qabul qilindi)
+insert into public.integration_secrets (organization_id, provider, secret)
+values (current_setting('test.org_a')::uuid, 'telegram', '{"token":"1:x","webhookSecret":"w"}');
+insert into public.telegram_links (organization_id, customer_id, chat_id) values (current_setting('test.org_a')::uuid, 'c1', 555001);
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+-- Administrator "Kelmadi" belgilaydi va kirim yozadi — navbatga tushadi; bog'lanmagan o'quvchi uchun — tushmaydi
+insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd7', 'g1', 'c1', current_date - 2, 'absent');
+insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd8', 'g2', 'c2', current_date - 2, 'absent');
+insert into public.transactions (organization_id, id, type, amount, method, category, customer_id, date) values (public.current_org_id(), 't9', 'income', 300000, 'cash', 'course_fee', 'c1', now());
+insert into public.transactions (organization_id, id, type, amount, method, category, customer_id, status, date) values (public.current_org_id(), 't10', 'income', 100000, 'cash', 'course_fee', 'c1', 'pending', now());
+do $$ begin
+  if (select count(*) from public.telegram_links) <> 1 then raise exception 'FAIL: administrator Telegram bog''lanishini ko''rmadi'; end if;
+  begin
+    perform 1 from public.notification_outbox;
+    raise exception 'FAIL: administrator xabarlar navbatini o''qidi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.telegram_links (organization_id, customer_id, chat_id) values (public.current_org_id(), 'c2', 1);
+    raise exception 'FAIL: administrator Telegram bog''lanishini qo''lda yozdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.outbox_wanted(public.current_org_id(), 'c1');
+    raise exception 'FAIL: administrator outbox_wanted ni chaqirdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$
+declare
+  v_org uuid := current_setting('test.org_a')::uuid;
+begin
+  if (select count(*) from public.notification_outbox where organization_id = v_org and kind = 'absence' and customer_id = 'c1' and payload ->> 'group_id' = 'g1') <> 1 then
+    raise exception 'FAIL: "Kelmadi" navbatga tushmadi';
+  end if;
+  if exists (select 1 from public.notification_outbox where customer_id = 'c2') then raise exception 'FAIL: bog''lanmagan o''quvchi uchun navbat'; end if;
+  if (select count(*) from public.notification_outbox where organization_id = v_org and kind = 'payment' and (payload ->> 'amount')::bigint = 300000) <> 1 then
+    raise exception 'FAIL: to''lov navbatga tushmadi';
+  end if;
+  -- "Kutilmoqda" kirim — navbatga tushmaydi; "To'langan"ga o'tsa — tushadi
+  if exists (select 1 from public.notification_outbox where payload ->> 'transaction_id' = 't10') then raise exception 'FAIL: kutilayotgan to''lov navbatga tushdi'; end if;
+  update public.transactions set status = 'paid' where organization_id = v_org and id = 't10';
+  if not exists (select 1 from public.notification_outbox where payload ->> 'transaction_id' = 't10') then raise exception 'FAIL: to''langan bo''lgach navbatga tushmadi'; end if;
+end $$;
+
 -- B markazi A ning provayder tranzaksiyalarini ko'rmaydi
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
 do $$ begin
   if exists (select 1 from public.payment_transactions) then raise exception 'FAIL: B markazi A ning Payme tranzaksiyasini ko''rdi'; end if;
   if exists (select 1 from public.transactions where provider is not null) then raise exception 'FAIL: B markazi A ning Payme kirimini ko''rdi'; end if;
   if exists (select 1 from public.sms_log) then raise exception 'FAIL: B markazi A ning SMS jurnalini ko''rdi'; end if;
+  if exists (select 1 from public.telegram_links) then raise exception 'FAIL: B markazi A ning Telegram bog''lanishini ko''rdi'; end if;
 end $$;
 reset role;
 

@@ -9,6 +9,19 @@ export interface OrgRows {
   transactions: Row[]
   groups: Row[]
   enrollments: Row[]
+  attendance?: Row[]
+}
+
+export interface CustomerReport {
+  customerId: string
+  name: string
+  debt: number
+  advance: number
+  monthly: number
+  link: string | null
+  currency: string
+  groups: Array<{ name: string; days: string[]; startTime: string; endTime: string; room: string }>
+  attendance: { present: number; late: number; absent: number; excused: number; rate: number | null; recent: Array<{ date: string; status: string; group: string }> }
 }
 
 export interface DebtorReminder {
@@ -21,5 +34,7 @@ export interface DebtorReminder {
 }
 
 export declare function debtorReminders(rows: OrgRows, options: { now: Date; lang: 'uz' | 'ru'; withLink: boolean }): DebtorReminder[]
+
+export declare function customerReports(rows: OrgRows, customerIds: readonly string[], options: { now: Date; lang: 'uz' | 'ru' }): CustomerReport[]
 
 export declare function tashkentNow(utcMs: number): Date
