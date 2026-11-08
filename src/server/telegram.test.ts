@@ -65,11 +65,11 @@ describe('Telegram bot (ota-onalar uchun)', () => {
 
   it('/start (kodsiz) — telefon so\'raladi; o\'zgalar kontakti rad; o\'z kontakti — ulanadi va menyu', async () => {
     const { store, links } = memoryBot()
-    expect(await handleUpdate(message('/start'), store, 'Bilim Plus')).toEqual([{ chatId: 77, text: expect.stringContaining('"Bilim Plus"'), keyboard: 'contact' }])
+    expect(await handleUpdate(message('/start'), store, 'Bilim Plus')).toEqual([{ chatId: 77, text: expect.stringContaining('"Bilim Plus"'), keyboard: 'contact', lang: 'uz' }])
     const foreign = await handleUpdate(message('', { contact: { phone_number: '+998901234567', user_id: 99 } }), store, 'Bilim Plus')
     expect(foreign[0].text).toContain('o\'zingizning raqamingizni')
     const own = await handleUpdate(message('', { contact: { phone_number: '+998901234567', user_id: 77 } }), store, 'Bilim Plus')
-    expect(own).toEqual([{ chatId: 77, text: expect.stringContaining('✅ Ulandi: Aziza Karimova'), keyboard: 'menu' }])
+    expect(own).toEqual([{ chatId: 77, text: expect.stringContaining('✅ Ulandi: Aziza Karimova'), keyboard: 'menu', lang: 'uz' }])
     expect(links).toHaveLength(1)
     const unknown = await handleUpdate(message('', { contact: { phone_number: '+998951112233', user_id: 77 } }), store, 'Bilim Plus')
     expect(unknown[0]).toMatchObject({ keyboard: 'contact', text: expect.stringContaining('topilmadi') })
@@ -92,7 +92,7 @@ describe('Telegram bot (ota-onalar uchun)', () => {
     expect(attendance).toContain('• 06.11 — Kelmadi (IELTS — kechki)')
     expect((await handleUpdate(message('🗓 Jadval'), store, 'X'))[0].text).toBe('Aziza Karimova:\n• IELTS — kechki — Du, Cho, Ju 18:00–19:30, 101-xona')
     const lang = await handleUpdate(message('🌐 Til'), store, 'X')
-    expect(lang[0].text).toContain('Язык: русский')
+    expect(lang[0]).toMatchObject({ lang: 'ru', text: expect.stringContaining('Язык: русский') })
     expect(links[0].lang).toBe('ru')
     expect((await handleUpdate(message('💳 Долг'), store, 'X'))[0].text).toContain('долг 650 000 сум')
     expect((await handleUpdate(message('/stop'), store, 'X'))[0]).toMatchObject({ keyboard: 'remove' })

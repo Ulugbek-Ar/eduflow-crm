@@ -11,6 +11,8 @@ export interface BotReply {
   chatId: number
   text: string
   keyboard: Keyboard
+  // Tugmalar shu tilda chiqadi
+  lang: Lang
 }
 
 export interface LinkedStudent {
@@ -179,7 +181,7 @@ export async function handleUpdate(update: unknown, store: BotStore, orgName: st
   const linked = await store.linked(chatId)
   const lang: Lang = linked[0]?.lang ?? (from.language_code === 'ru' ? 'ru' : 'uz')
   const t = TEXT[lang]
-  const reply = (text: string, keyboard: Keyboard): BotReply[] => [{ chatId, text, keyboard }]
+  const reply = (text: string, keyboard: Keyboard): BotReply[] => [{ chatId, text, keyboard, lang }]
   const names = (list: readonly LinkedStudent[]) => list.map((s) => s.name).join(', ')
 
   if (isRecord(message.contact)) {
@@ -205,7 +207,7 @@ export async function handleUpdate(update: unknown, store: BotStore, orgName: st
       if (linked.length === 0) return reply(t.notLinked, 'contact')
       const next: Lang = lang === 'uz' ? 'ru' : 'uz'
       await store.setLang(chatId, next)
-      return [{ chatId, text: `${TEXT[next].lang}\n${TEXT[next].help}`, keyboard: 'menu' }]
+      return [{ chatId, text: `${TEXT[next].lang}\n${TEXT[next].help}`, keyboard: 'menu', lang: next }]
     }
     case 'debt':
     case 'attendance':

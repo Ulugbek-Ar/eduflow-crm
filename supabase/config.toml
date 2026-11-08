@@ -39,3 +39,7 @@ verify_jwt = false
 # Kunlik avtomatik eslatmalar: pg_cron chaqiradi, x-cron-secret sarlavhasi bilan tekshiriladi
 [functions.cron]
 verify_jwt = false
+
+# Ota-onalar boti: Telegram X-Telegram-Bot-Api-Secret-Token sarlavhasi bilan tekshiriladi
+[functions.telegram]
+verify_jwt = false

@@ -4,7 +4,9 @@
 //   status | save { provider, secret } | remove { provider } — administrator (settings.manage)
 //   sms.send { messages: [{ customerId, text }] } — eslatma yuboruvchi (payments.create yoki customers.edit)
 //   sms.test { phone, text? } — administrator
+//   telegram.link { customerId } | telegram.send { messages } | telegram.unlink { customerId } — ota-onalar boti
 // Deploy: supabase functions deploy integrations
+import { isTelegramSecret } from '../_shared/bot.ts'
 import { ESKIZ_TEST_TEXT, eskizClient, eskizLogin, isEskizSecret, sendAll } from '../_shared/eskiz.ts'
 import type { EskizSecret, SmsResult } from '../_shared/eskiz.ts'
 import { isIntegrationProvider, maskSecret, parseSecret } from '../_shared/integrations.ts'
@@ -12,10 +14,16 @@ import type { IntegrationProvider } from '../_shared/integrations.ts'
 import { isRecord } from '../_shared/payments.ts'
 import { callerFromRequest, cors, json, loadSecret, serviceClient } from '../_shared/supabase.ts'
 import type { Caller, SupabaseClient } from '../_shared/supabase.ts'
+import { linkCode, telegramApi } from '../_shared/telegram.ts'
+import type { Lang } from '../_shared/telegram.ts'
 
 const LABELS: Record<IntegrationProvider, string> = { payme: 'Payme', click: 'Click', eskiz: 'Eskiz SMS', telegram: 'Telegram bot' }
 // Shu bosqichda ulanadiganlar (Telegram — keyingi bosqichda o'z tekshiruvi bilan)
-const SAVABLE: readonly IntegrationProvider[] = ['payme', 'click', 'eskiz']
+const SAVABLE: readonly IntegrationProvider[] = ['payme', 'click', 'eskiz', 'telegram']
+
+const randomHex = (bytes: number) => [...crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, '0')).join('')
+
+const canRemind = async (caller: Caller) => (await caller.can('payments.create')) || (await caller.can('customers.edit'))
 const MAX_SMS = 300
 
 // Eskiz: yangi token integration_secrets'ga yoziladi (keyingi yuborishda qayta kirilmaydi)
@@ -67,6 +75,11 @@ Deno.serve(async (req) => {
     if (!isIntegrationProvider(provider)) return json(400, { error: 'provider' })
 
     if (body.action === 'remove') {
+      // Bot: webhook o'chiriladi (bog'langan ota-onalar saqlanadi — o'sha bot qayta ulansa ishlayveradi)
+      if (provider === 'telegram') {
+        const old = await loadSecret(sb, caller.orgId, 'telegram')
+        if (isTelegramSecret(old)) await telegramApi(old.token, fetch).deleteWebhook().catch(() => null)
+      }
       const { error } = await sb.from('integration_secrets').delete().eq('organization_id', caller.orgId).eq('provider', provider)
       if (error) return json(500, { error: 'db' })
       await caller.client.rpc('log_event', { p_action: 'settings.update', p_summary: `${LABELS[provider]}: o'chirildi` })
@@ -83,6 +96,18 @@ Deno.serve(async (req) => {
       if (!token) return json(400, { error: 'invalid', field: 'password' })
       parsed.secret.token = token
       parsed.secret.tokenAt = Date.now()
+    }
+    // Telegram: token getMe bilan tekshiriladi, webhook maxfiy kalit bilan o'rnatiladi
+    if (provider === 'telegram') {
+      const api = telegramApi(String(parsed.secret.token), fetch)
+      const me = await api.getMe().catch(() => null)
+      const username = me?.ok && isRecord(me.result) && typeof me.result.username === 'string' ? me.result.username : ''
+      if (!username) return json(400, { error: 'invalid', field: 'token' })
+      const webhookSecret = isTelegramSecret(previous) && previous.token === parsed.secret.token ? previous.webhookSecret : randomHex(24)
+      const hook = await api.setWebhook(`${Deno.env.get('SUPABASE_URL') ?? ''}/functions/v1/telegram?org=${caller.orgId}`, webhookSecret).catch(() => null)
+      if (!hook?.ok) return json(400, { error: 'webhook' })
+      parsed.secret.username = username
+      parsed.secret.webhookSecret = webhookSecret
     }
     const { error } = await sb
       .from('integration_secrets')
@@ -128,6 +153,57 @@ Deno.serve(async (req) => {
       else failures.push({ customerId: item.customerId, error: result.error ?? 'error' })
     })
     return json(200, { ok: true, ...summary, failures })
+  }
+
+  if (body.action === 'telegram.link' || body.action === 'telegram.send' || body.action === 'telegram.unlink') {
+    if (!(await canRemind(caller))) return json(403, { error: 'forbidden' })
+    const secret = await loadSecret(sb, caller.orgId, 'telegram')
+    if (!isTelegramSecret(secret)) return json(400, { error: 'not-configured' })
+
+    if (body.action === 'telegram.link') {
+      const code = await linkCode(secret.webhookSecret, String(body.customerId ?? ''))
+      if (!code) return json(400, { error: 'customer' })
+      return json(200, { ok: true, link: `https://t.me/${secret.username}?start=${code}` })
+    }
+
+    if (body.action === 'telegram.unlink') {
+      const { error } = await sb.from('telegram_links').delete().eq('organization_id', caller.orgId).eq('customer_id', String(body.customerId ?? ''))
+      return error ? json(500, { error: 'db' }) : json(200, { ok: true })
+    }
+
+    // Eslatma ota-onaga bot orqali (bog'lanmaganlar — notLinked)
+    const { data: writable } = await caller.client.rpc('org_writable')
+    if (!writable) return json(403, { error: 'readonly' })
+    const messages = Array.isArray(body.messages) ? body.messages.filter(isRecord).slice(0, MAX_SMS) : []
+    const ids = [...new Set(messages.map((m) => String(m.customerId ?? '')).filter(Boolean))]
+    const { data: links } = await sb.from('telegram_links').select('customer_id, chat_id, lang').eq('organization_id', caller.orgId).in('customer_id', ids.length ? ids : [''])
+    const { data: customers } = await sb.from('customers').select('id, name').eq('organization_id', caller.orgId).in('id', ids.length ? ids : [''])
+    const names = new Map(((customers ?? []) as Array<Record<string, unknown>>).map((c) => [String(c.id), String(c.name)]))
+    const api = telegramApi(secret.token, fetch)
+    let sent = 0
+    let failed = 0
+    let notLinked = 0
+    for (const m of messages) {
+      const customerId = String(m.customerId ?? '')
+      const text = typeof m.text === 'string' ? m.text.trim().slice(0, 3000) : ''
+      const chats = ((links ?? []) as Array<Record<string, unknown>>).filter((l) => String(l.customer_id) === customerId)
+      if (!text || chats.length === 0) {
+        notLinked += 1
+        continue
+      }
+      let delivered = false
+      for (const chat of chats) {
+        const result = await api.sendMessage(Number(chat.chat_id), text, null, (chat.lang === 'ru' ? 'ru' : 'uz') as Lang).catch(() => null)
+        if (result?.ok) delivered = true
+        // Ota-ona botni bloklagan — bog'lanish o'chiriladi
+        else if (result?.status === 403) await sb.from('telegram_links').delete().eq('organization_id', caller.orgId).eq('customer_id', customerId).eq('chat_id', Number(chat.chat_id))
+      }
+      if (delivered) {
+        sent += 1
+        await caller.client.rpc('log_event', { p_action: 'reminder.sent', p_summary: `${names.get(customerId) ?? customerId} · Telegram bot`, p_entity: customerId })
+      } else failed += 1
+    }
+    return json(200, { ok: true, sent, failed, notLinked })
   }
 
   return json(400, { error: 'action' })
