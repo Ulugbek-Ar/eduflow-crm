@@ -26,6 +26,7 @@ import { SecuritySettings } from './SecuritySettings'
 
 // Faqat bulutli rejimda yuklanadi (Supabase mijozi lokal rejimda kerak emas)
 const IntegrationsSettings = lazy(() => import('./IntegrationsSettings').then((m) => ({ default: m.IntegrationsSettings })))
+const SmsSettings = lazy(() => import('./SmsSettings').then((m) => ({ default: m.SmsSettings })))
 
 const CURRENCIES: Record<Currency, string> = {
   UZS: tr('O\'zbek so\'mi (UZS)'),
@@ -53,6 +54,7 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: P
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
   { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
   { id: 'integrations', label: tr('Integratsiyalar'), icon: 'card', permission: 'settings.manage' },
+  { id: 'sms', label: tr('SMS'), icon: 'mail', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
   { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
@@ -271,6 +273,20 @@ export function SettingsPanel() {
             ) : (
               <p className="notice notice-info">
                 {tr('Onlayn to\'lov bulutli rejimda ishlaydi: Payme va Click to\'lovni serverga (Supabase Edge Function) yuboradi, kalitlar ham faqat serverda saqlanadi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="sms" title={tr('SMS (Eskiz)')} description={tr('Qarzdorlarga SMS eslatma — eslatma oynasidan yoki har kuni avtomatik')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <SmsSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('SMS bulutli rejimda ishlaydi: Eskiz login va paroli serverda saqlanadi, avtomatik eslatmani server har kuni yuboradi. Ulash tartibi — DEPLOY.md.')}
               </p>
             )}
           </SettingsCard>

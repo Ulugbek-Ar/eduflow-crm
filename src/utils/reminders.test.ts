@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { daysAgo, fillTemplate, monthName, smsUrl, telegramShare } from './reminders'
+import { daysAgo, fillTemplate, monthName, smsSegments, smsUrl, telegramShare } from './reminders'
 
 describe('to\'lov eslatmalari', () => {
   it('shablon o\'zgaruvchilari almashtiriladi, noma\'lumi qoladi', () => {
@@ -24,5 +24,17 @@ describe('to\'lov eslatmalari', () => {
     expect(telegramShare('Qarz: 650 000')).toContain('text=Qarz%3A%20650%20000')
     expect(daysAgo('2026-11-04T23:00:00', new Date('2026-11-07T08:00:00'))).toBe(3)
     expect(daysAgo('2026-11-07T01:00:00', new Date('2026-11-07T23:00:00'))).toBe(0)
+  })
+})
+
+describe('SMS bo\'laklari (Eskiz narxi)', () => {
+  it('lotin (GSM-7): 160 belgigacha 1 ta, keyin 153 dan; kirill yoki ʻ — 70 / 67', () => {
+    expect(smsSegments('')).toBe(0)
+    expect(smsSegments('a'.repeat(160))).toBe(1)
+    expect(smsSegments('a'.repeat(161))).toBe(2)
+    expect(smsSegments("To'lov — 650 000 so'm".replace('—', '-'))).toBe(1)
+    expect(smsSegments('я'.repeat(70))).toBe(1)
+    expect(smsSegments('я'.repeat(71))).toBe(2)
+    expect(smsSegments('oʻquvchi ' + 'a'.repeat(70))).toBe(2)
   })
 })

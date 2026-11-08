@@ -40,6 +40,10 @@ export const DEFAULT_SETTINGS: Settings = {
   paymeMerchantId: '',
   clickServiceId: '',
   clickMerchantId: '',
+  smsSender: '',
+  autoReminders: false,
+  autoRemindEveryDays: 7,
+  autoRemindLang: 'uz',
 }
 
 // [nom, turi, davomiyligi (oy), oylik narx, holati]

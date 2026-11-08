@@ -35,3 +35,7 @@ verify_jwt = false
 
 [functions.click]
 verify_jwt = false
+
+# Kunlik avtomatik eslatmalar: pg_cron chaqiradi, x-cron-secret sarlavhasi bilan tekshiriladi
+[functions.cron]
+verify_jwt = false

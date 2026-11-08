@@ -72,4 +72,10 @@ export interface Settings {
   paymeMerchantId: string
   clickServiceId: string
   clickMerchantId: string
+  // v1.2 (bulut): SMS (Eskiz) jo'natuvchi nomi; '' — SMS ulanmagan. Login va parol faqat serverda
+  smsSender: string
+  // Kunlik avtomatik eslatma (SMS): yoqilganmi, bir o'quvchiga necha kunda bir marta, qaysi tilda
+  autoReminders: boolean
+  autoRemindEveryDays: number
+  autoRemindLang: 'uz' | 'ru'
 }

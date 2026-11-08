@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createMockCourses } from '../../constants/mockData'
 import { makeCustomer, renderSignedIn } from '../../test/helpers'
@@ -42,7 +42,8 @@ describe('O\'qituvchilar va maosh', () => {
     const users = stored<{ id: string; login: string; role: string; mustChange: boolean }>('apex:users')
     const created = users.find((u) => u.login === 'nodira')
     expect(created).toMatchObject({ role: 'teacher', mustChange: true })
-    expect(stored<Teacher>('apex:teachers')[0].userId).toBe(created?.id)
+    // Yozuvga bog'lash keyingi render'da saqlanadi — yuklangan mashinada kutib tekshiriladi
+    await waitFor(() => expect(stored<Teacher>('apex:teachers')[0].userId).toBe(created?.id))
   })
 
   it('maosh: oy bo\'yicha hisob va "Maosh to\'lash" — teacherId va period bilan xarajat', async () => {

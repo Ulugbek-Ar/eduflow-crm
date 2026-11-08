@@ -37,3 +37,38 @@ export async function integrationStatus(): Promise<Record<string, ProviderStatus
 export function functionUrl(name: string, orgId: string): string {
   return `${cloudConfig()?.url ?? ''}/functions/v1/${name}?org=${orgId}`
 }
+
+export interface SmsLogEntry {
+  id: number
+  customerId: string | null
+  phone: string
+  text: string
+  kind: 'reminder' | 'auto' | 'test'
+  status: 'sent' | 'failed'
+  error: string | null
+  createdAt: string
+}
+
+// SMS jurnali (RLS: o'z markazi, payments.view) — oxirgi yozuvlar
+export async function recentSms(limit = 20): Promise<SmsLogEntry[] | null> {
+  try {
+    const { data, error } = await getClient()
+      .from('sms_log')
+      .select('id, customer_id, phone, text, kind, status, error, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (error) return null
+    return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      id: Number(r.id),
+      customerId: typeof r.customer_id === 'string' ? r.customer_id : null,
+      phone: String(r.phone ?? ''),
+      text: String(r.text ?? ''),
+      kind: r.kind === 'auto' || r.kind === 'test' ? r.kind : 'reminder',
+      status: r.status === 'failed' ? 'failed' : 'sent',
+      error: typeof r.error === 'string' ? r.error : null,
+      createdAt: String(r.created_at ?? ''),
+    }))
+  } catch {
+    return null
+  }
+}

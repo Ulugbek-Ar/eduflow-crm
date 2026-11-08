@@ -2953,7 +2953,8 @@ a.btn {
   gap: 8px;
 }
 
-.reminder-actions > :first-child {
+.reminder-actions > :first-child,
+.reminder-actions > .reminder-wide {
   grid-column: 1 / -1;
 }
 
@@ -3020,6 +3021,36 @@ a.btn {
 .integration-head h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+.sms-log {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sms-log li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.sms-log li > div {
+  min-width: 0;
+}
+
+.sms-text {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .check-field {

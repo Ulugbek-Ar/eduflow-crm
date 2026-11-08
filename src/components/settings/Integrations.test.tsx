@@ -13,6 +13,7 @@ const server = vi.hoisted(() => ({
 vi.mock('../../hooks/useCloudOrg', () => ({ useCloudOrgId: () => '11111111-2222-3333-4444-555555555555' }))
 vi.mock('../../data/integrations', () => ({
   integrationStatus: async () => server.status,
+  recentSms: async () => [],
   functionUrl: (name: string, org: string) => `https://loyiha.supabase.co/functions/v1/${name}?org=${org}`,
   callIntegrations: async (body: Record<string, unknown>) => {
     server.calls.push(body)

@@ -150,7 +150,11 @@ export function isSettings(value: unknown): value is Settings {
     typeof value.reminderTemplateRu === 'string' &&
     typeof value.paymeMerchantId === 'string' &&
     typeof value.clickServiceId === 'string' &&
-    typeof value.clickMerchantId === 'string'
+    typeof value.clickMerchantId === 'string' &&
+    typeof value.smsSender === 'string' &&
+    typeof value.autoReminders === 'boolean' &&
+    isWholeNumber(value.autoRemindEveryDays, 3, 30) &&
+    (value.autoRemindLang === 'uz' || value.autoRemindLang === 'ru')
   )
 }
 
@@ -291,6 +295,11 @@ export function sanitizeSettings(value: unknown): Settings {
     paymeMerchantId: typeof raw.paymeMerchantId === 'string' && /^[0-9a-f]{24}$/i.test(raw.paymeMerchantId) ? raw.paymeMerchantId : '',
     clickServiceId: typeof raw.clickServiceId === 'string' && /^\d{1,10}$/.test(raw.clickServiceId) ? raw.clickServiceId : '',
     clickMerchantId: typeof raw.clickMerchantId === 'string' && /^\d{1,10}$/.test(raw.clickMerchantId) ? raw.clickMerchantId : '',
+    // v1.2: SMS va avtomatik eslatma
+    smsSender: typeof raw.smsSender === 'string' && /^[\w.-]{2,11}$/.test(raw.smsSender) ? raw.smsSender : '',
+    autoReminders: raw.autoReminders === true,
+    autoRemindEveryDays: isWholeNumber(raw.autoRemindEveryDays, 3, 30) ? raw.autoRemindEveryDays : DEFAULT_SETTINGS.autoRemindEveryDays,
+    autoRemindLang: raw.autoRemindLang === 'ru' ? 'ru' : 'uz',
   }
 }
 

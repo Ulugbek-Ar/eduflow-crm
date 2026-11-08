@@ -47,3 +47,16 @@ export function withPaymentLink(template: string, text: string, link: string | n
   if (!link || template.includes('{havola}') || !append) return text
   return `${text}\n${LINK_LABEL[lang]} ${link}`
 }
+
+// GSM-7 asosiy alifbosi (lotin, raqamlar, ' va tinish belgilari). Kirill yoki ʻ bo'lsa — UCS-2 (bir SMS 70 belgi)
+const GSM7 = /^[A-Za-z0-9 \n\r@£$¥èéùìòÇØøÅå_ÆæßÉ!"#%&'()*+,\-./:;<=>?¡ÄÖÑÜ§¿äöñüà]*$/
+
+// Xabar necha SMS bo'lib ketadi (Eskiz har bo'lakni alohida hisoblaydi)
+export function smsSegments(text: string): number {
+  if (!text) return 0
+  const gsm = GSM7.test(text)
+  const single = gsm ? 160 : 70
+  const part = gsm ? 153 : 67
+  const length = [...text].length
+  return length <= single ? 1 : Math.ceil(length / part)
+}

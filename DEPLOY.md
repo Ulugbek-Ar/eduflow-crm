@@ -213,3 +213,47 @@ supabase functions deploy click --no-verify-jwt
 
 Tekshirish: qarzdor o'quvchiga eslatma oching — matnda to'lov havolasi bo'ladi; sandbox'da to'lab ko'ring, bir
 daqiqada *Moliya*da "Karta · Payme" (yoki Click) kirimi va jurnalda "Payme" nomidan yozuv paydo bo'ladi.
+
+---
+
+## 7. SMS eslatmalar: Eskiz.uz (ixtiyoriy, faqat bulutli rejim)
+
+Qarzdorlarga SMS — eslatma oynasidan ("SMS yuborish") yoki **har kuni ertalab avtomatik**. Telefon raqami server
+tomonda mijoz kartasidan olinadi, har SMS jurnalga (`sms_log`) va amallar jurnaliga yoziladi. Eskiz login va paroli
+faqat serverda.
+
+- [ ] [my.eskiz.uz](https://my.eskiz.uz) da hisob oching va balansni to'ldiring. **Eslatma matnini moderatsiyaga
+      yuboring** (Sozlamalar → O'quv jarayoni'dagi shablon bilan bir xil); sinov hisobidan faqat
+      `This is test from Eskiz` matni yuboriladi. Jo'natuvchi nomi (masalan, markaz nomi) — Eskiz tasdiqlaganidan keyin.
+- [ ] Migratsiya: `supabase db push` (`20261108000001_sms.sql`).
+- [ ] Ilovada *Sozlamalar → SMS (Eskiz)*: email, parol, jo'natuvchi (standart `4546`) → "Eskiz'ni ulash" — server
+      Eskiz'ga kirib tekshiradi. "Sinov SMS" bilan o'z raqamingizga yuborib ko'ring.
+
+**Avtomatik eslatma (har kuni 09:00, Toshkent):**
+
+- [ ] Kalit va funksiya:
+
+```bash
+supabase secrets set CRON_SECRET=<uzun-tasodifiy-satr>
+```
+
+```bash
+supabase functions deploy cron --no-verify-jwt
+```
+
+- [ ] *Database → Extensions*: `pg_cron` va `pg_net` ni yoqing, so'ng *SQL Editor* (04:00 UTC = 09:00 Toshkent):
+
+```sql
+select cron.schedule('eduflow-avtomatik-eslatma', '0 4 * * *', $$
+  select net.http_post(
+    url := 'https://<loyiha>.supabase.co/functions/v1/cron',
+    headers := '{"Content-Type": "application/json", "x-cron-secret": "<uzun-tasodifiy-satr>"}'::jsonb,
+    body := '{"task": "reminders"}'::jsonb
+  );
+$$);
+```
+
+- [ ] Ilovada *Sozlamalar → SMS → Avtomatik eslatma*: yoqing, "necha kunda bir marta" (3–30) va tilni tanlang.
+      Server har kuni to'lov muddati o'tgan o'quvchilarga (oxirgi N kunda SMS olmaganlariga, ko'pi bilan 300 ta)
+      shablon bo'yicha xabar yuboradi; onlayn to'lov ulangan bo'lsa — havola bilan. Qarz ilova bilan aynan bir xil
+      hisoblanadi (`supabase/functions/_shared/generated/engine.js`).

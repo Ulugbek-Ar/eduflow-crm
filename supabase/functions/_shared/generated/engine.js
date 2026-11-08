@@ -410,7 +410,11 @@ var DEFAULT_SETTINGS = {
 	reminderTemplateRu: DEFAULT_REMINDER_RU,
 	paymeMerchantId: "",
 	clickServiceId: "",
-	clickMerchantId: ""
+	clickMerchantId: "",
+	smsSender: "",
+	autoReminders: false,
+	autoRemindEveryDays: 7,
+	autoRemindLang: "uz"
 };
 COURSES[0], COURSES[1], COURSES[2], COURSES[3], COURSES[4], COURSES[5];
 // src/utils/guards.ts
@@ -465,7 +469,11 @@ function sanitizeSettings(value) {
 		reminderTemplateRu: isText(raw.reminderTemplateRu) ? raw.reminderTemplateRu.slice(0, 1e3) : DEFAULT_REMINDER_RU,
 		paymeMerchantId: typeof raw.paymeMerchantId === "string" && /^[0-9a-f]{24}$/i.test(raw.paymeMerchantId) ? raw.paymeMerchantId : "",
 		clickServiceId: typeof raw.clickServiceId === "string" && /^\d{1,10}$/.test(raw.clickServiceId) ? raw.clickServiceId : "",
-		clickMerchantId: typeof raw.clickMerchantId === "string" && /^\d{1,10}$/.test(raw.clickMerchantId) ? raw.clickMerchantId : ""
+		clickMerchantId: typeof raw.clickMerchantId === "string" && /^\d{1,10}$/.test(raw.clickMerchantId) ? raw.clickMerchantId : "",
+		smsSender: typeof raw.smsSender === "string" && /^[\w.-]{2,11}$/.test(raw.smsSender) ? raw.smsSender : "",
+		autoReminders: raw.autoReminders === true,
+		autoRemindEveryDays: isWholeNumber(raw.autoRemindEveryDays, 3, 30) ? raw.autoRemindEveryDays : DEFAULT_SETTINGS.autoRemindEveryDays,
+		autoRemindLang: raw.autoRemindLang === "ru" ? "ru" : "uz"
 	};
 }
 // src/utils/phone.ts

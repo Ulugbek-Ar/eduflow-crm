@@ -19,3 +19,11 @@ describe('v1.2 maydonlari: onlayn to\'lov', () => {
     expect(isTransaction({ ...base, provider: 'payme', providerRef: '' })).toBe(false)
   })
 })
+
+describe('v1.2 maydonlari: SMS va avtomatik eslatma', () => {
+  it('jo\'natuvchi nomi, 3–30 kun va til; noto\'g\'risi — standart', () => {
+    expect(sanitizeSettings({ smsSender: 'BilimPlus', autoReminders: true, autoRemindEveryDays: 5, autoRemindLang: 'ru' })).toMatchObject({ smsSender: 'BilimPlus', autoReminders: true, autoRemindEveryDays: 5, autoRemindLang: 'ru' })
+    expect(sanitizeSettings({ smsSender: 'juda uzun nom bilan', autoReminders: 'ha', autoRemindEveryDays: 1, autoRemindLang: 'en' })).toMatchObject({ smsSender: '', autoReminders: false, autoRemindEveryDays: 7, autoRemindLang: 'uz' })
+    expect(isSettings(sanitizeSettings({}))).toBe(true)
+  })
+})

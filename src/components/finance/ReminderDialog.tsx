@@ -5,7 +5,8 @@ import type { Lang } from '../../i18n'
 import type { DebtRow } from '../../utils/debts'
 import { useCloudOrgId } from '../../hooks/useCloudOrg'
 import { onlinePaymentsEnabled, paymentLink } from '../../utils/paymentLinks'
-import { fillTemplate, monthName, smsUrl, telegramShare, withPaymentLink } from '../../utils/reminders'
+import { refreshAudit } from '../../services/audit.service'
+import { fillTemplate, monthName, smsSegments, smsUrl, telegramShare, withPaymentLink } from '../../utils/reminders'
 import { cx } from '../../utils/cx'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -24,8 +25,12 @@ async function copy(text: string): Promise<boolean> {
 // Birinchi amal bajarilganda "Eslatildi" jurnalga yoziladi (qarzdorlar ro'yxatida "Oxirgi eslatma: N kun oldin")
 export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: () => void }) {
   const { settings, money, logReminders } = useDashboard()
+  const cloud = useCloudOrgId() !== null
   // Onlayn to'lov (bulut, Payme yoki Click ulangan): har bir xabarga shu o'quvchining to'lov havolasi
-  const linksAvailable = useCloudOrgId() !== null && onlinePaymentsEnabled(settings)
+  const linksAvailable = cloud && onlinePaymentsEnabled(settings)
+  // SMS (bulut, Eskiz ulangan): server yuboradi va jurnalga o'zi yozadi
+  const smsAvailable = cloud && Boolean(settings.smsSender)
+  const [smsBusy, setSmsBusy] = useState(false)
   const [withLink, setWithLink] = useState(true)
   const [lang, setLang] = useState<Lang>(getLang())
   const [status, setStatus] = useState('')
@@ -48,6 +53,25 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
   }
   const single = rows.length === 1 ? rows[0] : null
   const text = single ? messageFor(single) : rows.map((r) => `${r.customer.name} (${r.customer.phone}):\n${messageFor(r)}`).join('\n\n')
+
+  const sendSms = async () => {
+    setSmsBusy(true)
+    setStatus('')
+    // Supabase mijozi faqat shu yerda (bulutli rejimda) yuklanadi
+    const { callIntegrations } = await import('../../data/integrations')
+    const result = await callIntegrations({ action: 'sms.send', messages: rows.map((r) => ({ customerId: r.customer.id, text: messageFor(r) })) })
+    setSmsBusy(false)
+    if (!result.ok) {
+      return setStatus(result.error === 'not-configured' ? tr('SMS ulanmagan: Sozlamalar → SMS (Eskiz)') : tr('SMS yuborilmadi. Internet va Eskiz sozlamasini tekshiring.'))
+    }
+    const sent = Number(result.data.sent ?? 0)
+    const failed = Number(result.data.failed ?? 0)
+    setStatus(failed > 0 ? tr('{0} ta SMS yuborildi, {1} tasi yuborilmadi (SMS jurnalida sababi)', { 0: sent, 1: failed }) : tr('{0} ta SMS yuborildi', { 0: sent }))
+    if (sent > 0) {
+      setLogged(true)
+      void refreshAudit()
+    }
+  }
 
   const mark = (channel: string) => {
     if (logged) return
@@ -97,6 +121,11 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
           >
             {tr('Nusxa olish')}
           </Button>
+          {smsAvailable && (
+            <Button variant="ghost" icon="mail" className="reminder-wide" disabled={smsBusy} onClick={() => void sendSms()}>
+              {smsBusy ? tr('Yuborilmoqda…') : rows.length > 1 ? tr('SMS yuborish ({0})', { 0: rows.length }) : tr('SMS yuborish (≈{0} ta)', { 0: smsSegments(text) })}
+            </Button>
+          )}
           {single && (
             <>
               <a className="btn btn-ghost" href={telegramShare(text)} target="_blank" rel="noreferrer" onClick={() => mark('Telegram')}>
