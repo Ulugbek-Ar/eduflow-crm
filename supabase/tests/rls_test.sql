@@ -249,6 +249,74 @@ do $$ begin
 end $$;
 reset role;
 
+-- 7b) v1.2: onlayn to'lov (Payme/Click). Funksiyalarni Edge Function service_role bilan chaqiradi — bu yerda superuser
+select set_config('test.org_a', :'org_a', false);
+-- service_role so'rovida JWT foydalanuvchisi yo'q (oldingi bo'limdan qolgan sub tozalanadi)
+select set_config('request.jwt.claim.sub', '', false);
+do $$
+declare
+  v_org uuid := current_setting('test.org_a')::uuid;
+  v public.payment_transactions;
+  n integer;
+begin
+  -- Hisob — telefon (998 bilan ham, bo'shliq va belgilar bilan ham); qisqa raqam — topilmaydi
+  if (select id from public.pay_find_customer(v_org, '998901234567')) is distinct from 'c1' then raise exception 'FAIL: mijoz telefon bo''yicha topilmadi'; end if;
+  if (select id from public.pay_find_customer(v_org, '+998 (90) 123-45-67')) is distinct from 'c1' then raise exception 'FAIL: formatlangan telefon'; end if;
+  if exists (select 1 from public.pay_find_customer(v_org, '12345')) then raise exception 'FAIL: qisqa raqam bilan mijoz topildi'; end if;
+  -- Yaratish takror chaqirilsa ham bitta yozuv
+  perform public.pay_tx_create(v_org, 'payme', 'pm-1', 'c1', 65000000, 1700000000000, '{"phone":"901234567"}');
+  perform public.pay_tx_create(v_org, 'payme', 'pm-1', 'c1', 65000000, 1700000000000, '{"phone":"901234567"}');
+  if (select count(*) from public.payment_transactions where organization_id = v_org) <> 1 then raise exception 'FAIL: takror yaratildi'; end if;
+  -- Bajarish: bitta kirim (so'mda), yagona faol o'qishga bog'langan; takror — ikkinchi kirim yo'q
+  select * into v from public.pay_tx_perform(v_org, 'payme', 'pm-1', 1700000001000, 'Payme');
+  if v.state <> 2 or v.transaction_id is null or v.perform_time <> 1700000001000 then raise exception 'FAIL: bajarilmadi'; end if;
+  perform public.pay_tx_perform(v_org, 'payme', 'pm-1', 1700000002000, 'Payme');
+  select count(*) into n from public.transactions
+  where organization_id = v_org and provider = 'payme' and provider_ref = 'pm-1' and amount = 650000 and status = 'paid' and method = 'card'
+    and enrollment_id = 'e1' and customer_name = 'Aziza Karimova' and updated_at is not null;
+  if n <> 1 then raise exception 'FAIL: Payme kirimi % ta', n; end if;
+  if not exists (select 1 from public.audit_log where organization_id = v_org and action = 'payment.create' and user_name = 'Payme') then
+    raise exception 'FAIL: jurnalda "Payme" yo''q';
+  end if;
+  -- Bajarilgandan keyin bekor: -2, kirim "Bekor qilingan"
+  select * into v from public.pay_tx_cancel(v_org, 'payme', 'pm-1', 1700000003000, 5::smallint, 'Payme');
+  if v.state <> -2 or v.reason <> 5 then raise exception 'FAIL: bajarilgandan keyin bekor holati %', v.state; end if;
+  if (select status from public.transactions where organization_id = v_org and provider_ref = 'pm-1') <> 'cancelled' then raise exception 'FAIL: kirim bekor bo''lmadi'; end if;
+  -- Click: tayyorlangan, so'ng bekor — kirim yozilmaydi; topilmagan id — bo'sh
+  perform public.pay_tx_create(v_org, 'click', '9001', 'c1', 10000000, 1700000004000, '{}');
+  select * into v from public.pay_tx_cancel(v_org, 'click', '9001', 1700000005000, null, 'Click');
+  if v.state <> -1 or exists (select 1 from public.transactions where provider = 'click') then raise exception 'FAIL: Click bekor qilinmadi'; end if;
+  if exists (select 1 from public.pay_tx_perform(v_org, 'click', 'yoq', 1, 'Click')) then raise exception 'FAIL: yo''q tranzaksiya bajarildi'; end if;
+  if (select count(*) from public.pay_tx_statement(v_org, 'payme', 1700000000000, 1700000009000)) <> 1 then raise exception 'FAIL: statement'; end if;
+  insert into public.integration_secrets (organization_id, provider, secret) values (v_org, 'payme', '{"key":"maxfiy"}');
+end $$;
+-- Administrator: provayder tranzaksiyalarini ko'radi; maxfiy kalitni o'qiy olmaydi, to'lov funksiyasini chaqira olmaydi
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  if (select count(*) from public.payment_transactions) <> 2 then raise exception 'FAIL: administrator provayder tranzaksiyalarini ko''rmadi'; end if;
+  begin
+    perform 1 from public.integration_secrets;
+    raise exception 'FAIL: administrator maxfiy kalitni o''qidi';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.pay_tx_perform(public.current_org_id(), 'payme', 'pm-1', 1, 'X');
+    raise exception 'FAIL: administrator to''lov funksiyasini chaqirdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.payment_transactions (organization_id, provider, provider_id, id, customer_id, amount, state, create_time)
+    values (public.current_org_id(), 'payme', 'soxta', 'soxta', 'c1', 100, 2, 1);
+    raise exception 'FAIL: administrator provayder tranzaksiyasini qo''lda yozdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+-- B markazi A ning provayder tranzaksiyalarini ko'rmaydi
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+do $$ begin
+  if exists (select 1 from public.payment_transactions) then raise exception 'FAIL: B markazi A ning Payme tranzaksiyasini ko''rdi'; end if;
+  if exists (select 1 from public.transactions where provider is not null) then raise exception 'FAIL: B markazi A ning Payme kirimini ko''rdi'; end if;
+end $$;
+reset role;
+
 -- 8) Sotuvchi: markazlar ro'yxati, muddati tugasa markaz faqat o'qiydi
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000ff');
 do $$ begin
