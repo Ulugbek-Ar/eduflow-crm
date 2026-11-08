@@ -253,7 +253,61 @@ select cron.schedule('eduflow-avtomatik-eslatma', '0 4 * * *', $$
 $$);
 ```
 
-- [ ] Ilovada *Sozlamalar → SMS → Avtomatik eslatma*: yoqing, "necha kunda bir marta" (3–30) va tilni tanlang.
-      Server har kuni to'lov muddati o'tgan o'quvchilarga (oxirgi N kunda SMS olmaganlariga, ko'pi bilan 300 ta)
-      shablon bo'yicha xabar yuboradi; onlayn to'lov ulangan bo'lsa — havola bilan. Qarz ilova bilan aynan bir xil
-      hisoblanadi (`supabase/functions/_shared/generated/engine.js`).
+- [ ] Ilovada *Sozlamalar → Avtomatik eslatma*: yoqing, "necha kunda bir marta" (3–30) va tilni tanlang.
+      Server har kuni to'lov muddati o'tgan o'quvchilarga (oxirgi N kunda eslatma olmaganlariga — xodim WhatsApp,
+      Telegram yoki SMS orqali yuborganlari ham hisobga olinadi; ko'pi bilan 300 ta) shablon bo'yicha xabar yuboradi;
+      onlayn to'lov ulangan bo'lsa — havola bilan. Ota-onasi Telegram botga ulangan o'quvchilarga eslatma **bot orqali**
+      (bepul) boradi, qolganlarga — SMS. Qarz ilova bilan aynan bir xil hisoblanadi
+      (`supabase/functions/_shared/generated/engine.js`).
+- [ ] Ko'p markaz bo'lsa: funksiya bir chaqiruvda ~100 soniya ishlaydi, ulgurmagan markazlar keyingi chaqiruvda
+      davom etadi. Jadvalni `'0 4,5,6 * * *'` qilish xavfsiz — eslatma olganlar qayta olmaydi.
+
+## 8. Ota-onalar uchun Telegram bot (ixtiyoriy, faqat bulutli rejim)
+
+Har markaz **o'z botini** ulaydi (bot nomi va rasmi markazniki). Ota-ona botda farzandini ulaydi va:
+
+- dars qoldirilganda ("Kelmadi" belgilansa) va to'lov qabul qilinganda (kassada, Payme yoki Click orqali) xabar oladi;
+- tugmalar bilan qarz (onlayn to'lov havolasi bilan), oxirgi 30 kun davomati va dars jadvalini so'raydi;
+- tilni o'zi tanlaydi (o'zbekcha / ruscha), `/stop` bilan xabarlarni to'xtatadi.
+
+Ulash: o'quvchi kartasidagi **"Ulash havolasi"** (`t.me/<bot>?start=<kod>`, kod HMAC bilan imzolangan — boshqa
+o'quvchining kodini to'qib bo'lmaydi) yoki ota-ona botga **o'z telefon raqamini** yuboradi (Telegram kontakt tugmasi;
+boshqaning kontakti qabul qilinmaydi) — raqam o'quvchi kartasidagi bilan bir xil bo'lsa ulanadi. Bot tokeni faqat
+serverda (`integration_secrets`), Telegram so'rovlari `X-Telegram-Bot-Api-Secret-Token` sarlavhasi bilan tekshiriladi.
+
+- [ ] Migratsiya: `supabase db push` (`20261108000002_telegram.sql` — `telegram_links`, `notification_outbox`,
+      davomat va to'lov triggerlari).
+- [ ] Funksiyalar (webhook JWT'siz — Telegram o'z sarlavhasi bilan keladi):
+
+```bash
+supabase functions deploy telegram --no-verify-jwt
+```
+
+```bash
+supabase functions deploy integrations
+```
+
+- [ ] Telegram'da [@BotFather](https://t.me/BotFather) → `/newbot` → nom va username (oxiri `_bot`). Bergan tokenni
+      ilovada *Sozlamalar → Telegram bot* ga kiriting → "Botni ulash". Server tokenni `getMe` bilan tekshiradi va
+      webhook'ni o'rnatadi (`…/functions/v1/telegram?org=<markaz id>`).
+- [ ] Xabarlar navbati — **har 5 daqiqada** (`pg_cron`, `pg_net` §7 dagidek yoqilgan; `CRON_SECRET` o'sha):
+
+```sql
+select cron.schedule('eduflow-bot-xabarlari', '*/5 * * * *', $$
+  select net.http_post(
+    url := 'https://<loyiha>.supabase.co/functions/v1/cron',
+    headers := '{"Content-Type": "application/json", "x-cron-secret": "<uzun-tasodifiy-satr>"}'::jsonb,
+    body := '{"task": "outbox"}'::jsonb
+  );
+$$);
+```
+
+- [ ] Tekshiruv: o'z telefoningizni biror o'quvchi kartasiga yozing, botga `/start` yuborib raqamingizni ulashing →
+      "✅ Ulandi". Davomatda shu o'quvchiga "Kelmadi" belgilang — 2–7 daqiqada xabar keladi (2 daqiqa — xato
+      belgini tuzatishga vaqt; tuzatilsa xabar yuborilmaydi). Kassada to'lov kiriting — "✅ To'lov qabul qilindi".
+- [ ] *Sozlamalar → Telegram bot → Ota-onaga xabarlar*: kerak bo'lmagan turini o'chirish mumkin. Botni o'chirsangiz
+      ulangan ota-onalar saqlanadi — shu botni qayta ulasangiz, xabarlar davom etadi.
+
+Cheklovlar (halol): xabar bir necha daqiqa kechikadi (navbat har 5 daqiqada); ota-ona botni bloklasa, bog'lanish
+o'chiriladi (u `/start` bilan qayta ulanadi); 3 kundan eski yuborilmagan xabarlar yuborilmaydi; Telegram'ning
+umumiy cheklovi — bot sekundiga ~30 ta xabar.

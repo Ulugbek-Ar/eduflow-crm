@@ -3053,6 +3053,42 @@ a.btn {
   white-space: nowrap;
 }
 
+/* Telegram bot: BotFather qadamlari, ota-ona qanday ulanadi */
+.steps-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text-secondary);
+  list-style: disc;
+}
+
+ol.steps-list {
+  list-style: decimal;
+}
+
+/* Integratsiya bloklaridagi kichik sarlavhalar bir xil o'lchamda */
+.integration > h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* O'quvchi kartasi: ota-ona Telegram'i */
+.parent-bot {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.parent-bot .detail-subtitle {
+  margin-bottom: 0;
+}
+
+.parent-bot-status {
+  margin: 0;
+  font-weight: 600;
+}
+
 .check-field {
   display: flex;
   align-items: flex-start;

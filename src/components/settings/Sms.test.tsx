@@ -62,9 +62,10 @@ describe('SMS (Eskiz) — bulutli rejim', () => {
     expect(storedSettings().smsSender).toBe('4546')
     expect(JSON.stringify(localStorage)).not.toContain('togri-parol')
 
-    // Avtomatik eslatma: yoqish, 3 kundan kam bo'lmaydi, til
-    const auto = await within(card).findByRole('region', { name: 'Avtomatik eslatma' })
-    await user.click(within(auto).getByRole('checkbox', { name: /Har kuni ertalab qarzdorlarga SMS yuborish/ }))
+    // Avtomatik eslatma (alohida karta): yoqish, 3 kundan kam bo'lmaydi, til; kanal — faqat SMS
+    const auto = await screen.findByRole('region', { name: 'Avtomatik eslatma' })
+    expect(await within(auto).findByText('SMS orqali (Telegram bot ulanmagan)')).toBeTruthy()
+    await user.click(within(auto).getByRole('checkbox', { name: /Har kuni ertalab qarzdorlarga eslatma yuborish/ }))
     await user.clear(within(auto).getByLabelText('Bir o\'quvchiga necha kunda bir marta'))
     await user.type(within(auto).getByLabelText('Bir o\'quvchiga necha kunda bir marta'), '1')
     await user.selectOptions(within(auto).getByLabelText('Xabar tili'), 'ru')

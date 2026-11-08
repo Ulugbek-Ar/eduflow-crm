@@ -72,3 +72,13 @@ export async function recentSms(limit = 20): Promise<SmsLogEntry[] | null> {
     return null
   }
 }
+
+// Ota-onalar boti: o'quvchiga nechta ota-ona chati bog'langan (RLS: o'z markazi, customers.view)
+export async function telegramLinkCount(customerId: string): Promise<number | null> {
+  try {
+    const { count, error } = await getClient().from('telegram_links').select('chat_id', { count: 'exact', head: true }).eq('customer_id', customerId)
+    return error ? null : (count ?? 0)
+  } catch {
+    return null
+  }
+}

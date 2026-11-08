@@ -11,7 +11,6 @@ import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { PasswordInput } from '../ui/PasswordInput'
-import { Select } from '../ui/Select'
 
 export const ESKIZ_TEST_TEXT = 'This is test from Eskiz'
 
@@ -31,7 +30,7 @@ function errorText(result: { error: string; field?: string }): string {
   return tr('Server bilan bog\'lanib bo\'lmadi. "integrations" Edge Function deploy qilinganini tekshiring (DEPLOY.md).')
 }
 
-// Bulutli rejim: SMS (Eskiz) — ulash, avtomatik eslatma jadvali, sinov SMS va jurnal
+// Bulutli rejim: SMS (Eskiz) — ulash, sinov SMS va jurnal (avtomatik eslatma — AutoRemindSettings)
 export function SmsSettings() {
   const { settings, updateSettings, formatDate } = useDashboard()
   const toast = useToast()
@@ -41,7 +40,6 @@ export function SmsSettings() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [account, setAccount] = useState({ email: '', password: '', from: settings.smsSender || '4546' })
-  const [auto, setAuto] = useState({ enabled: settings.autoReminders, everyDays: String(settings.autoRemindEveryDays), lang: settings.autoRemindLang })
   const [test, setTest] = useState({ phone: '', text: ESKIZ_TEST_TEXT })
 
   const load = async () => {
@@ -78,7 +76,7 @@ export function SmsSettings() {
   const disconnect = async () => {
     const ok = await confirm({
       title: tr('SMS\'ni o\'chirish'),
-      message: tr('Eskiz login va paroli serverdan o\'chiriladi, avtomatik eslatma to\'xtaydi. SMS jurnali saqlanadi.'),
+      message: tr('Eskiz login va paroli serverdan o\'chiriladi, SMS eslatmalar to\'xtaydi. SMS jurnali saqlanadi.'),
       confirmLabel: tr('O\'chirish'),
     })
     if (!ok) return
@@ -86,17 +84,10 @@ export function SmsSettings() {
     const result = await callIntegrations({ action: 'remove', provider: 'eskiz' })
     setBusy(false)
     if (!result.ok) return setError(errorText(result))
-    updateSettings({ ...settings, smsSender: '', autoReminders: false }, { silent: true })
+    // Bot ulangan bo'lsa avtomatik eslatma bot orqali davom etadi
+    updateSettings({ ...settings, smsSender: '', autoReminders: settings.telegramBot ? settings.autoReminders : false }, { silent: true })
     toast.success(tr('O\'chirildi'))
     void load()
-  }
-
-  const saveAuto = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const everyDays = Math.min(30, Math.max(3, Math.round(Number(auto.everyDays) || 7)))
-    updateSettings({ ...settings, autoReminders: auto.enabled, autoRemindEveryDays: everyDays, autoRemindLang: auto.lang }, { silent: true })
-    setAuto((a) => ({ ...a, everyDays: String(everyDays) }))
-    toast.success(auto.enabled ? tr('Avtomatik eslatma yoqildi') : tr('Avtomatik eslatma o\'chirildi'))
   }
 
   const sendTest = async (e: FormEvent<HTMLFormElement>) => {
@@ -146,37 +137,6 @@ export function SmsSettings() {
 
       {configured && (
         <>
-          <section className="integration" aria-label={tr('Avtomatik eslatma')}>
-            <h3>{tr('Avtomatik eslatma')}</h3>
-            <form className="form" onSubmit={saveAuto} noValidate>
-              <label className="check-field">
-                <input type="checkbox" checked={auto.enabled} onChange={(e) => setAuto({ ...auto, enabled: e.target.checked })} />
-                <span>
-                  {tr('Har kuni ertalab qarzdorlarga SMS yuborish')}
-                  <small className="muted cell-block">{tr('To\'lov muddati o\'tgan o\'quvchilarga shablon bo\'yicha; onlayn to\'lov ulangan bo\'lsa — havola bilan')}</small>
-                </span>
-              </label>
-              <div className="form-row">
-                <Input
-                  label={tr('Bir o\'quvchiga necha kunda bir marta')}
-                  type="number"
-                  min={3}
-                  max={30}
-                  inputMode="numeric"
-                  value={auto.everyDays}
-                  hint={tr('3–30 kun; qo\'lda yuborilgan SMS ham hisobga olinadi')}
-                  onChange={(e) => setAuto({ ...auto, everyDays: e.target.value })}
-                />
-                <Select label={tr('Xabar tili')} value={auto.lang} onChange={(e) => setAuto({ ...auto, lang: e.target.value === 'ru' ? 'ru' : 'uz' })} options={[{ value: 'uz', label: 'O\'zbekcha' }, { value: 'ru', label: 'Русский' }]} />
-              </div>
-              <div className="toolbar">
-                <Button type="submit" icon="check">
-                  {tr('Saqlash')}
-                </Button>
-              </div>
-            </form>
-          </section>
-
           <section className="integration" aria-label={tr('Sinov SMS')}>
             <h3>{tr('Sinov SMS')}</h3>
             <form className="form" onSubmit={sendTest} noValidate>

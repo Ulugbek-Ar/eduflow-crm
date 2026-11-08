@@ -21,7 +21,8 @@ async function copy(text: string): Promise<boolean> {
   }
 }
 
-// To'lov eslatmasi: Sozlamalardagi shablon (o'zbek yoki rus) bo'yicha tayyor matn. Amallar: nusxa, Telegram, SMS, qo'ng'iroq.
+// To'lov eslatmasi: Sozlamalardagi shablon (o'zbek yoki rus) bo'yicha tayyor matn. Amallar: nusxa, Telegram, SMS, qo'ng'iroq;
+// bulutda — server orqali SMS (Eskiz) va ota-onalar boti.
 // Birinchi amal bajarilganda "Eslatildi" jurnalga yoziladi (qarzdorlar ro'yxatida "Oxirgi eslatma: N kun oldin")
 export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: () => void }) {
   const { settings, money, logReminders } = useDashboard()
@@ -30,6 +31,8 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
   const linksAvailable = cloud && onlinePaymentsEnabled(settings)
   // SMS (bulut, Eskiz ulangan): server yuboradi va jurnalga o'zi yozadi
   const smsAvailable = cloud && Boolean(settings.smsSender)
+  // Ota-onalar boti (bulut, bot ulangan): botga ulangan ota-onalarga bepul xabar
+  const botAvailable = cloud && Boolean(settings.telegramBot)
   const [smsBusy, setSmsBusy] = useState(false)
   const [withLink, setWithLink] = useState(true)
   const [lang, setLang] = useState<Lang>(getLang())
@@ -67,6 +70,28 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
     const sent = Number(result.data.sent ?? 0)
     const failed = Number(result.data.failed ?? 0)
     setStatus(failed > 0 ? tr('{0} ta SMS yuborildi, {1} tasi yuborilmadi (SMS jurnalida sababi)', { 0: sent, 1: failed }) : tr('{0} ta SMS yuborildi', { 0: sent }))
+    if (sent > 0) {
+      setLogged(true)
+      void refreshAudit()
+    }
+  }
+
+  const sendBot = async () => {
+    setSmsBusy(true)
+    setStatus('')
+    const { callIntegrations } = await import('../../data/integrations')
+    const result = await callIntegrations({ action: 'telegram.send', messages: rows.map((r) => ({ customerId: r.customer.id, text: messageFor(r) })) })
+    setSmsBusy(false)
+    if (!result.ok) {
+      return setStatus(result.error === 'not-configured' ? tr('Telegram bot ulanmagan: Sozlamalar → Telegram bot') : tr('Bot orqali yuborilmadi. Internetni tekshiring.'))
+    }
+    const sent = Number(result.data.sent ?? 0)
+    const parts = [tr('Bot orqali yuborildi: {0}', { 0: sent })]
+    const notLinked = Number(result.data.notLinked ?? 0)
+    const failed = Number(result.data.failed ?? 0)
+    if (notLinked > 0) parts.push(tr('ota-onasi botga ulanmagan: {0}', { 0: notLinked }))
+    if (failed > 0) parts.push(tr('yetkazilmadi: {0}', { 0: failed }))
+    setStatus(parts.join(' · '))
     if (sent > 0) {
       setLogged(true)
       void refreshAudit()
@@ -124,6 +149,11 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
           {smsAvailable && (
             <Button variant="ghost" icon="mail" className="reminder-wide" disabled={smsBusy} onClick={() => void sendSms()}>
               {smsBusy ? tr('Yuborilmoqda…') : rows.length > 1 ? tr('SMS yuborish ({0})', { 0: rows.length }) : tr('SMS yuborish (≈{0} ta)', { 0: smsSegments(text) })}
+            </Button>
+          )}
+          {botAvailable && (
+            <Button variant="ghost" icon="bell" className="reminder-wide" disabled={smsBusy} onClick={() => void sendBot()}>
+              {smsBusy ? tr('Yuborilmoqda…') : rows.length > 1 ? tr('Bot orqali ota-onalarga ({0})', { 0: rows.length }) : tr('Bot orqali ota-onaga')}
             </Button>
           )}
           {single && (

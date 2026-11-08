@@ -154,7 +154,10 @@ export function isSettings(value: unknown): value is Settings {
     typeof value.smsSender === 'string' &&
     typeof value.autoReminders === 'boolean' &&
     isWholeNumber(value.autoRemindEveryDays, 3, 30) &&
-    (value.autoRemindLang === 'uz' || value.autoRemindLang === 'ru')
+    (value.autoRemindLang === 'uz' || value.autoRemindLang === 'ru') &&
+    typeof value.telegramBot === 'string' &&
+    typeof value.botAbsenceAlerts === 'boolean' &&
+    typeof value.botPaymentAlerts === 'boolean'
   )
 }
 
@@ -300,6 +303,10 @@ export function sanitizeSettings(value: unknown): Settings {
     autoReminders: raw.autoReminders === true,
     autoRemindEveryDays: isWholeNumber(raw.autoRemindEveryDays, 3, 30) ? raw.autoRemindEveryDays : DEFAULT_SETTINGS.autoRemindEveryDays,
     autoRemindLang: raw.autoRemindLang === 'ru' ? 'ru' : 'uz',
+    // v1.2: ota-onalar boti (Telegram username: 5–32 belgi)
+    telegramBot: typeof raw.telegramBot === 'string' && /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(raw.telegramBot) ? raw.telegramBot : '',
+    botAbsenceAlerts: raw.botAbsenceAlerts !== false,
+    botPaymentAlerts: raw.botPaymentAlerts !== false,
   }
 }
 

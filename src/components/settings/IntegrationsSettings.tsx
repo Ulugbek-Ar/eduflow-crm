@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast'
 import { tr } from '../../i18n'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { CopyField } from '../ui/CopyField'
 import { Input } from '../ui/Input'
 import { PasswordInput } from '../ui/PasswordInput'
 
@@ -28,27 +29,6 @@ const ERRORS: Record<string, string> = {
 
 const serverError = (result: { error: string; field?: string }) =>
   (result.field && FIELD_ERRORS[result.field]) || ERRORS[result.error] || tr('Server bilan bog\'lanib bo\'lmadi. "integrations" Edge Function deploy qilinganini tekshiring (DEPLOY.md).')
-
-function CopyField({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <div className="copy-field">
-      <Input label={label} value={value} readOnly onFocus={(e) => e.target.select()} />
-      <Button
-        variant="ghost"
-        icon={copied ? 'check' : 'copy'}
-        onClick={() => {
-          navigator.clipboard
-            ?.writeText(value)
-            .then(() => setCopied(true))
-            .catch(() => setCopied(false))
-        }}
-      >
-        {copied ? tr('Nusxa olindi') : tr('Nusxa')}
-      </Button>
-    </div>
-  )
-}
 
 function ProviderBlock({ title, status, children }: { title: string; status: ProviderStatus | undefined; children: ReactNode }) {
   return (

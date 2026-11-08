@@ -449,7 +449,10 @@ var DEFAULT_SETTINGS = {
 	smsSender: "",
 	autoReminders: false,
 	autoRemindEveryDays: 7,
-	autoRemindLang: "uz"
+	autoRemindLang: "uz",
+	telegramBot: "",
+	botAbsenceAlerts: true,
+	botPaymentAlerts: true
 };
 COURSES[0], COURSES[1], COURSES[2], COURSES[3], COURSES[4], COURSES[5];
 // src/utils/guards.ts
@@ -508,7 +511,10 @@ function sanitizeSettings(value) {
 		smsSender: typeof raw.smsSender === "string" && /^[\w.-]{2,11}$/.test(raw.smsSender) ? raw.smsSender : "",
 		autoReminders: raw.autoReminders === true,
 		autoRemindEveryDays: isWholeNumber(raw.autoRemindEveryDays, 3, 30) ? raw.autoRemindEveryDays : DEFAULT_SETTINGS.autoRemindEveryDays,
-		autoRemindLang: raw.autoRemindLang === "ru" ? "ru" : "uz"
+		autoRemindLang: raw.autoRemindLang === "ru" ? "ru" : "uz",
+		telegramBot: typeof raw.telegramBot === "string" && /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(raw.telegramBot) ? raw.telegramBot : "",
+		botAbsenceAlerts: raw.botAbsenceAlerts !== false,
+		botPaymentAlerts: raw.botPaymentAlerts !== false
 	};
 }
 // src/utils/phone.ts

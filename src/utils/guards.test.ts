@@ -24,6 +24,8 @@ describe('v1.2 maydonlari: SMS va avtomatik eslatma', () => {
   it('jo\'natuvchi nomi, 3–30 kun va til; noto\'g\'risi — standart', () => {
     expect(sanitizeSettings({ smsSender: 'BilimPlus', autoReminders: true, autoRemindEveryDays: 5, autoRemindLang: 'ru' })).toMatchObject({ smsSender: 'BilimPlus', autoReminders: true, autoRemindEveryDays: 5, autoRemindLang: 'ru' })
     expect(sanitizeSettings({ smsSender: 'juda uzun nom bilan', autoReminders: 'ha', autoRemindEveryDays: 1, autoRemindLang: 'en' })).toMatchObject({ smsSender: '', autoReminders: false, autoRemindEveryDays: 7, autoRemindLang: 'uz' })
+    expect(sanitizeSettings({ telegramBot: 'BilimPlus_bot', botAbsenceAlerts: false })).toMatchObject({ telegramBot: 'BilimPlus_bot', botAbsenceAlerts: false, botPaymentAlerts: true })
+    expect(sanitizeSettings({ telegramBot: '@yomon bot', botPaymentAlerts: 'yo\'q' })).toMatchObject({ telegramBot: '', botAbsenceAlerts: true, botPaymentAlerts: true })
     expect(isSettings(sanitizeSettings({}))).toBe(true)
   })
 })

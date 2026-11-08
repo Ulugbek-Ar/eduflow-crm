@@ -44,6 +44,9 @@ export const DEFAULT_SETTINGS: Settings = {
   autoReminders: false,
   autoRemindEveryDays: 7,
   autoRemindLang: 'uz',
+  telegramBot: '',
+  botAbsenceAlerts: true,
+  botPaymentAlerts: true,
 }
 
 // [nom, turi, davomiyligi (oy), oylik narx, holati]

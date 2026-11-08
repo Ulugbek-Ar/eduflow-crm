@@ -27,6 +27,8 @@ import { SecuritySettings } from './SecuritySettings'
 // Faqat bulutli rejimda yuklanadi (Supabase mijozi lokal rejimda kerak emas)
 const IntegrationsSettings = lazy(() => import('./IntegrationsSettings').then((m) => ({ default: m.IntegrationsSettings })))
 const SmsSettings = lazy(() => import('./SmsSettings').then((m) => ({ default: m.SmsSettings })))
+const TelegramSettings = lazy(() => import('./TelegramSettings').then((m) => ({ default: m.TelegramSettings })))
+const AutoRemindSettings = lazy(() => import('./AutoRemindSettings').then((m) => ({ default: m.AutoRemindSettings })))
 
 const CURRENCIES: Record<Currency, string> = {
   UZS: tr('O\'zbek so\'mi (UZS)'),
@@ -55,6 +57,8 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: P
   { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
   { id: 'integrations', label: tr('Integratsiyalar'), icon: 'card', permission: 'settings.manage' },
   { id: 'sms', label: tr('SMS'), icon: 'mail', permission: 'settings.manage' },
+  { id: 'telegram', label: tr('Telegram bot'), icon: 'bell', permission: 'settings.manage' },
+  { id: 'auto-reminders', label: tr('Avtomatik eslatma'), icon: 'clock', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
   { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
@@ -279,7 +283,7 @@ export function SettingsPanel() {
         )}
 
         {canManage && (
-          <SettingsCard id="sms" title={tr('SMS (Eskiz)')} description={tr('Qarzdorlarga SMS eslatma — eslatma oynasidan yoki har kuni avtomatik')}>
+          <SettingsCard id="sms" title={tr('SMS (Eskiz)')} description={tr('Qarzdorlarga SMS eslatma — eslatma oynasidan yoki avtomatik')}>
             {cloudOrgId ? (
               <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
                 <SmsSettings />
@@ -288,6 +292,32 @@ export function SettingsPanel() {
               <p className="notice notice-info">
                 {tr('SMS bulutli rejimda ishlaydi: Eskiz login va paroli serverda saqlanadi, avtomatik eslatmani server har kuni yuboradi. Ulash tartibi — DEPLOY.md.')}
               </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="telegram" title={tr('Telegram bot (ota-onalar uchun)')} description={tr('Ota-ona dars qoldirilganda va to\'lov qabul qilinganda xabar oladi, qarz va jadvalni botdan so\'raydi')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <TelegramSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('Telegram bot bulutli rejimda ishlaydi: markaz o\'z botini ulaydi, bot tokeni serverda saqlanadi, xabarlarni server yuboradi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="auto-reminders" title={tr('Avtomatik eslatma')} description={tr('Har kuni ertalab qarzdorlarga — Telegram bot yoki SMS orqali')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <AutoRemindSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">{tr('Avtomatik eslatma bulutli rejimda ishlaydi: server har kuni ertalab qarzdorlarga Telegram bot yoki SMS orqali yuboradi.')}</p>
             )}
           </SettingsCard>
         )}

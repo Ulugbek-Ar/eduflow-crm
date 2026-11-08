@@ -78,4 +78,8 @@ export interface Settings {
   autoReminders: boolean
   autoRemindEveryDays: number
   autoRemindLang: 'uz' | 'ru'
+  // v1.2 (bulut): ota-onalar boti — @username ('' — ulanmagan; token faqat serverda) va bot yuboradigan xabarlar
+  telegramBot: string
+  botAbsenceAlerts: boolean
+  botPaymentAlerts: boolean
 }
