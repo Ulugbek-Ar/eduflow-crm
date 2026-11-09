@@ -311,3 +311,31 @@ $$);
 Cheklovlar (halol): xabar bir necha daqiqa kechikadi (navbat har 5 daqiqada); ota-ona botni bloklasa, bog'lanish
 o'chiriladi (u `/start` bilan qayta ulanadi); 3 kundan eski yuborilmagan xabarlar yuborilmaydi; Telegram'ning
 umumiy cheklovi — bot sekundiga ~30 ta xabar.
+
+## 9. Filiallar (bir nechta manzil)
+
+Markaz bir nechta manzilda ishlasa: *Sozlamalar → Filiallar*. Guruh, o'quvchi va to'lovlar filialga biriktiriladi,
+Header'dagi tanlov bilan butun ilova (ro'yxatlar, kassa balansi, hisobotlar, jadval, davomat) bitta filial bo'yicha
+ko'rinadi; *Tahlil* bo'limida filiallar taqqoslanadi. Xodimni bitta filialga cheklash mumkin (*Boshqaruv → xodim →
+Filial*) — u faqat shu filial guruhlari, o'quvchilari (shu filialniki yoki shu filial guruhida o'qiydigan) va
+to'lovlarini ko'radi va yozadi. Lokal rejimda ham ishlaydi; tarif: Standart — 1 ta filial, Pro va sinov — cheksiz.
+
+- [ ] Bulutda — migratsiya: `supabase db push` (`20261108000003_branches.sql`: `branches` jadvali, `branch_id`
+      ustunlari, filialga cheklangan xodim uchun RLS, savatcha va import funksiyalari, `set_staff_branch`).
+      **Ilovaning yangi versiyasidan oldin** qo'llang: filial qo'shilmaguncha eski baza bilan ham ishlaydi, lekin
+      filial yaratish uchun jadval kerak.
+- [ ] Xodim qo'shish funksiyasi yangilanadi (filial bilan taklif qilish):
+
+```bash
+supabase functions deploy staff
+```
+
+- [ ] Birinchi filial qo'shilganda "Mavjud guruhlar, mijozlar va to'lovlarni shu filialga biriktirish" belgisi
+      (standart — yoqilgan) hozirgi ma'lumotni shu filialga o'tkazadi. Keyingi filiallar bo'sh boshlanadi.
+- [ ] Tekshiruv: ikkinchi filial qo'shing, menejerni shu filialga cheklang, uning nomidan kiring — Header'da filial
+      nomi turadi, boshqa filial o'quvchilari va to'lovlari ko'rinmaydi.
+
+Qoidalar (halol): filialga cheklangan administrator filial qo'sha olmaydi, butun markaz amallar jurnalini ko'rmaydi
+va JSON zaxirani import qila olmaydi; markazda kamida bitta filialsiz faol administrator qoladi (server va ilova
+himoyasi). Filialsiz to'lovlar (masalan, umumiy xarajat) faqat butun markazni ko'radigan xodimga ko'rinadi.
+Mijoz to'lovining filiali avtomatik: o'qish guruhining, bo'lmasa o'quvchining filiali (Payme/Click ham shunday).

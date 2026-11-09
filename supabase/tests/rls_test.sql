@@ -374,6 +374,120 @@ begin
   if not exists (select 1 from public.notification_outbox where payload ->> 'transaction_id' = 't10') then raise exception 'FAIL: to''langan bo''lgach navbatga tushmadi'; end if;
 end $$;
 
+-- 7e) v1.2: filiallar. Filialga cheklangan xodim faqat o'z filiali guruhlari, o'quvchilari va to'lovlarini ko'radi va yozadi
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000e4', 'filial-menejer@a.uz'),
+  ('00000000-0000-0000-0000-0000000000e5', 'filial-admin@a.uz');
+insert into public.profiles (id, organization_id, full_name, role) values
+  ('00000000-0000-0000-0000-0000000000e4', current_setting('test.org_a')::uuid, 'Kamola Ergasheva', 'manager'),
+  ('00000000-0000-0000-0000-0000000000e5', current_setting('test.org_a')::uuid, 'Jasur Tursunov', 'admin');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+insert into public.branches (organization_id, id, name, address) values
+  (public.current_org_id(), 'f1', 'Chilonzor filiali', 'Chilonzor 9'),
+  (public.current_org_id(), 'f2', 'Yunusobod filiali', 'Yunusobod 4');
+update public.groups set branch_id = 'f1' where id = 'g1';
+update public.groups set branch_id = 'f2' where id = 'g2';
+update public.customers set branch_id = 'f1' where id = 'c1';
+insert into public.customers (organization_id, id, name, phone, course, status, source, branch_id) values (public.current_org_id(), 'c5', 'Yunusobod lidi', '', '', 'new', 'website', 'f2');
+-- Filialsiz kirim (Payme, eski ilova): o'qish guruhining filiali avtomatik yoziladi
+insert into public.transactions (organization_id, id, type, amount, method, category, customer_id, enrollment_id, date) values (public.current_org_id(), 't11', 'income', 400000, 'cash', 'course_fee', 'c2', 'e2', now());
+insert into public.transactions (organization_id, id, type, amount, method, category, date, branch_id) values (public.current_org_id(), 't12', 'expense', 2000000, 'cash', 'rent', now(), 'f1');
+insert into public.transactions (organization_id, id, type, amount, method, category, date) values (public.current_org_id(), 't13', 'expense', 900000, 'transfer', 'utilities', now());
+select public.set_staff_branch('00000000-0000-0000-0000-0000000000e4', 'f2');
+select public.set_staff_branch('00000000-0000-0000-0000-0000000000e5', 'f2');
+do $$ begin
+  if (select branch_id from public.transactions where id = 't11') is distinct from 'f2' then raise exception 'FAIL: kirimga filial avtomatik yozilmadi'; end if;
+  if not exists (select 1 from public.audit_log where action = 'branch.create' and summary = 'Yunusobod filiali') then raise exception 'FAIL: filial jurnalda yo''q'; end if;
+  -- Oxirgi filialsiz administrator filialga cheklanmaydi
+  begin
+    perform public.set_staff_branch('00000000-0000-0000-0000-00000000000a', 'f1');
+    raise exception 'FAIL: oxirgi filialsiz administrator filialga cheklandi';
+  exception when insufficient_privilege then null; end;
+  -- Xodim biriktirilgan filial o'chirilmaydi
+  begin
+    delete from public.branches where id = 'f2';
+    raise exception 'FAIL: xodim biriktirilgan filial o''chirildi';
+  exception when foreign_key_violation then null; end;
+end $$;
+reset role;
+
+-- Filialga cheklangan menejer (Yunusobod)
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e4');
+do $$ begin
+  if (select string_agg(id, ',' order by id) from public.branches) is distinct from 'f2' then raise exception 'FAIL: filialli xodim boshqa filialni ko''rdi'; end if;
+  if (select string_agg(id, ',' order by id) from public.groups) is distinct from 'g2' then raise exception 'FAIL: filialli xodim boshqa filial guruhini ko''rdi'; end if;
+  -- c2 — filialsiz, lekin shu filial guruhida o'qiydi; c5 — shu filial lidi; c1 — boshqa filial
+  if (select string_agg(id, ',' order by id) from public.customers where deleted_at is null) is distinct from 'c2,c5' then
+    raise exception 'FAIL: filialli xodim mijozlari: %', (select string_agg(id, ',' order by id) from public.customers);
+  end if;
+  if (select string_agg(id, ',' order by id) from public.transactions) is distinct from 't11' then
+    raise exception 'FAIL: filialli xodim to''lovlari: %', (select string_agg(id, ',' order by id) from public.transactions);
+  end if;
+  if exists (select 1 from public.enrollments where group_id <> 'g2') then raise exception 'FAIL: boshqa filial o''qishlari ko''rindi'; end if;
+  if exists (select 1 from public.attendance where group_id = 'g1') then raise exception 'FAIL: boshqa filial davomati ko''rindi'; end if;
+  if exists (select 1 from public.telegram_links) then raise exception 'FAIL: boshqa filial o''quvchisining bot bog''lanishi ko''rindi'; end if;
+  if exists (select 1 from public.sms_log) then raise exception 'FAIL: boshqa filial SMS jurnali ko''rindi'; end if;
+  -- Yozish: faqat o'z filialiga
+  insert into public.customers (organization_id, id, name, phone, course, status, source, branch_id) values (public.current_org_id(), 'c6', 'Yangi lid', '', '', 'new', 'telegram', 'f2');
+  begin
+    insert into public.customers (organization_id, id, name, phone, course, status, source, branch_id) values (public.current_org_id(), 'c7', 'X', '', '', 'new', 'telegram', 'f1');
+    raise exception 'FAIL: boshqa filialga mijoz yozildi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.customers (organization_id, id, name, phone, course, status, source) values (public.current_org_id(), 'c8', 'X', '', '', 'new', 'telegram');
+    raise exception 'FAIL: filialsiz mijoz yozildi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.transactions (organization_id, id, type, amount, method, category, date, branch_id) values (public.current_org_id(), 't14', 'income', 1000, 'cash', 'other_income', now(), 'f1');
+    raise exception 'FAIL: boshqa filialga kirim yozildi';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.attendance (organization_id, id, group_id, customer_id, date, status) values (public.current_org_id(), 'd9', 'g1', 'c1', current_date, 'present');
+    raise exception 'FAIL: boshqa filial guruhiga davomat yozildi';
+  exception when insufficient_privilege then null; end;
+  -- Ko'rinmaydigan yozuv: savatchaga o'tmaydi, o'zgarmaydi; cheklovni o'zi olib tashlay olmaydi
+  if public.trash_move('customers', array['c1']) <> 0 then raise exception 'FAIL: boshqa filial mijozi savatchaga o''tdi'; end if;
+  update public.groups set name = 'Hack' where id = 'g1';
+  begin
+    perform public.set_staff_branch('00000000-0000-0000-0000-0000000000e4', null);
+    raise exception 'FAIL: menejer filial cheklovini olib tashladi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+
+-- Filialga cheklangan administrator: filial qo'sha olmaydi, butun markaz jurnali va zaxirasi yopiq
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e5');
+do $$ begin
+  if exists (select 1 from public.audit_log) then raise exception 'FAIL: filialli administrator butun markaz jurnalini ko''rdi'; end if;
+  if (select string_agg(id, ',' order by id) from public.transactions) is distinct from 't11' then raise exception 'FAIL: filialli administrator boshqa filial to''lovini ko''rdi'; end if;
+  begin
+    insert into public.branches (organization_id, id, name) values (public.current_org_id(), 'f3', 'Sergeli filiali');
+    raise exception 'FAIL: filialli administrator filial qo''shdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.import_backup('{"customers": [], "transactions": []}'::jsonb);
+    raise exception 'FAIL: filialli administrator butun markaz zaxirasini import qildi';
+  exception when insufficient_privilege then null; end;
+  -- Direktorni (filialsiz) bloklay olmaydi; o'z filiali menejerini o'zgartira oladi
+  begin
+    perform public.update_staff('00000000-0000-0000-0000-00000000000a', null, 'blocked');
+    raise exception 'FAIL: filialli administrator direktorni blokladi';
+  exception when insufficient_privilege then null; end;
+  perform public.update_staff('00000000-0000-0000-0000-0000000000e4', null, null, null, 'Filial menejeri');
+end $$;
+reset role;
+
+-- Filialsiz administrator: hammasini ko'radi, boshqa filial ma'lumoti o'zgarmagan
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  if (select name from public.groups where id = 'g1') <> 'IELTS — kechki' then raise exception 'FAIL: boshqa filial guruhi o''zgardi'; end if;
+  if (select deleted_at from public.customers where id = 'c1') is not null then raise exception 'FAIL: boshqa filial mijozi savatchaga tushdi'; end if;
+  if not exists (select 1 from public.customers where id = 'c6' and branch_id = 'f2') then raise exception 'FAIL: filial menejeri qo''shgan mijoz ko''rinmadi'; end if;
+  if (select count(*) from public.transactions where id in ('t11', 't12', 't13')) <> 3 then raise exception 'FAIL: filialsiz administrator barcha to''lovlarni ko''rmadi'; end if;
+  if (select count(*) from public.branches) <> 2 then raise exception 'FAIL: administrator filiallarni ko''rmadi'; end if;
+end $$;
+reset role;
+
 -- B markazi A ning provayder tranzaksiyalarini ko'rmaydi
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
 do $$ begin
@@ -381,6 +495,8 @@ do $$ begin
   if exists (select 1 from public.transactions where provider is not null) then raise exception 'FAIL: B markazi A ning Payme kirimini ko''rdi'; end if;
   if exists (select 1 from public.sms_log) then raise exception 'FAIL: B markazi A ning SMS jurnalini ko''rdi'; end if;
   if exists (select 1 from public.telegram_links) then raise exception 'FAIL: B markazi A ning Telegram bog''lanishini ko''rdi'; end if;
+  if exists (select 1 from public.branches) then raise exception 'FAIL: B markazi A ning filiallarini ko''rdi'; end if;
+  if exists (select 1 from public.customers where branch_id is not null) then raise exception 'FAIL: B markazi A ning filial mijozlarini ko''rdi'; end if;
 end $$;
 reset role;
 
@@ -394,7 +510,7 @@ reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
 do $$ begin
   if public.org_writable() then raise exception 'FAIL: muddati o''tgan markaz yoza oladi'; end if;
-  if (select count(*) from public.customers where deleted_at is null) <> 3 then raise exception 'FAIL: muddati o''tganda o''qish yopildi'; end if;
+  if (select count(*) from public.customers where deleted_at is null) <> 5 then raise exception 'FAIL: muddati o''tganda o''qish yopildi'; end if;
   begin
     insert into public.customers (organization_id, id, name, phone, course, status, source) values (public.current_org_id(), 'c4', 'Z', '', '', 'new', 'website');
     raise exception 'FAIL: muddati o''tgan markaz yozdi';

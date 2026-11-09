@@ -67,6 +67,7 @@ describe('Sozlash ustasi', () => {
       enrollments: [],
       attendance: [],
       lessonExceptions: [],
+      branches: [],
       customers: [makeCustomer({ name: 'Zaxiradagi Mijoz' })],
       transactions: [makeTransaction()],
       courses: [],

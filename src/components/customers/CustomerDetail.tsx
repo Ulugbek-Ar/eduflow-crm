@@ -22,7 +22,7 @@ import { Modal } from '../ui/Modal'
 const ParentBot = lazy(() => import('./ParentBot').then((m) => ({ default: m.ParentBot })))
 
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings, debtContext } = useDashboard()
+  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings, debtContext, getBranch } = useDashboard()
   const confirm = useConfirm()
   const can = useCan()
   const actor = useAuditActor()
@@ -136,6 +136,12 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           <dt>{tr('Qo\'shilgan')}</dt>
           <dd>{formatDate(customer.createdAt)}</dd>
         </div>
+        {customer.branchId && getBranch(customer.branchId) && (
+          <div>
+            <dt>{tr('Filial')}</dt>
+            <dd>{getBranch(customer.branchId)?.name}</dd>
+          </div>
+        )}
         <div>
           <dt>{tr('Yangilangan')}</dt>
           <dd>{customer.updatedAt ? formatDate(customer.updatedAt) : '—'}</dd>

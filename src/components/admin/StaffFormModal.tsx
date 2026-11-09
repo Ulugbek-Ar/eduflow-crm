@@ -2,16 +2,18 @@ import { tr } from '../../i18n'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES } from '../../auth/permissions'
+import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
 import { generateTempPassword } from '../../services/auth.service'
 import type { PublicUser, Role } from '../../types/user.types'
 import { cx } from '../../utils/cx'
+import { BranchSelect } from '../branches/BranchSelect'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { CopyField } from './TempPasswordModal'
 
-type Field = 'fullName' | 'title' | 'login' | 'password'
+type Field = 'fullName' | 'title' | 'login' | 'password' | 'branch'
 
 interface StaffFormModalProps {
   // Bo'lmasa — yangi xodim
@@ -41,7 +43,10 @@ export function RolePicker({ value, onChange, disabled }: { value: Role; onChang
 
 export function StaffFormModal({ editing, onClose, onCreated, preset }: StaffFormModalProps) {
   const { addUser, updateUser, user: me } = useAuth()
+  const { branches } = useDashboard()
   const [form, setForm] = useState(() => ({
+    // '' — butun markaz; filialga cheklangan administrator xodimni faqat o'z filialiga qo'shadi
+    branchId: editing ? (editing.branchId ?? '') : (me?.branchId ?? ''),
     fullName: editing?.fullName ?? preset?.fullName ?? '',
     title: editing?.title ?? preset?.title ?? '',
     login: editing?.login ?? '',
@@ -60,9 +65,18 @@ export function StaffFormModal({ editing, onClose, onCreated, preset }: StaffFor
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setBusy(true)
+    const branchChanged = branches.length > 0 && form.branchId !== (editing?.branchId ?? '')
     const result = editing
-      ? updateUser(editing.id, { fullName: form.fullName, title: form.title, role: form.role })
-      : await addUser({ fullName: form.fullName, title: form.title, login: form.login, role: form.role, password: form.password, teacherId: preset?.teacherId })
+      ? updateUser(editing.id, { fullName: form.fullName, title: form.title, role: form.role, ...(branchChanged ? { branchId: form.branchId } : {}) })
+      : await addUser({
+          fullName: form.fullName,
+          title: form.title,
+          login: form.login,
+          role: form.role,
+          password: form.password,
+          teacherId: preset?.teacherId,
+          ...(form.branchId ? { branchId: form.branchId } : {}),
+        })
     setBusy(false)
     if (!result.ok) {
       const field = result.field ?? 'fullName'
@@ -133,6 +147,15 @@ export function StaffFormModal({ editing, onClose, onCreated, preset }: StaffFor
               />
             </div>
           </div>
+        )}
+        {!self && (
+          <BranchSelect
+            value={form.branchId}
+            noneLabel={tr('Barcha filiallar')}
+            error={errors.branch}
+            hint={form.branchId ? tr('Xodim faqat shu filial guruhlari, o\'quvchilari va to\'lovlarini ko\'radi') : tr('Xodim butun markazni ko\'radi')}
+            onChange={(v) => update('branchId', v)}
+          />
         )}
         {!preset && <RolePicker value={form.role} onChange={(role) => update('role', role)} disabled={self} />}
         {preset && <p className="notice notice-info">{tr('Rol: O\'qituvchi — faqat o\'z guruhlari, dars jadvali va davomatini ko\'radi. Tarif xodimlar limitiga kirmaydi.')}</p>}

@@ -660,6 +660,51 @@ body.scroll-locked {
   gap: 10px;
 }
 
+/* Filial tanlovi (Header): sarlavha yonida ixcham "tabletka" */
+.branch-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.branch-switch:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.branch-switch select {
+  min-width: 0;
+  max-width: 180px;
+  padding: 4px 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.branch-switch select:focus {
+  outline: none;
+}
+
+.branch-switch.is-fixed .branch-switch-name {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .header-icons {
   display: flex;
   gap: 8px;
@@ -3073,6 +3118,37 @@ ol.steps-list {
   font-size: 1rem;
 }
 
+/* Sozlamalar → Filiallar */
+.branch-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.branch-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.branch-list li:first-child {
+  border-top: 0;
+}
+
+.branch-list li > div:first-child {
+  min-width: 0;
+}
+
+.branch-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
 /* O'quvchi kartasi: ota-ona Telegram'i */
 .parent-bot {
   display: grid;
@@ -3488,6 +3564,16 @@ ol.steps-list {
     font-size: 1.1rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .branch-switch {
+    max-width: 150px;
+    min-height: 28px;
+    padding: 0 8px;
+  }
+
+  .branch-switch select {
+    max-width: 112px;
   }
 
   .header-actions {

@@ -14,6 +14,7 @@ function rowToCustomer(r) {
 	if (opt(r.note)) c.note = String(r.note);
 	if (opt(r.updated_at)) c.updatedAt = String(r.updated_at);
 	if (opt(r.paid_at)) c.paidAt = String(r.paid_at);
+	if (opt(r.branch_id)) c.branchId = String(r.branch_id);
 	return c;
 }
 function rowToTransaction(r) {
@@ -36,6 +37,7 @@ function rowToTransaction(r) {
 	if (opt(r.period)) t.period = String(r.period);
 	if (r.provider === "payme" || r.provider === "click") t.provider = r.provider;
 	if (opt(r.provider_ref)) t.providerRef = String(r.provider_ref);
+	if (opt(r.branch_id)) t.branchId = String(r.branch_id);
 	return t;
 }
 function rowToCourse(r) {
@@ -70,6 +72,7 @@ function rowToGroup(r) {
 	if (opt(r.teacher_id)) g.teacherId = String(r.teacher_id);
 	if (opt(r.end_date)) g.endDate = day(r.end_date);
 	if (opt(r.updated_at)) g.updatedAt = String(r.updated_at);
+	if (opt(r.branch_id)) g.branchId = String(r.branch_id);
 	return g;
 }
 function rowToEnrollment(r) {

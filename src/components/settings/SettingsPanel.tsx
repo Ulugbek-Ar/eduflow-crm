@@ -18,6 +18,7 @@ import { Input, Textarea } from '../ui/Input'
 import { REMINDER_VARIABLES } from '../../utils/reminders'
 import { DEFAULT_REMINDER_RU, DEFAULT_REMINDER_UZ } from '../../constants/mockData'
 import { Select } from '../ui/Select'
+import { BranchSettings } from './BranchSettings'
 import { DataSettings } from './DataSettings'
 import { LogoUpload } from './LogoUpload'
 import { PlanSettings } from './PlanSettings'
@@ -55,6 +56,7 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: P
   { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
   { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
+  { id: 'branches', label: tr('Filiallar'), icon: 'layers', permission: 'settings.manage' },
   { id: 'integrations', label: tr('Integratsiyalar'), icon: 'card', permission: 'settings.manage' },
   { id: 'sms', label: tr('SMS'), icon: 'mail', permission: 'settings.manage' },
   { id: 'telegram', label: tr('Telegram bot'), icon: 'bell', permission: 'settings.manage' },
@@ -82,7 +84,7 @@ function SettingsCard({ id, title, description, children }: { id: string; title:
 }
 
 export function SettingsPanel() {
-  const { settings, updateSettings, setUnsavedChanges } = useDashboard()
+  const { settings, updateSettings, setUnsavedChanges, restrictedBranch } = useDashboard()
   const can = useCan()
   const canManage = can('settings.manage')
   const cloudOrgId = useCloudOrgId()
@@ -141,7 +143,8 @@ export function SettingsPanel() {
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label={tr('Sozlamalar bo\'limlari')}>
-        {SECTIONS.filter((section) => !section.permission || can(section.permission)).map((section) => (
+        {/* Filiallarni faqat butun markazni ko'radigan administrator boshqaradi */}
+        {SECTIONS.filter((section) => (!section.permission || can(section.permission)) && !(section.id === 'branches' && restrictedBranch)).map((section) => (
           <a key={section.id} href={`#${section.id}`}>
             <Icon name={section.icon} size={16} />
             {section.label}
@@ -266,6 +269,12 @@ export function SettingsPanel() {
             </div>
           </SettingsCard>
         </form>
+        )}
+
+        {canManage && !restrictedBranch && (
+          <SettingsCard id="branches" title={tr('Filiallar')} description={tr('Bir nechta manzil: guruh, o\'quvchi va to\'lovlar filial bo\'yicha, xodimni filialga cheklash')}>
+            <BranchSettings />
+          </SettingsCard>
         )}
 
         {canManage && (

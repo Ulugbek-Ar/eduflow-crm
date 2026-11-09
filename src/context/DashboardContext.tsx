@@ -38,6 +38,7 @@ import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '
 import type { DateRange, ModalState, ModalType, Section, SortState } from '../types/dashboard.types'
 import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
 import type { Course } from '../types/course.types'
+import type { Branch } from '../types/branch.types'
 import { cashBalance } from '../utils/analytics'
 import { courseInUse, normalizeCourseName } from '../utils/courses'
 import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
@@ -78,6 +79,9 @@ function withPaidAt(before: Customer, after: Customer, now: string): Customer {
 }
 
 export const SIDEBAR_COLLAPSED_KEY = 'apex:sidebar-collapsed'
+// Header'da tanlangan filial ('' — barcha filiallar); shu brauzerda eslab qolinadi
+export const BRANCH_FILTER_KEY = 'apex:branch-filter'
+const isString = (value: unknown): value is string => typeof value === 'string'
 
 const DENIED_MESSAGE = tr('Bu amal uchun ruxsatingiz yo\'q. Administratorga murojaat qiling.')
 
@@ -111,6 +115,9 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const actor = useAuditActor()
   const authMode = useContext(AuthContext)?.mode
   const authUser = useContext(AuthContext)?.user
+  const branchLimit = useContext(AuthContext)?.access.branchLimit ?? null
+  // Filialga biriktirilgan xodim bo'lsa filial o'chirilmaydi (bulutda ham tashqi kalit to'xtatadi)
+  const authContextUsers = useContext(AuthContext)?.users
   // AuthProvider bo'lmasa (alohida komponent testlari) — administrator kabi
   const role = authUser ? authUser.role : 'admin'
   // Demo markazda rol almashtirilsa ham tanishtiruv qayta chiqmaydi
@@ -131,6 +138,8 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const [enrollments, setEnrollments] = useState(initial.data.enrollments)
   const [attendance, setAttendance] = useState(initial.data.attendance)
   const [lessonExceptions, setLessonExceptions] = useState(initial.data.lessonExceptions)
+  const [branches, setBranches] = useState(initial.data.branches)
+  const [branchFilter, setBranchFilter] = usePersistentState(BRANCH_FILTER_KEY, '', isString)
   const [isDemo, setIsDemo] = useState(() => !cloud && isDemoMode())
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
@@ -192,6 +201,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     })
   })
 
+  useEffect(() => (cloud ? pushCloud('branches', branches) : onSaved(STORAGE_KEYS.branches, setItem(STORAGE_KEYS.branches, branches))), [branches, cloud])
   useEffect(() => (cloud ? pushCloud('customers', customers) : onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers))), [customers, cloud])
   useEffect(() => (cloud ? pushCloud('transactions', transactions) : onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions))), [transactions, cloud])
   useEffect(() => (cloud ? pushCloud('settings', settings) : onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings))), [settings, cloud])
@@ -267,13 +277,11 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       if (is(STORAGE_KEYS.enrollments)) setEnrollments(data.enrollments)
       if (is(STORAGE_KEYS.attendance)) setAttendance(data.attendance)
       if (is(STORAGE_KEYS.lessonExceptions)) setLessonExceptions(data.lessonExceptions)
+      if (is(STORAGE_KEYS.branches)) setBranches(data.branches)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [cloud])
-
-  // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi
-  const balance = cashBalance(transactions)
 
   const getCustomer = (id?: string) => (id ? customers.find((c) => c.id === id) : undefined)
 
@@ -352,19 +360,53 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const trashed = <K extends TrashKind>(kind: K, id: string, item: Extract<TrashEntry, { kind: K }>['item']) =>
     ({ kind, id, item, deletedAt: new Date().toISOString(), deletedBy: actor?.userName ?? '' }) as TrashEntry
 
+  // ===== Filial: filialga cheklangan xodim — faqat o'z filiali; qolganlar — Header'da tanlangani ('' — barchasi).
+  // Qoida bulutdagi RLS bilan bir xil (20261108000003_branches.sql): guruh va to'lov — shu filialniki; o'quvchi — shu
+  // filialniki yoki shu filial guruhida o'qiydi; o'qish, davomat — shu filial guruhlarida. Filialsiz yozuv — faqat "Barchasi"da
+  const restrictedBranch = authUser?.branchId || undefined
+  const branchScope = restrictedBranch ?? (branchFilter && branches.some((b) => b.id === branchFilter) ? branchFilter : '')
+  const scopedGroups = branchScope ? groups.filter((g) => g.branchId === branchScope) : groups
+  const scopedGroupIds = new Set(scopedGroups.map((g) => g.id))
+  const scopedEnrollments = branchScope ? enrollments.filter((e) => scopedGroupIds.has(e.groupId)) : enrollments
+  const branchStudents = new Set(scopedEnrollments.map((e) => e.customerId))
+  const scopedCustomers = branchScope ? customers.filter((c) => c.branchId === branchScope || branchStudents.has(c.id)) : customers
+  const scopedTransactions = branchScope ? transactions.filter((t) => t.branchId === branchScope) : transactions
+  // Yangi yozuv filiali: filiallar bo'lsa — cheklangan xodimniki yoki tanlangani (barchasi tanlangan bo'lsa — forma so'raydi)
+  const defaultBranch = branches.length > 0 ? restrictedBranch ?? (branchScope || undefined) : undefined
+  // Mijoz to'lovi — o'qish guruhining, bo'lmasa o'quvchining filiali; boshqa yozuv — formada tanlangani yoki standart
+  const transactionBranch = (t: Partial<TransactionInput>): string | undefined => {
+    if (branches.length === 0) return t.branchId
+    if (restrictedBranch) return restrictedBranch
+    const enrollment = t.enrollmentId ? enrollments.find((e) => e.id === t.enrollmentId) : undefined
+    const groupBranch = enrollment ? groups.find((g) => g.id === enrollment.groupId)?.branchId : undefined
+    const customerBranch = t.customerId ? customers.find((c) => c.id === t.customerId)?.branchId : undefined
+    return groupBranch || customerBranch || (t.branchId ?? defaultBranch)
+  }
+
+  // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi (tanlangan filial bo'yicha)
+  const balance = cashBalance(scopedTransactions)
+
   // ===== O'qituvchi faqat o'z guruhlarini ko'radi; o'quvchilarning telefoni yashirin; to'lovlar — ruxsat bo'yicha =====
   const ownTeacher = role === 'teacher' ? teacherForUser(authUser?.id, teachers) : undefined
   const scoped = role === 'teacher'
-  const visibleGroups = scoped ? groups.filter((g) => ownTeacher !== undefined && g.teacherId === ownTeacher.id) : groups
+  const visibleGroups = scoped ? scopedGroups.filter((g) => ownTeacher !== undefined && g.teacherId === ownTeacher.id) : scopedGroups
   const visibleGroupIds = new Set(visibleGroups.map((g) => g.id))
   // Savatchadagi (o'chirilgan) mijozning o'qishlari ko'rinmaydi — tiklansa qaytadi
   const liveCustomerIds = new Set(customers.map((c) => c.id))
-  const visibleEnrollments = enrollments.filter((e) => liveCustomerIds.has(e.customerId) && (!scoped || visibleGroupIds.has(e.groupId)))
+  const visibleEnrollments = scopedEnrollments.filter((e) => liveCustomerIds.has(e.customerId) && (!scoped || visibleGroupIds.has(e.groupId)))
   const studentIds = new Set(visibleEnrollments.map((e) => e.customerId))
   const visibleCustomers = scoped
     ? customers.filter((c) => studentIds.has(c.id)).map((c): Customer => ({ id: c.id, name: c.name, phone: '', course: c.course, status: c.status, source: c.source, createdAt: c.createdAt }))
-    : customers
-  const visibleTransactions = can('payments.view') ? transactions : []
+    : scopedCustomers
+  const visibleTransactions = can('payments.view') ? scopedTransactions : []
+  const groupScoped = scoped || Boolean(branchScope)
+
+  // Filial ishlatilganmi (guruh, o'quvchi, to'lov yoki xodim biriktirilgan) — bo'lsa o'chirilmaydi, arxivlanadi
+  const branchInUse = (id: string) =>
+    groups.some((g) => g.branchId === id) ||
+    customers.some((c) => c.branchId === id) ||
+    transactions.some((t) => t.branchId === id) ||
+    (authContextUsers ?? []).some((u) => u.branchId === id)
 
   const edu = createEduActions({
     customers,
@@ -383,6 +425,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     setLessonExceptions,
     role,
     ownTeacherId: ownTeacher?.id,
+    defaultBranch,
     actorName: actor?.userName ?? '',
     can,
     allowed: (permission) => allowed(permission),
@@ -402,6 +445,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     setEnrollments(data.enrollments)
     setAttendance(data.attendance)
     setLessonExceptions(data.lessonExceptions)
+    setBranches(data.branches)
     setSearch('')
     setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
@@ -415,13 +459,84 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     teachers: scoped ? (ownTeacher ? [ownTeacher] : []) : teachers,
     groups: visibleGroups,
     enrollments: visibleEnrollments,
-    attendance: scoped ? attendance.filter((r) => visibleGroupIds.has(r.groupId)) : attendance,
-    lessonExceptions: scoped ? lessonExceptions.filter((e) => visibleGroupIds.has(e.groupId)) : lessonExceptions,
+    attendance: groupScoped ? attendance.filter((r) => visibleGroupIds.has(r.groupId)) : attendance,
+    lessonExceptions: groupScoped ? lessonExceptions.filter((e) => visibleGroupIds.has(e.groupId)) : lessonExceptions,
     ownTeacher,
+    branches: restrictedBranch ? branches.filter((b) => b.id === restrictedBranch) : branches,
+    branchFilter: branchScope,
+    restrictedBranch,
+    setBranchFilter: (id) => {
+      if (!restrictedBranch) setBranchFilter(id)
+    },
+    getBranch: (id) => (id ? branches.find((b) => b.id === id) : undefined),
+    addBranch: (input, options) => {
+      if (!allowed('settings.manage')) return null
+      if (restrictedBranch) {
+        toast.error(DENIED_MESSAGE)
+        return null
+      }
+      const active = branches.filter((b) => b.status === 'active').length
+      if (branchLimit !== null && active >= branchLimit) {
+        toast.error(tr('Tarifingizda {0} ta filial. Ko\'proq filial uchun Pro tarifga o\'ting.', { 0: branchLimit }))
+        return null
+      }
+      const name = input.name.trim().replace(/\s+/g, ' ')
+      if (branches.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
+        toast.error(tr('"{0}" nomli filial bor', { 0: name }))
+        return null
+      }
+      const branch: Branch = { name, address: input.address.trim(), phone: input.phone.trim(), status: input.status, id: createId('b'), createdAt: new Date().toISOString() }
+      setBranches((list) => [...list, branch])
+      // Birinchi filial: mavjud guruhlar, o'quvchilar va to'lovlar shu filialga biriktiriladi
+      if (options?.assignExisting) {
+        const assign = <T extends { branchId?: string }>(list: T[]) => list.map((item) => (item.branchId ? item : { ...item, branchId: branch.id }))
+        setGroups(assign)
+        setCustomers(assign)
+        setTransactions(assign)
+      }
+      audit('branch.create', branch.name, branch.id)
+      toast.success(tr('"{0}" filiali qo\'shildi', { 0: branch.name }))
+      return branch.id
+    },
+    updateBranch: (id, patch) => {
+      if (!allowed('settings.manage') || restrictedBranch) return
+      const before = branches.find((b) => b.id === id)
+      if (!before) return
+      const name = patch.name === undefined ? before.name : patch.name.trim().replace(/\s+/g, ' ')
+      if (branches.some((b) => b.id !== id && b.name.toLowerCase() === name.toLowerCase())) {
+        toast.error(tr('"{0}" nomli filial bor', { 0: name }))
+        return
+      }
+      if (patch.status === 'active' && before.status === 'archived' && branchLimit !== null && branches.filter((b) => b.status === 'active').length >= branchLimit) {
+        toast.error(tr('Tarifingizda {0} ta filial. Ko\'proq filial uchun Pro tarifga o\'ting.', { 0: branchLimit }))
+        return
+      }
+      setBranches((list) =>
+        list.map((b) => (b.id === id ? { ...b, ...patch, name, address: (patch.address ?? b.address).trim(), phone: (patch.phone ?? b.phone).trim(), updatedAt: new Date().toISOString() } : b)),
+      )
+      const archived = patch.status === 'archived' && before.status !== 'archived'
+      audit(archived ? 'branch.archive' : 'branch.update', name, id)
+      toast.success(archived ? tr('"{0}" arxivlandi', { 0: name }) : tr('"{0}" saqlandi', { 0: name }))
+    },
+    removeBranch: (id) => {
+      if (!allowed('settings.manage') || restrictedBranch) return
+      const branch = branches.find((b) => b.id === id)
+      if (!branch) return
+      if (branchInUse(id)) {
+        setBranches((list) => list.map((b) => (b.id === id ? { ...b, status: 'archived', updatedAt: new Date().toISOString() } : b)))
+        audit('branch.archive', branch.name, id)
+        toast.info(tr('"{0}" filialida guruh, o\'quvchi yoki to\'lovlar bor — o\'chirish o\'rniga arxivlandi', { 0: branch.name }))
+        return
+      }
+      setBranches((list) => list.filter((b) => b.id !== id))
+      if (branchFilter === id) setBranchFilter('')
+      audit('branch.delete', branch.name, id)
+      toast.success(tr('"{0}" filiali o\'chirildi', { 0: branch.name }))
+    },
     ...edu,
     getGroup: (id) => (id ? groups.find((g) => g.id === id) : undefined),
     getTeacher: (id) => (id ? teachers.find((t) => t.id === id) : undefined),
-    exportData: () => ({ customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions }),
+    exportData: () => ({ customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions, branches }),
     debtContext: { groups: visibleGroups, enrollments: visibleEnrollments, settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay } },
     logReminders: (customerIds, channel) => {
       for (const id of customerIds) audit('reminder.sent', `${getCustomer(id)?.name ?? id} · ${channel}`, id)
@@ -437,7 +552,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
             .map((name) => ({ id: createId('k'), name, type: 'course', durationMonths: 0, monthlyPrice: 0, status: 'active', createdAt: now }))
         : []
       const available = new Set([...courses, ...newCourses].map((c) => c.name))
-      const created: Customer[] = plan.create.map((c) => ({ ...c, course: available.has(c.course) ? c.course : '', id: createId('c') }))
+      const created: Customer[] = plan.create.map((c) => ({ ...c, course: available.has(c.course) ? c.course : '', id: createId('c'), ...(defaultBranch ? { branchId: defaultBranch } : {}) }))
       const patches = new Map(plan.update.map((u) => [u.id, u.patch]))
       const previous = customers.filter((c) => patches.has(c.id))
       if (newCourses.length) setCourses((list) => [...list, ...newCourses])
@@ -516,7 +631,8 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     addCustomer: (data) => {
       if (!allowed('customers.edit')) return
       const createdAt = new Date().toISOString()
-      const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt, ...(data.status === 'paid' ? { paidAt: createdAt } : {}) }
+      const branchId = restrictedBranch ?? data.branchId ?? defaultBranch
+      const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt, ...(data.status === 'paid' ? { paidAt: createdAt } : {}), ...(branchId ? { branchId } : {}) }
       setCustomers((list) => [customer, ...list])
       audit('customer.create', customer.name, customer.id)
       toast.success(tr('"{0}" mijozlar bazasiga qo\'shildi', { 0: customer.name }))
@@ -551,7 +667,8 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
     },
     addTransaction: (data) => {
       if (!allowed(data.type === 'income' ? 'payments.create' : 'payments.manage')) return
-      const created = { ...withCustomerName(cleanTransaction(data)), id: createId('t') }
+      const branchId = transactionBranch(data)
+      const created = { ...withCustomerName(cleanTransaction(data)), id: createId('t'), ...(branchId !== undefined ? { branchId } : {}) }
       setTransactions((list) => [created, ...list])
       audit('payment.create', txSummary(created), created.id)
       const receipt = created.type === 'income' ? { action: { label: tr('Chek'), onClick: () => setModal({ type: 'receipt', payload: { id: created.id } }) } } : undefined
@@ -565,6 +682,12 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
         list.map((t) => {
           if (t.id !== id) return t
           const next = { ...t, ...clean, updatedAt }
+          // Mijoz, o'qish yoki filial o'zgarsa — filial qayta aniqlanadi (filialsiz qilinsa — '' bulutga null bo'lib boradi)
+          if (branches.length > 0 && ('customerId' in patch || 'enrollmentId' in patch || 'branchId' in patch)) {
+            const branchId = transactionBranch(next)
+            next.branchId = branchId ?? (t.branchId ? '' : undefined)
+            if (next.branchId === undefined) delete next.branchId
+          }
           // To'langan to'lov kelajakda bo'lolmaydi: kutilgan sana o'tmagan bo'lsa, bugungi kun yoziladi
           if (next.status === 'paid' && new Date(next.date).getTime() > Date.now()) next.date = updatedAt
           return next
@@ -663,6 +786,8 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       setEnrollments(empty.enrollments)
       setAttendance(empty.attendance)
       setLessonExceptions(empty.lessonExceptions)
+      setBranches(empty.branches)
+      setBranchFilter('')
       setSearch('')
       setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
       setTransactionFilters(EMPTY_TRANSACTION_FILTERS)

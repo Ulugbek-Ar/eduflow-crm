@@ -28,6 +28,7 @@ export interface Access {
   // Yozish taqiqlangan (faqat majburiy rejimda)
   readOnly: boolean
   staffLimit: number | null
+  branchLimit: number | null
 }
 
 const PLAN_IDS: Record<PlanId, true> = { trial: true, standard: true, pro: true }
@@ -66,7 +67,7 @@ export function planOf(id: PlanId) {
 }
 
 export function computeAccess(sub: Subscription, now = Date.now()): Access {
-  const staffLimit = planOf(sub.plan).staffLimit
+  const { staffLimit, branchLimit } = planOf(sub.plan)
   const end = sub.plan === 'trial' ? sub.trialEndsAt : sub.paidUntil
   const daysLeft = end ? Math.ceil((Date.parse(end) - now) / DAY) : null
   let state: AccessState
@@ -74,5 +75,5 @@ export function computeAccess(sub: Subscription, now = Date.now()): Access {
   else if (daysLeft !== null && daysLeft <= 0) state = 'expired'
   else if (daysLeft !== null && daysLeft <= WARN_DAYS) state = 'expiring'
   else state = sub.plan === 'trial' ? 'trial' : 'active'
-  return { state, daysLeft, readOnly: sub.enforced && (state === 'blocked' || state === 'expired'), staffLimit }
+  return { state, daysLeft, readOnly: sub.enforced && (state === 'blocked' || state === 'expired'), staffLimit, branchLimit }
 }

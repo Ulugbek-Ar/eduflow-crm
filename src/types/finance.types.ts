@@ -41,6 +41,9 @@ export interface Transaction {
   // v1.2: onlayn to'lov tizimi orqali avtomatik yozilgan kirim (Payme / Click) va uning tranzaksiya id'si
   provider?: PaymentProvider
   providerRef?: string
+  // v12: filial. Mijoz to'lovida — o'qish guruhining (bo'lmasa o'quvchining) filiali; xarajatda — tanlangan,
+  // '' yoki yo'q — umumiy (filialsiz, faqat butun markazni ko'radigan xodimga ko'rinadi)
+  branchId?: string
   date: string
   updatedAt?: string
 }

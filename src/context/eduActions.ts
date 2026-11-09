@@ -38,6 +38,8 @@ export interface EduDeps extends EduState {
   role: Role
   // O'qituvchi sifatida kirgan bo'lsa — uning o'qituvchi yozuvi id'si
   ownTeacherId?: string
+  // v12: yangi guruh filiali (filiallar bo'lsa — cheklangan xodimniki yoki Header'da tanlangani)
+  defaultBranch?: string
   actorName: string
   can: (permission: Permission) => boolean
   allowed: (permission: Permission) => boolean
@@ -97,7 +99,14 @@ export function createEduActions(d: EduDeps) {
     // ===== Guruhlar =====
     addGroup(input: GroupInput): Group | null {
       if (!d.allowed('groups.edit')) return null
-      const group: Group = clean({ ...input, name: input.name.trim().replace(/\s+/g, ' '), room: input.room.trim(), id: createId('g'), createdAt: nowIso() })
+      const group: Group = clean({
+        ...input,
+        name: input.name.trim().replace(/\s+/g, ' '),
+        room: input.room.trim(),
+        branchId: input.branchId || d.defaultBranch,
+        id: createId('g'),
+        createdAt: nowIso(),
+      })
       d.setGroups((list) => [...list, group])
       d.audit('group.create', group.name, group.id)
       d.toast.success(tr('"{0}" guruhi ochildi', { 0: group.name }))
@@ -154,6 +163,9 @@ export function createEduActions(d: EduDeps) {
         createdAt: nowIso(),
       })
       d.setEnrollments((list) => [...list, enrollment])
+      // Filialsiz o'quvchi — guruh filialiga biriktiriladi
+      const groupBranch = d.groups.find((g) => g.id === input.groupId)?.branchId
+      if (groupBranch && !customer.branchId) d.setCustomers((list) => list.map((c) => (c.id === customer.id ? { ...c, branchId: groupBranch } : c)))
       const converted = customer.status !== 'paid'
       if (converted) {
         const paidAt = nowIso()

@@ -13,6 +13,8 @@ export interface Plan {
   trialDays?: number
   // Xodimlar chegarasi (null — cheksiz)
   staffLimit: number | null
+  // Faol filiallar chegarasi (null — cheksiz)
+  branchLimit: number | null
   features: string[]
   highlighted?: boolean
 }
@@ -26,6 +28,7 @@ export const PLANS: Plan[] = [
     priceMonthly: 0,
     trialDays: TRIAL_DAYS,
     staffLimit: 3,
+    branchLimit: null,
     features: [
       tr('Barcha imkoniyatlar 14 kun'),
       tr('3 tagacha xodim'),
@@ -38,6 +41,7 @@ export const PLANS: Plan[] = [
     name: tr('Standart'),
     priceMonthly: 199_000,
     staffLimit: 5,
+    branchLimit: 1,
     highlighted: true,
     features: [
       tr('5 tagacha xodim va rollar'),
@@ -53,6 +57,7 @@ export const PLANS: Plan[] = [
     name: tr('Pro'),
     priceMonthly: 399_000,
     staffLimit: null,
+    branchLimit: null,
     features: [
       tr('Standart\'dagi hamma narsa'),
       tr('Cheksiz xodim'),
