@@ -368,7 +368,7 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 - **RLS testlari** oddiy PostgreSQL'da (`supabase/tests/run-local.sh`): bir markaz boshqasining ma'lumotini ko'rmaydi,
   rollar, savatcha, faqat o'qish rejimi; onlayn to'lov funksiyalari, SMS jurnali, bot bog'lanishlari va xabarlar navbati;
   filialga cheklangan xodim (ko'rish, yozish, savatcha, xodimlar, import).
-- **Edge Function'lar** Deno bilan tip tekshiruvidan o'tadi (`deno check supabase/functions/*/index.ts`).
+- **Edge Function'lar** Deno bilan tip tekshiruvidan o'tadi (`deno check --no-lock --node-modules-dir=none supabase/functions/*/index.ts`).
 - CI (`.github/workflows/ci.yml`) har push va PR'da hammasini bajaradi.
 
 **Lighthouse 13 (mobil, production build, v1.2.0):**

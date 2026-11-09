@@ -87,4 +87,6 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check --no-lock supabase/functions/*/index.ts
+      # Ildizdagi package.json sababli Deno npm paketlarini node_modules'dan qidiradi (bu job'da npm ci yo'q) —
+      # --node-modules-dir=none: paketlar Deno keshiga yuklanadi, Supabase'dagi kabi npm:...@versiya bo'yicha
+      - run: deno check --no-lock --node-modules-dir=none supabase/functions/*/index.ts
