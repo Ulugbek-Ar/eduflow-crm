@@ -1,6 +1,6 @@
 import { tr } from '../../i18n'
 import { useState } from 'react'
-import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
+import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, methodLabel, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
@@ -259,7 +259,7 @@ export function TransactionTable() {
                         {t.type === 'income' ? '+' : '−'}
                         {money(t.amount)}
                       </td>
-                      <td data-label={tr('To\'lov turi')}>{METHOD_LABELS[t.method]}</td>
+                      <td data-label={tr('To\'lov turi')}>{methodLabel(t)}</td>
                       <td data-label={tr('Status')}>
                         {canManage ? (
                         <select

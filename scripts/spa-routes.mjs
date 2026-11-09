@@ -10,15 +10,25 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-const APP_NAME = 'EduFlow CRM'
-
-// title — HTML yuklanib, React o'z sarlavhasini qo'yguncha ko'rinadi (va qidiruv natijasida)
+// Sarlavha: "<label> · <sayt nomi>". Sayt nomi kodga yozilmaydi — build qilingan index.html dagi <title> dan olinadi
+// (u brenddan: src/constants/brand.ts, VITE_BRAND_NAME). HTML yuklanib, React o'z sarlavhasini qo'yguncha ko'rinadi
 export const SPA_ROUTES = [
-  { path: 'app', title: `Kirish · ${APP_NAME}`, noindex: true },
-  { path: 'privacy', title: `Maxfiylik siyosati · ${APP_NAME}`, noindex: false },
-  { path: 'terms', title: `Foydalanish shartlari · ${APP_NAME}`, noindex: false },
-  { path: 'owner', title: `Sotuvchi paneli · ${APP_NAME}`, noindex: true },
+  { path: 'app', label: 'Kirish', noindex: true },
+  { path: 'privacy', label: 'Maxfiylik siyosati', noindex: false },
+  { path: 'terms', label: 'Foydalanish shartlari', noindex: false },
+  { path: 'owner', label: 'Sotuvchi paneli', noindex: true },
 ]
+
+const unescapeHtml = (value) => value.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&amp;', '&')
+
+// Build qilingan index.html dagi sayt nomi
+export function siteName(indexHtml) {
+  return unescapeHtml(/<title>([^<]*)<\/title>/.exec(indexHtml)?.[1]?.trim() ?? '')
+}
+
+export function routeTitle(route, name) {
+  return name ? `${route.label} · ${name}` : route.label
+}
 
 // Qidiruvga ochiq sahifalar (sitemap.xml)
 export const PUBLIC_PATHS = ['', 'privacy', 'terms']
@@ -73,11 +83,12 @@ export function writeSpaRoutes({ outDir, base = '/', siteUrl = '', pages = false
   const indexPath = join(outDir, 'index.html')
   if (!existsSync(indexPath)) throw new Error(`${indexPath} topilmadi — avval vite build`)
   const indexHtml = readFileSync(indexPath, 'utf8')
+  const name = siteName(indexHtml)
   const written = []
   for (const route of SPA_ROUTES) {
     mkdirSync(join(outDir, route.path), { recursive: true })
     const target = join(outDir, route.path, 'index.html')
-    writeFileSync(target, pageHtml(indexHtml, route, { base: normalizedBase, siteUrl, trailingSlash: pages }))
+    writeFileSync(target, pageHtml(indexHtml, { ...route, title: routeTitle(route, name) }, { base: normalizedBase, siteUrl, trailingSlash: pages }))
     written.push(target)
   }
   if (pages) {

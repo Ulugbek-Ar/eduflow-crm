@@ -130,7 +130,7 @@ describe('loadData', () => {
     const { data } = loadData()
     expect(data.customers).toEqual([])
     expect(data.transactions).toEqual([])
-    expect(data.settings).toMatchObject({ orgName: 'EduFlow Academy', logoText: 'EA' })
+    expect(data.settings).toMatchObject({ orgName: DEFAULT_SETTINGS.orgName, logoText: DEFAULT_SETTINGS.logoText })
   })
 })
 

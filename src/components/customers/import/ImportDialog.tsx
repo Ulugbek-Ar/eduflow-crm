@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
+import { EXPORT_FILE_PREFIX } from '../../../constants/app'
 import { FUNNEL_STAGES, Icon, SOURCE_LABELS, STATUS_LABELS } from '../../../constants/navigation'
 import { useDashboard } from '../../../context/useDashboard'
 import { useCan } from '../../../hooks/useAuth'
@@ -53,8 +54,8 @@ function initialMapping(rows: readonly string[][]): { header: boolean; mapping: 
 
 function downloadTemplate(format: 'csv' | 'xls', delimiter: ';' | ',') {
   const columns: ExportColumn<string[]>[] = TEMPLATE_HEADERS.map((header, i) => ({ header, value: (row) => row[i] ?? '', width: i === 0 ? 160 : 120 }))
-  if (format === 'csv') downloadFile('eduflow-import-shablon.csv', toCsv(templateRows(), columns, delimiter), 'text/csv;charset=utf-8')
-  else downloadFile('eduflow-import-shablon.xls', toSpreadsheetXml(templateRows(), columns, tr('Mijozlar')), 'application/vnd.ms-excel;charset=utf-8')
+  if (format === 'csv') downloadFile(`${EXPORT_FILE_PREFIX}-import-shablon.csv`, toCsv(templateRows(), columns, delimiter), 'text/csv;charset=utf-8')
+  else downloadFile(`${EXPORT_FILE_PREFIX}-import-shablon.xls`, toSpreadsheetXml(templateRows(), columns, tr('Mijozlar')), 'application/vnd.ms-excel;charset=utf-8')
 }
 
 // Mijozlarni Excel/CSV'dan import: fayl -> ustunlarni moslashtirish va oldindan ko'rish -> natija (bekor qilish bilan)
@@ -383,7 +384,7 @@ export function ImportDialog() {
           {receipt.courseIds.length > 0 && !undone && <p className="notice notice-info">{tr('{0} ta yangi kurs yaratildi — Kurslar bo\'limida narxini kiriting.', { 0: receipt.courseIds.length })}</p>}
           <div className="toolbar">
             {skippedReport && (
-              <Button variant="ghost" icon="download" onClick={() => downloadFile(`eduflow-import-xatolar-${dateStamp()}.csv`, skippedReport, 'text/csv;charset=utf-8')}>
+              <Button variant="ghost" icon="download" onClick={() => downloadFile(`${EXPORT_FILE_PREFIX}-import-xatolar-${dateStamp()}.csv`, skippedReport, 'text/csv;charset=utf-8')}>
                 {tr('O\'tkazilganlar va xatolar (CSV)')}
               </Button>
             )}

@@ -55,6 +55,13 @@ describe('scripts/spa-routes.mjs', () => {
     expect(read('robots.txt')).toContain('Sitemap: https://eduflow.uz/sitemap.xml')
   })
 
+  it('sarlavhadagi sayt nomi kodda emas — build qilingan index.html dan (boshqa brend ham)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'spa-'))
+    writeFileSync(join(dir, 'index.html'), INDEX.replace('<title>EduFlow CRM</title>', '<title>Bilim &amp; Ilm CRM</title>'))
+    execFileSync('node', [script, '--out', dir], { env: { PATH: process.env.PATH ?? '' }, stdio: 'pipe' })
+    expect(readFileSync(join(dir, 'app/index.html'), 'utf8')).toContain('<title>Kirish · Bilim &amp; Ilm CRM</title>')
+  })
+
   it('sayt manzili berilmasa: nisbiy canonical (base bilan), sitemap yozilmaydi', () => {
     const dir = mkdtempSync(join(tmpdir(), 'spa-'))
     writeFileSync(join(dir, 'index.html'), INDEX)

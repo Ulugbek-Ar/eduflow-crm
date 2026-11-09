@@ -1,9 +1,10 @@
 import { tr } from '../../i18n'
-import { useState } from 'react'
-import { FUNNEL_STAGES, METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
+import { lazy, Suspense, useState } from 'react'
+import { FUNNEL_STAGES, methodLabel, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
 import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuditActor, useCan } from '../../hooks/useAuth'
+import { useCloudOrgId } from '../../hooks/useCloudOrg'
 import { useConfirm } from '../../hooks/useConfirm'
 import { deleteCustomerMessage, getInitials } from '../../utils/customers'
 import { attendanceRate, rateLabel, recordsFor } from '../../utils/attendance'
@@ -17,11 +18,15 @@ import { PrintDocument } from '../print/PrintDocument'
 import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
+// Faqat bulutli rejimda va bot ulangan bo'lsa yuklanadi
+const ParentBot = lazy(() => import('./ParentBot').then((m) => ({ default: m.ParentBot })))
+
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings, debtContext } = useDashboard()
+  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings, debtContext, getBranch } = useDashboard()
   const confirm = useConfirm()
   const can = useCan()
   const actor = useAuditActor()
+  const cloudOrgId = useCloudOrgId()
   // Chop etish vaqti (bosilgan paytda) — kartada ko'rsatiladi
   const [printedAt, setPrintedAt] = useState<string | null>(null)
   const customer = getCustomer(customerId)
@@ -131,6 +136,12 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           <dt>{tr('Qo\'shilgan')}</dt>
           <dd>{formatDate(customer.createdAt)}</dd>
         </div>
+        {customer.branchId && getBranch(customer.branchId) && (
+          <div>
+            <dt>{tr('Filial')}</dt>
+            <dd>{getBranch(customer.branchId)?.name}</dd>
+          </div>
+        )}
         <div>
           <dt>{tr('Yangilangan')}</dt>
           <dd>{customer.updatedAt ? formatDate(customer.updatedAt) : '—'}</dd>
@@ -160,6 +171,12 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
           </div>
         )}
       </dl>
+
+      {cloudOrgId && settings.telegramBot && (can('payments.create') || can('customers.edit')) && (
+        <Suspense fallback={null}>
+          <ParentBot customerId={customer.id} name={customer.name} bot={settings.telegramBot} />
+        </Suspense>
+      )}
 
       {studentEnrollments.length > 0 && (
         <>
@@ -273,7 +290,7 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
               <div>
                 <strong>{t.note || tr('To\'lov')}</strong>
                 <small className="muted">
-                  {formatDate(t.date)} · {METHOD_LABELS[t.method]} · {TX_STATUS_LABELS[t.status]}
+                  {formatDate(t.date)} · {methodLabel(t)} · {TX_STATUS_LABELS[t.status]}
                 </small>
               </div>
               <span className={t.status !== 'paid' ? 'muted' : t.type === 'income' ? 'text-success' : 'text-danger'}>

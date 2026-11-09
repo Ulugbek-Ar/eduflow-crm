@@ -2,6 +2,7 @@ import { tr } from '../../i18n'
 import { useEffect, useRef } from 'react'
 import { APP_NAME } from '../../constants/app'
 import { Icon, NAV_ITEMS, sectionLabel } from '../../constants/navigation'
+import { BrandMark } from '../ui/BrandMark'
 import { canOpenSection } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
@@ -36,7 +37,7 @@ export function Sidebar() {
             ) : settings.logoText ? (
               <span className="logo-text">{settings.logoText}</span>
             ) : (
-              <Icon name="logo" size={20} />
+              <BrandMark />
             )}
           </span>
           <div className="sidebar-logo-text">

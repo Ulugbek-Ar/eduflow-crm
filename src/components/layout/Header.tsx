@@ -17,6 +17,7 @@ import { cx } from '../../utils/cx'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { Dropdown } from '../ui/Dropdown'
+import { BranchSwitch } from './BranchSwitch'
 import { NotificationBell } from './NotificationBell'
 import { ProfileMenu } from './ProfileMenu'
 import { SearchResults } from './SearchResults'
@@ -128,6 +129,7 @@ export function Header() {
     <header className={cx('header', searching && 'is-searching')}>
       <div className="header-title">
         <h1>{title}</h1>
+        <BranchSwitch />
         {isDemo && mode === 'main' && can('data.manage') && (
           <span className="demo-banner">
             <Badge tone="primary">{tr('Demo ma\'lumot')}</Badge>

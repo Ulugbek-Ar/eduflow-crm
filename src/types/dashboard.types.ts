@@ -68,4 +68,18 @@ export interface Settings {
   // v11: qarz eslatmasi shablonlari ({ism} {summa} {kurs} {guruh} {oy} {markaz} {telefon})
   reminderTemplateUz: string
   reminderTemplateRu: string
+  // v1.2 (bulut): onlayn to'lov havolalari uchun ochiq id'lar; '' — ulanmagan. Kalitlar faqat serverda
+  paymeMerchantId: string
+  clickServiceId: string
+  clickMerchantId: string
+  // v1.2 (bulut): SMS (Eskiz) jo'natuvchi nomi; '' — SMS ulanmagan. Login va parol faqat serverda
+  smsSender: string
+  // Kunlik avtomatik eslatma (SMS): yoqilganmi, bir o'quvchiga necha kunda bir marta, qaysi tilda
+  autoReminders: boolean
+  autoRemindEveryDays: number
+  autoRemindLang: 'uz' | 'ru'
+  // v1.2 (bulut): ota-onalar boti — @username ('' — ulanmagan; token faqat serverda) va bot yuboradigan xabarlar
+  telegramBot: string
+  botAbsenceAlerts: boolean
+  botPaymentAlerts: boolean
 }

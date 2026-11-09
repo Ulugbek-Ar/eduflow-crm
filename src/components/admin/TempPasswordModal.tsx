@@ -1,5 +1,6 @@
 import { tr } from '../../i18n'
 import { useId, useState } from 'react'
+import { BRAND } from '../../constants/app'
 import { useToast } from '../../hooks/useToast'
 import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -53,7 +54,7 @@ interface TempPasswordModalProps {
 export function TempPasswordModal({ title, fullName, login, password, onClose }: TempPasswordModalProps) {
   const toast = useToast()
   const [copied, setCopied] = useState(false)
-  const message = tr('{0}, EduFlow\'ga kirish uchun:\nLogin: {1}\nVaqtinchalik parol: {2}\nBirinchi kirishda o\'z parolingizni o\'rnatasiz.', { 0: fullName, 1: login, 2: password })
+  const message = tr('{0}, {3}\'ga kirish uchun:\nLogin: {1}\nVaqtinchalik parol: {2}\nBirinchi kirishda o\'z parolingizni o\'rnatasiz.', { 0: fullName, 1: login, 2: password, 3: BRAND.shortName })
 
   return (
     <Modal
