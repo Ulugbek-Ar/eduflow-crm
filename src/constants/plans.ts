@@ -48,6 +48,7 @@ export const PLANS: Plan[] = [
       tr('O\'qituvchilar xodim limitiga kirmaydi'),
       tr('Guruhlar, jadval, davomat va maosh'),
       tr('Chek, qarzdorlar, eslatmalar, hisobotlar'),
+      tr('1 ta filial'),
       tr('Amallar jurnali va savatcha'),
       tr('Telegram orqali yordam'),
     ],
@@ -61,7 +62,9 @@ export const PLANS: Plan[] = [
     features: [
       tr('Standart\'dagi hamma narsa'),
       tr('Cheksiz xodim'),
+      tr('Bir nechta filial va filiallar hisoboti'),
       tr('Bulutli saqlash — istalgan qurilmadan'),
+      tr('Payme/Click, SMS va ota-onalar boti'),
       tr('Excel\'dan ko\'chirishda yordam'),
       tr('Ustuvor yordam'),
     ],

@@ -72,6 +72,10 @@ const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'alert', title: tr('Qarzdorlar va eslatmalar'), text: tr('Qarz har bir guruh bo\'yicha o\'zi hisoblanadi. Qarzdorga tayyor matn — nusxa, Telegram yoki SMS.') },
   { icon: 'briefcase', title: tr('O\'qituvchi maoshi'), text: tr('Belgilangan summa, tushumdan foiz yoki o\'quvchi boshiga — oylik hisob, to\'lash va eksport.') },
   { icon: 'barChart', title: tr('Kassa va hisobotlar'), text: tr('Kirim, chiqim va balans; qaysi reklama o\'zini oqladi — CSV va Excel\'ga bir tugmada.') },
+  { icon: 'card', title: tr('Payme va Click'), text: tr('Ota-ona havola orqali to\'laydi — to\'lov kassaga o\'zi tushadi, qarz darhol yangilanadi. Bulutli rejimda.') },
+  { icon: 'mail', title: tr('SMS va avtomatik eslatma'), text: tr('Eskiz orqali qarzdorlarga SMS — bir tugmada yoki har kuni ertalab avtomatik, to\'lov havolasi bilan.') },
+  { icon: 'bell', title: tr('Ota-onalar boti'), text: tr('Telegram\'da: farzandi darsga kelmasa va to\'lov qabul qilinsa xabar; qarz, davomat va jadval — botda.') },
+  { icon: 'building', title: tr('Filiallar'), text: tr('Bir nechta manzil: har filial bo\'yicha guruh, kassa va hisobot; xodim faqat o\'z filialini ko\'radi.') },
   { icon: 'upload', title: tr('Excel\'dan import'), text: tr('Eski ro\'yxatni CSV yoki Excel\'dan ko\'chiring: ustunlar o\'zi moslashadi, takrorlar oldindan ko\'rinadi.') },
   { icon: 'shield', title: tr('Xodimlar va rollar'), text: tr('Administrator, menejer, kassir, o\'qituvchi, kuzatuvchi — har biri faqat o\'ziga kerakli narsani ko\'radi.') },
   { icon: 'activity', title: tr('Jurnal va savatcha'), text: tr('Kim qachon nima qilgani yozib boriladi. O\'chirilgan narsa 30 kun savatchada turadi.') },
@@ -96,6 +100,14 @@ const FAQ: Array<{ q: string; a: string }> = [
   {
     q: tr('Excel\'dagi eski ro\'yxatimni ko\'chirsa bo\'ladimi?'),
     a: tr('Ha. Mijozlar bo\'limidagi "Import" CSV yoki Excel faylni o\'qiydi: ustunlar o\'zi moslashadi, takror va xatoli qatorlar oldindan ko\'rinadi, xohlasangiz importni bekor qilasiz.'),
+  },
+  {
+    q: tr('Ota-onalar to\'lovni onlayn qila oladimi?'),
+    a: tr('Ha, bulutli rejimda: markaz Payme yoki Click kassasini ulaydi, ota-ona eslatmadagi havola orqali to\'laydi — to\'lov kassaga avtomatik kirim bo\'lib tushadi. Kassa shartnomasi markaz va to\'lov tizimi o\'rtasida tuziladi.'),
+  },
+  {
+    q: tr('Bir nechta filialim bor — mos keladimi?'),
+    a: tr('Ha. Har filial bo\'yicha guruhlar, o\'quvchilar, kassa va hisobot yuritiladi, filiallarni yonma-yon solishtirasiz; xodimni bitta filialga cheklash mumkin. Bir nechta filial — Pro tarifida.'),
   },
   {
     q: tr('O\'qituvchilar ham tizimga kiradimi?'),

@@ -1,13 +1,14 @@
 # EduFlow CRM — ishga tushirish (runbook)
 
 Bu hujjat — sotuvga chiqarishdan oldin **qo'lda** bajariladigan qadamlar. Har qadamdan keyin "Tekshirish" bandini
-bajaring: u o'tmasa, keyingi qadamga o'tmang. Taxminiy vaqt: 1–1,5 soat.
+bajaring: u o'tmasa, keyingi qadamga o'tmang. Taxminiy vaqt: 1–1,5 soat (ixtiyoriy §6–9 — onlayn to'lov, SMS,
+Telegram bot va filiallar — har biri yana 15–30 daqiqa).
 
 Uchta joy bor:
 
 | Joy | Vazifasi | Manzil (namuna) |
 | --- | --- | --- |
-| **Supabase** | Baza, kirish (Auth), RLS, `staff` funksiyasi | `https://<loyiha-id>.supabase.co` |
+| **Supabase** | Baza, kirish (Auth), RLS, Edge Function'lar (`staff`; ixtiyoriy — `payme`, `click`, `integrations`, `telegram`, `cron`) | `https://<loyiha-id>.supabase.co` |
 | **Vercel** | Asosiy sayt: landing + `/app` (bulutli rejim) | `https://eduflow.uz` |
 | **GitHub Pages** | Faqat namoyish (demo), ro'yxatdan o'tish yo'q | `https://ulugbek-ar.github.io/eduflow-crm/` |
 

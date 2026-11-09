@@ -2,6 +2,49 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-11-09 · ma'lumot sxemasi v12
+
+Pul va aloqa avtomatlashtirildi: onlayn to'lov kassaga o'zi tushadi, eslatmalar SMS va ota-onalar boti orqali (har kuni
+avtomatik ham), markaz bir nechta filialda ishlaydi.
+
+### Qo'shildi
+
+- **Payme va Click** (bulutli rejim): Merchant API (Payme JSON-RPC: CheckPerform/Create/Perform/Cancel/CheckTransaction/
+  GetStatement, 12 soatlik muddat, tiyin, xato kodlari; ixtiyoriy fiskal `detail` — MXIK) va Click SHOP API (Prepare/
+  Complete, MD5 imzo). Hisob — o'quvchi telefoni; to'lov kassaga "To'langan" kirim bo'lib yoziladi (guruh va oy bilan,
+  Toshkent vaqti), bekor qilinsa — kirim ham bekor; ilova har daqiqada yangi onlayn to'lovlarni olib keladi va xabar beradi.
+  Eslatma matniga o'quvchining shaxsiy to'lov havolasi (`{havola}`). Kalitlar faqat serverda (`integration_secrets`).
+- **SMS (Eskiz.uz)**: ulash (login tekshiriladi, token 30 kun, avtomatik yangilanadi), eslatma oynasidan bitta yoki ko'p
+  qarzdorga SMS (telefon serverda mijoz kartasidan), SMS jurnali (`sms_log`), sinov SMS, segmentlar soni.
+- **Ota-onalar uchun Telegram bot**: markaz o'z botini ulaydi (BotFather tokeni, webhook `X-Telegram-Bot-Api-Secret-Token`
+  bilan tekshiriladi). Ota-ona o'quvchi kartasidagi HMAC kodli havola yoki o'z telefon raqami (faqat o'z kontakti) bilan
+  ulanadi; "dars qoldirildi" va "to'lov qabul qilindi" xabarlari (bazadagi triggerlar → `notification_outbox` → har 5
+  daqiqada, xato belgini tuzatish uchun 2 daqiqa, bekor qilingan voqea yuborilmaydi); botda qarz (to'lov havolasi bilan),
+  oxirgi 30 kun davomati, jadval; o'zbek/rus; `/stop`. Eslatma oynasida "Bot orqali ota-onaga".
+- **Kunlik avtomatik eslatma** (`cron` Edge Function, pg_cron): qarzdorlarga ertalab — botga ulanganlarga bot orqali
+  (bepul, ota-ona tilida), qolganlarga SMS; bir o'quvchiga N kunda bir marta (xodim yuborgan eslatmalar ham hisobga
+  olinadi); qarz ilova bilan aynan bir xil hisoblanadi (`src/server/engine.ts` yig'masi, `npm run check:engine`).
+- **Filiallar**: Sozlamalar → Filiallar (qo'shish, tahrirlash, arxivlash; birinchi filialga mavjud ma'lumotni biriktirish);
+  Header'da filial tanlovi — ro'yxatlar, kassa balansi, hisobotlar, jadval va davomat shu filial bo'yicha; guruh, mijoz,
+  xarajat va xodim formalarida filial; mijoz to'lovining filiali o'qish guruhidan; xona ziddiyati filial ichida; Tahlil →
+  "Filiallar bo'yicha" (o'quvchi, guruh, kirim, xarajat, foyda). Xodimni bitta filialga cheklash — u faqat shu filial
+  ma'lumotini ko'radi va yozadi (bulutda RLS bilan).
+- Tariflar: Standart — 1 filial, Pro va sinov — cheksiz. Demo markaz ikki filialli (Pro).
+- `DEPLOY.md` §6–9: Payme/Click, Eskiz, Telegram bot, filiallar; pg_cron jadvallari.
+
+### O'zgardi
+
+- Avtomatik eslatma sozlamalari alohida kartaga ko'chdi (SMS va bot kanallari uchun umumiy).
+- Mijoz kartasida "Ota-ona Telegram'i" bo'limi (bot ulangan bo'lsa): ulash havolasi, botdan uzish.
+- `CopyField` umumiy UI komponenti.
+
+### Migratsiya (v11 → v12)
+
+- Lokal ma'lumot o'zgarmaydi (filialsiz ishlayveradi); zaxira formati — v12 (eski zaxiralar o'qiladi).
+- Supabase: `20261108000000_online_payments.sql`, `20261108000001_sms.sql`, `20261108000002_telegram.sql`,
+  `20261108000003_branches.sql` — `supabase db push`. Edge Function'lar: `payme`, `click`, `telegram`, `cron`
+  (`--no-verify-jwt`), `integrations`, `staff`. Ilova filiallar migratsiyasidan oldin ham ishlaydi (filial qo'shilmaguncha).
+
 ## [1.1.0] — 2026-11-07 · ma'lumot sxemasi v11
 
 O'quv jarayoni: guruhlar, dars jadvali, davomat, o'qituvchilar va maosh; qarz har bir o'qish bo'yicha; eslatmalar va import.

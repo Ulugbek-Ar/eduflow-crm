@@ -1,9 +1,11 @@
 # EduFlow CRM
 
-[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.1.0 · ma'lumot sxemasi v11 · [o'zgarishlar](CHANGELOG.md)
+[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.2.0 · ma'lumot sxemasi v12 · [o'zgarishlar](CHANGELOG.md)
 
 **O'quv markazlari uchun CRM.** Lidlar va mijozlar, guruhlar va dars jadvali, davomat, to'lovlar va kassa, qarzdorlar va
-to'lov eslatmalari, o'qituvchilar va maosh, Excel/CSV'dan import, hisobotlar, xodimlar va rollar — bitta brauzer ilovasida.
+to'lov eslatmalari, o'qituvchilar va maosh, Excel/CSV'dan import, hisobotlar, xodimlar va rollar, filiallar — bitta brauzer
+ilovasida. Bulutli rejimda: Payme va Click orqali onlayn to'lov (kassaga avtomatik), SMS (Eskiz) va ota-onalar uchun Telegram
+bot, har kuni avtomatik qarz eslatmasi.
 Interfeys o'zbek (lotin) va rus tillarida, telefonda ham qulay, yorug' va qorong'i mavzu bor.
 
 | Manzil | Nima |
@@ -52,6 +54,24 @@ Standart parol yo'q: birinchi ochilishda **sozlash ustasi** markaz nomi va admin
 - Formalar: telefon maskasi, takroriy raqamni ogohlantirish, tugallanmagan forma qoralama sifatida saqlanadi.
 - Internet uzilsa — ogohlantirish chizig'i; yangi versiya bo'lagi yuklanmasa — qayta urinish va tushunarli xabar.
 
+## Onlayn to'lov, SMS, ota-onalar boti va filiallar (v1.2)
+
+| Imkoniyat | Nima qiladi | Qayerda yoqiladi | Rejim |
+| --- | --- | --- | --- |
+| **Payme va Click** | Ota-ona havola orqali o'quvchi telefoni bilan to'laydi → kassaga avtomatik "To'langan" kirim (guruh va oy bilan), ilovada bir daqiqa ichida xabar; eslatma matniga shaxsiy to'lov havolasi qo'shiladi | Sozlamalar → Integratsiyalar | bulut |
+| **SMS (Eskiz.uz)** | Eslatma oynasidan bitta yoki ko'p qarzdorga SMS (telefon serverda mijoz kartasidan olinadi), SMS jurnali, sinov SMS | Sozlamalar → SMS | bulut |
+| **Ota-onalar boti (Telegram)** | Markazning o'z boti: ota-ona havola (HMAC kodli) yoki o'z telefon raqami bilan ulanadi; dars qoldirilganda va to'lov qabul qilinganda xabar; botdan qarz (to'lov havolasi bilan), oxirgi 30 kun davomati va jadval; o'zbek/rus | Sozlamalar → Telegram bot; o'quvchi kartasi → "Ulash havolasi" | bulut |
+| **Avtomatik eslatma** | Har kuni ertalab qarzdorlarga: botga ulangan ota-onaga bot orqali (bepul), qolganlarga SMS; bir o'quvchiga N kunda bir marta (xodim yuborganlari ham hisobga olinadi) | Sozlamalar → Avtomatik eslatma | bulut |
+| **Filiallar** | Bir nechta manzil: guruh, o'quvchi va to'lov filialga; Header'da filial tanlovi (ro'yxatlar, kassa, hisobotlar shu filial bo'yicha); xodimni filialga cheklash (bulutda RLS bilan); Tahlil → filiallar taqqoslanishi | Sozlamalar → Filiallar | lokal va bulut |
+
+Kalit va parollar faqat serverda (`integration_secrets` — ilova o'qiy olmaydi, faqat Edge Function'lar); ilovaga holat va
+oxirgi 4 belgi qaytadi. Qarz serverda ilova bilan aynan bir xil hisoblanadi (`src/server/engine.ts` →
+`supabase/functions/_shared/generated/engine.js`, `npm run check:engine` mosligini tekshiradi). Ulash — [DEPLOY.md](DEPLOY.md) §6–9.
+
+> **Halol eslatma:** Payme/Click, Eskiz va Telegram bilan ishlash ishlab chiqish muhitida soxta (mock) javoblar, Deno tip
+> tekshiruvi va lokal PostgreSQL'dagi RLS testlari bilan sinalgan — haqiqiy kassa, SMS hisobi va botga ulanib sinalmagan.
+> Birinchi ulanishda DEPLOY.md'dagi "Tekshiruv" bandlarini bajaring (Payme sandbox, Eskiz sinov matni, botga `/start`).
+
 ## Xodimlar, rollar va tariflar
 
 | Rol | Nima qila oladi |
@@ -70,11 +90,11 @@ Ruxsatlar jadvali bitta joyda — `src/auth/permissions.ts` (bulutda xuddi shu j
 Xodimga vaqtinchalik parol beriladi, birinchi kirishda o'zgartirish majburiy. **Amallar jurnali**: kim, qachon, nimani
 o'zgartirdi. Faol seanslar ro'yxati va "Boshqa qurilmalardan chiqarish".
 
-| Tarif | Narx (namuna) | Xodimlar |
-| --- | --- | --- |
-| Sinov | 14 kun bepul | 3 tagacha |
-| Standart | 199 000 so'm / oy | 5 tagacha |
-| Pro | 399 000 so'm / oy | cheksiz |
+| Tarif | Narx (namuna) | Xodimlar | Filiallar |
+| --- | --- | --- | --- |
+| Sinov | 14 kun bepul | 3 tagacha | cheksiz |
+| Standart | 199 000 so'm / oy | 5 tagacha | 1 ta |
+| Pro | 399 000 so'm / oy | cheksiz | cheksiz |
 
 Narxlar `src/constants/plans.ts` da — **sotuvdan oldin haqiqiy narxlarni yozing**. Lokal rejimda tarif faqat ma'lumot uchun;
 bulutli rejimda muddat tugasa yoki markaz to'xtatilsa ilova **faqat o'qish** rejimiga o'tadi (ma'lumot o'chmaydi).
@@ -183,6 +203,8 @@ davr tanlovi (Bugun / 7 kun / Shu oy / Shu yil) bilan sinxron.
 - Tashkilot: nom, logotip (rasm, 200 KB gacha; yo'q bo'lsa harfli logo), telefon, manzil
 - Mintaqa va ko'rinish: asosiy valyuta (UZS / USD), sana formati, CSV ajratgich, mavzu (yorug' / qorong'i / tizim)
 - Profil va xavfsizlik: to'liq ism, rol/lavozim, login va parolni almashtirish
+- Filiallar: qo'shish, tahrirlash, arxivlash (birinchi filialga mavjud ma'lumotni biriktirish taklifi)
+- Bulutda: Integratsiyalar (Payme, Click), SMS (Eskiz), Telegram bot, Avtomatik eslatma
 - Ma'lumotlar: JSON zaxira, zaxiradan tiklash, demo ma'lumot, tasdiqlash bilan **barcha ma'lumotni tozalash (Reset)**,
   taxminiy band joy (KB va ~5 MB ga nisbatan %)
 
@@ -332,18 +354,21 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 
 ## Sifat: testlar va Lighthouse
 
-- **Unit va komponent testlari** (Vitest + Testing Library): 505 ta test, 73 fayl — `npm run test`. Formulalar (qarz, maosh,
+- **Unit va komponent testlari** (Vitest + Testing Library): 563 ta test, 87 fayl — `npm run test`. Formulalar (qarz, maosh,
   davomat, jadval), migratsiya, CSV/XLSX parser (xlsx fixture test ichida yasaladi), ruxsatlar jadvali va SQL
-  `has_permission()` mosligi, tarjimalar to'liqligi.
+  `has_permission()` mosligi, tarjimalar to'liqligi; v1.2: Payme/Click protokoli (imzo, holatlar, xato kodlari), Eskiz
+  mijozi, bot buyruqlari va ulash kodi, xabarlar navbati, server qarz hisobi ilova bilan bir xilligi, filiallar.
 - **E2E** (Playwright, `e2e/`): landing, demo, ro'yxatdan o'tish → mijoz → to'lov → chek, xodim qo'shish; **guruh yaratish →
   o'quvchi qo'shish → davomat → to'lov → qarz yopiladi**; **o'qituvchi sifatida kirish → faqat o'z guruhlari va davomat**;
   **import: 10 qatorli CSV, 2 ta takror → 8 qo'shildi, 2 o'tkazib yuborildi**; GitHub Pages deep link'lari. Desktop (1440)
   va Pixel 7 (mobil) da, konsolda xato yo'qligi va gorizontal scroll yo'qligi tekshiriladi — `npm run e2e`.
 - **RLS testlari** oddiy PostgreSQL'da (`supabase/tests/run-local.sh`): bir markaz boshqasining ma'lumotini ko'rmaydi,
-  rollar, savatcha, faqat o'qish rejimi.
-- CI (`.github/workflows/ci.yml`) har push va PR'da uchalasini ham bajaradi.
+  rollar, savatcha, faqat o'qish rejimi; onlayn to'lov funksiyalari, SMS jurnali, bot bog'lanishlari va xabarlar navbati;
+  filialga cheklangan xodim (ko'rish, yozish, savatcha, xodimlar, import).
+- **Edge Function'lar** Deno bilan tip tekshiruvidan o'tadi (`deno check supabase/functions/*/index.ts`).
+- CI (`.github/workflows/ci.yml`) har push va PR'da hammasini bajaradi.
 
-**Lighthouse 13 (mobil, production build, v1.1.0):**
+**Lighthouse 13 (mobil, production build, v1.2.0):**
 
 | Sahifa | Performance | Accessibility | Best Practices | SEO |
 | --- | --- | --- | --- | --- |
@@ -351,8 +376,9 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 | `/app` | 100 | 100 | 100 | 100 |
 | `/privacy` | 100 | 100 | 100 | 100 |
 
-Boshlang'ich JS (gzip'siz): `index` ≈ 240 KB + `App` ≈ 206 KB; yangi bo'limlar (guruhlar, jadval, davomat, o'qituvchilar,
-import) alohida lazy bo'laklarda yuklanadi.
+Boshlang'ich JS (gzip'siz): `index` ≈ 240 KB + `App` ≈ 201 KB; bo'limlar (guruhlar, jadval, davomat, o'qituvchilar, import)
+va bulutli rejim sozlamalari (integratsiyalar, SMS, Telegram bot, ota-ona havolasi) alohida lazy bo'laklarda yuklanadi —
+lokal rejimda Supabase mijozi umuman yuklanmaydi.
 
 ## Ma'lumotlar qayerda saqlanadi
 
@@ -368,8 +394,9 @@ xuddi shu kalitlarni `eduflow-demo:` prefiksi ostida alohida saqlaydi):
 | --- | --- |
 | `apex:customers`, `apex:transactions`, `apex:courses`, `apex:settings` | Asosiy ma'lumotlar |
 | `apex:teachers`, `apex:groups`, `apex:enrollments`, `apex:attendance`, `apex:lesson-exceptions` | v11: o'qituvchilar, guruhlar, o'quvchilarning guruhga yozilishi, davomat, bekor qilingan darslar |
+| `apex:branches`, `apex:branch-filter` | v12: filiallar va Header'da tanlangan filial |
 | `apex:backup-pre-v11` | v11 ga ko'chishdan oldingi ma'lumotning avtomatik nusxasi (Sozlamalar → Ma'lumotlar'dan yuklab olinadi) |
-| `apex:version` | Sxema versiyasi (hozir **11**) |
+| `apex:version` | Sxema versiyasi (hozir **12**) |
 | `apex:users`, `apex:auth`, `apex:sessions`, `apex:login-lock` | Xodimlar, parol xeshlari (PBKDF2-SHA256), seanslar, kirish bloki |
 | `apex:audit`, `apex:trash` | Amallar jurnali, savatcha (30 kun) |
 | `apex:subscription` | Tarif va sinov muddati |
@@ -394,6 +421,7 @@ ham joriy sxemaga ko'chiriladi, buzuq yozuvlar tashlab yuboriladi va soni ko'rsa
 | v9 | "To'lov qildi" sanasi `customer.paidAt` | birinchi to'langan kirim sanasi, bo'lmasa qo'shilgan sana |
 | v10 | Kurs davomiyligi 0 — "muddatsiz" | v6 yaratgan (1 oy, narx 0, 0 guruh) kurslar → muddatsiz |
 | v11 | O'qituvchilar, guruhlar, o'qishlar (enrollment), davomat; to'lovda `enrollmentId`/`period`, maoshda `teacherId`; sozlamalarda davomat va to'lov muddati, eslatma shablonlari | Ko'chishdan oldin avtomatik nusxa olinadi. "To'lov qildi" mijozlar kurs bo'yicha "{Kurs} — 1-guruh"ga yoziladi (Du/Cho/Ju, 14:00–15:30, o'qituvchisiz — keyin tahrirlanadi), o'qish boshlanishi — `paidAt`; eski to'lovlar o'zgartirilmaydi, guruhga "Kirim qaysi guruhga tegishli" qoidasi bo'yicha bog'lanadi |
+| v12 | Filiallar (`apex:branches`); guruh, mijoz va to'lovda ixtiyoriy `branchId`; sozlamalarda onlayn to'lov, SMS, bot va avtomatik eslatma maydonlari | Ma'lumot o'zgarmaydi (filialsiz). Birinchi filial qo'shilganda mavjud ma'lumotni unga biriktirish taklif qilinadi; noma'lum filialga havola olib tashlanadi |
 
 Lokal rejimda boshqa brauzer yoki qurilmada ma'lumotlar ko'rinmaydi — ko'chirish uchun
 **Sozlamalar → Ma'lumotlar → JSON zaxira** dan foydalaning. Brauzer tarixini tozalash ma'lumotlarni ham o'chiradi, shuning uchun
@@ -452,6 +480,10 @@ har markaz RLS bilan ajratilgan, istalgan qurilmadan ishlash, tarif muddati va t
 | Jadvallar, RLS, RPC, triggerlar | `supabase/migrations/20261106000001_init.sql` |
 | Lokal Supabase uchun namunaviy markaz | `supabase/seed.sql` (`supabase start` → demo@eduflow.uz / DemoParol2026) |
 | Xodim qo'shish / parol tiklash | `supabase/functions/staff/index.ts` |
+| v1.2 migratsiyalari | `20261108000000_online_payments.sql`, `…01_sms.sql`, `…02_telegram.sql`, `…03_branches.sql` |
+| Onlayn to'lov (Payme, Click) | `supabase/functions/payme`, `click` (+ `_shared/payme.ts`, `click.ts`) |
+| Integratsiyalarni ulash, SMS, bot havolasi | `supabase/functions/integrations` |
+| Telegram webhook, kunlik eslatma va xabarlar navbati | `supabase/functions/telegram`, `cron` (+ `_shared/telegram.ts`, `outbox.ts`, `eskiz.ts`) |
 | RLS testlari (oddiy PostgreSQL'da) | `supabase/tests/run-local.sh` |
 | Ilovadagi adapter | `src/data/` (`supabase.ts`, `mappers.ts`, `diff.ts`), `src/context/CloudAuthProvider.tsx` |
 
@@ -537,7 +569,11 @@ faqat-o'qish rejimi serverda tekshiriladi, jurnal server triggerlari bilan yozil
 - Qarz "oylik to'lov" modelida: bir martalik (butun kurs uchun) to'lov va kurs davomiyligi bo'yicha avtomatik tugash yo'q —
   o'quvchi guruhdan chiqarilganda (tugash sanasi) hisob to'xtaydi. Guruhga yozilmagan mijozlar uchun eskicha (faqat joriy oy)
   hisob qoladi; mijoz kursga nom orqali bog'langan.
-- Eslatmalar avtomatik yuborilmaydi: matn tayyorlanadi, yuborish — nusxa, Telegram yoki SMS ilovasi orqali qo'lda.
+- Lokal rejimda eslatmalar avtomatik yuborilmaydi (matn tayyorlanadi — nusxa, Telegram yoki SMS ilovasi orqali qo'lda);
+  SMS, bot va kunlik avtomatik eslatma — faqat bulutli rejimda (server kerak).
+- Ota-onalar botidagi xabarlar bir necha daqiqa kechikadi (navbat har 5 daqiqada yuboriladi, "Kelmadi" xato belgilansa
+  tuzatishga 2 daqiqa beriladi).
+- Filiallar bo'yicha alohida kassa (inkassatsiya) va filiallararo o'tkazma yo'q: kassa balansi filial to'lovlaridan hisoblanadi.
 - Sana maydonlari brauzerning tili/hududiga qarab ko'rinadi (masalan, `mm/dd/yyyy` yoki `dd.mm.yyyy`).
 - Logotip `localStorage`'da data URL sifatida saqlanadi (200 KB gacha) — band joyni oshiradi.
 - CSV'da `=`, `+`, `-`, `@` bilan boshlangan matnlar (masalan, `+998...` telefonlar) Excel formula sifatida bajarilmasligi uchun
@@ -545,6 +581,7 @@ faqat-o'qish rejimi serverda tekshiriladi, jurnal server triggerlari bilan yozil
 
 ## Keyingi rivojlanish
 
-- Payme / Click: obuna to'lovini avtomatik qabul qilish va to'lovlarni avtomatik qayd etish
-- SMS (Eskiz) va Telegram bot orqali avtomatik eslatmalar (to'lov muddati, dars jadvali), ota-onalar uchun bot
+- Sotuvchi uchun: markaz tarifini Payme orqali o'zi to'lashi (obuna to'lovini avtomatik qabul qilish)
+- Ota-onalar botida bekor qilingan dars va jadval o'zgarishi haqida xabar
+- Filial kassasi: inkassatsiya va filiallararo o'tkazmalar
 - O'zbekistondagi serverda (self-hosted Supabase) joylashtirish
