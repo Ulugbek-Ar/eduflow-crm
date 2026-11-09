@@ -23,6 +23,9 @@ Interfeys o'zbek (lotin) va rus tillarida, telefonda ham qulay, yorug' va qorong
 Standart parol yo'q: birinchi ochilishda **sozlash ustasi** markaz nomi va administrator hisobini yaratadi.
 
 > **Ishga tushirish (Supabase, Vercel, Pages, domen) — qadam-baqadam runbook: [DEPLOY.md](DEPLOY.md).**
+>
+> Sayt nomi va logosi kodga yozilmagan — mijozga qarab muhit o'zgaruvchilari bilan beriladi:
+> [Brend (sayt nomi va logosi)](#brend-sayt-nomi-va-logosi--har-mijoz-uchun).
 
 | Yorug' mavzu | Qorong'i mavzu |
 | --- | --- |
@@ -354,7 +357,7 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 
 ## Sifat: testlar va Lighthouse
 
-- **Unit va komponent testlari** (Vitest + Testing Library): 563 ta test, 87 fayl — `npm run test`. Formulalar (qarz, maosh,
+- **Unit va komponent testlari** (Vitest + Testing Library): 565 ta test, 87 fayl — `npm run test`. Formulalar (qarz, maosh,
   davomat, jadval), migratsiya, CSV/XLSX parser (xlsx fixture test ichida yasaladi), ruxsatlar jadvali va SQL
   `has_permission()` mosligi, tarjimalar to'liqligi; v1.2: Payme/Click protokoli (imzo, holatlar, xato kodlari), Eskiz
   mijozi, bot buyruqlari va ulash kodi, xabarlar navbati, server qarz hisobi ilova bilan bir xilligi, filiallar.
@@ -498,6 +501,39 @@ har markaz RLS bilan ajratilgan, istalgan qurilmadan ishlash, tarif muddati va t
 O'zbekiston qonunchiligiga ko'ra fuqarolarning shaxsga doir ma'lumotlari O'zbekiston hududidagi serverlarda saqlanishi kerak.
 Supabase'ning bunday regioni yo'q. Bulutli rejimni mijozlarga sotishdan oldin **yurist bilan maslahatlashing**: muqobil — Supabase'ni
 (ochiq kodli) O'zbekistondagi serverda o'zingiz joylashtirish (self-hosted), sxema va ilova o'zgarishsiz ishlaydi.
+
+## Brend (sayt nomi va logosi) — har mijoz uchun
+
+Sayt nomi va logosi **kodga yozilmagan** — mijozga qarab deploy paytida beriladi. Yagona manba —
+`src/constants/brand.ts` (muhit o'zgaruvchilari `VITE_BRAND_*`): sahifa sarlavhalari, landing, kirish ekrani, huquqiy
+sahifalar, favicon, havola rasmi (og:image), `/app` va boshqa sahifalar sarlavhasi (`scripts/spa-routes.mjs`), yuklab
+olinadigan fayl nomlari va matnlar shundan olinadi. Berilmasa — standart (EduFlow CRM).
+
+| O'zgaruvchi | Nima | Misol |
+| --- | --- | --- |
+| `VITE_BRAND_NAME` | To'liq nom: sarlavha, landing, kirish ekrani | `Bilim CRM` |
+| `VITE_BRAND_SHORT_NAME` | Qisqa nom: matnlar ("Bilim'ga kirish") va fayl nomlari (`bilim-zaxira-…json`); berilmasa — birinchi so'z | `Bilim` |
+| `VITE_BRAND_DESCRIPTION` | Qidiruv tizimlari uchun tavsif (meta description) | `o'quv markazlari uchun CRM…` |
+| `VITE_BRAND_LOGO` | Logo — sayt ichidagi fayl (`public/brand/`), kvadrat SVG/PNG | `/brand/logo.svg` |
+| `VITE_BRAND_FAVICON` | Brauzer yorlig'idagi belgi; berilmasa — logo | `/brand/favicon.svg` |
+| `VITE_BRAND_APPLE_ICON` | iPhone "Bosh ekranga qo'shish" belgisi, PNG 180×180 | `/brand/icon-180.png` |
+| `VITE_BRAND_OG_IMAGE` | Telegram/Facebook'dagi havola rasmi, 1200×630 (yo'l yoki https URL) | `/brand/og.jpg` |
+
+**Yangi mijoz uchun tartib:**
+
+1. Logo fayllarini `public/brand/` papkasiga qo'ying. Logo va belgilar sayt ichida bo'lishi kerak — xavfsizlik siyosati
+   (CSP) tashqi saytdagi rasmni yuklatmaydi.
+2. Qiymatlarni yozing: Vercel → *Settings → Environment Variables* (lokal — `.env.local`; GitHub Pages — repozitoriya
+   o'zgaruvchilari `BRAND_NAME`, `BRAND_LOGO`, …) va qayta deploy qiling.
+3. Rasmlarni yangilang: `npm run build && npm run screenshots` (README va landing skrinshotlari yangi brend bilan).
+   `og-image.jpg` va `apple-touch-icon.png` — rasm, ularni mijoz logosi bilan tayyorlab, 2-qadamdagi o'zgaruvchilar orqali bering.
+4. Mijozga xos boshqa narsalar: narxlar — `src/constants/plans.ts`, yordam kontaktlari — `VITE_SUPPORT_*`, huquqiy sahifalar
+   matni — `src/landing/LegalPage.tsx` (yurist bilan).
+
+Ataylab o'zgarmaydigan narsalar: brauzer xotirasi kalitlari (`apex:*`), zaxira faylidagi `app` maydoni, Supabase jadvallari —
+brend almashsa ham eski ma'lumot va zaxiralar ishlayveradi. Har markazning o'z nomi va logosi (ilova ichida, chek va
+eslatmalarda) — *Sozlamalar → Tashkilot*, bu sayt brendidan alohida. `tests/branding.test.ts` kodga brend nomi yozilib
+qolmasligini tekshiradi.
 
 ## Deploy
 

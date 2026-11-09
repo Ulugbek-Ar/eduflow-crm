@@ -12,7 +12,7 @@ const ORG = '11111111-2222-3333-4444-555555555555'
 function demoRows(now: Date): { rows: OrgRows; demo: ReturnType<typeof generateDemo> } {
   const demo = generateDemo(now)
   const rows: OrgRows = {
-    settings: { orgName: 'EduFlow Academy', paymentDueDay: 10, prorateFirstMonth: false },
+    settings: { orgName: 'Bilim Plus', paymentDueDay: 10, prorateFirstMonth: false },
     customers: demo.customers.map((c) => customerToRow(c, ORG)),
     courses: demo.courses.map((c) => courseToRow(c, ORG)),
     transactions: demo.transactions.map((t) => transactionToRow(t, ORG)),

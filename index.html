@@ -7,8 +7,9 @@
     <meta name="description" content="%APP_NAME% — %APP_DESCRIPTION%." />
     <meta name="theme-color" content="#4f46e5" />
     <meta name="color-scheme" content="light dark" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Brend (nom, belgi, havola rasmi) — src/constants/brand.ts, VITE_BRAND_* (build paytida vite.config.ts to'ldiradi) -->
+    <link rel="icon" type="%BRAND_FAVICON_TYPE%" href="%BRAND_FAVICON%" />
+    <link rel="apple-touch-icon" href="%BRAND_APPLE_ICON%" />
 
     <!-- Open Graph: og:url, canonical va to'liq og:image build paytida qo'shiladi (vite.config.ts: VITE_SITE_URL yoki Vercel) -->
     <meta property="og:type" content="website" />
@@ -16,7 +17,7 @@
     <meta property="og:title" content="%APP_NAME% — o'quv markazlari uchun CRM" />
     <meta property="og:description" content="Lidlar, to'lovlar, qarzdorlar, kassa va hisobotlar bitta panelda. 14 kun bepul. O'zbek va rus tilida." />
     <meta property="og:locale" content="uz_UZ" />
-    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:image" content="%BRAND_OG_IMAGE%" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />

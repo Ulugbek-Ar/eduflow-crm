@@ -45,7 +45,7 @@ export interface BotStore {
 
 const TEXT = {
   uz: {
-    welcome: (org: string) => `Assalomu alaykum! Bu "${org}" o'quv markazining boti.\nFarzandingizni ulash uchun pastdagi tugma bilan telefon raqamingizni yuboring (markazda yozilgan raqam) yoki markaz bergan havolani oching.`,
+    welcome: (org: string) => `Assalomu alaykum! Bu ${org.trim() ? `"${org.trim()}" ` : ''}o'quv markazining boti.\nFarzandingizni ulash uchun pastdagi tugma bilan telefon raqamingizni yuboring (markazda yozilgan raqam) yoki markaz bergan havolani oching.`,
     linked: (names: string) => `✅ Ulandi: ${names}.\nEndi dars qoldirilsa va to'lov qabul qilinsa xabar olasiz. Tugmalar: qarz, davomat, jadval.`,
     notFound: 'Bu raqam bo\'yicha o\'quvchi topilmadi. Markazdan ulash havolasini so\'rang.',
     badCode: 'Havola noto\'g\'ri yoki eskirgan. Markazdan yangisini so\'rang yoki telefon raqamingizni yuboring.',
@@ -72,7 +72,7 @@ const TEXT = {
     currency: 'so\'m',
   },
   ru: {
-    welcome: (org: string) => `Здравствуйте! Это бот учебного центра «${org}».\nЧтобы подключить ребёнка, отправьте свой номер телефона кнопкой ниже (номер, записанный в центре) или откройте ссылку от центра.`,
+    welcome: (org: string) => `Здравствуйте! Это бот учебного центра${org.trim() ? ` «${org.trim()}»` : ''}.\nЧтобы подключить ребёнка, отправьте свой номер телефона кнопкой ниже (номер, записанный в центре) или откройте ссылку от центра.`,
     linked: (names: string) => `✅ Подключено: ${names}.\nТеперь вы будете получать сообщения о пропусках и поступивших оплатах. Кнопки: долг, посещаемость, расписание.`,
     notFound: 'По этому номеру ученик не найден. Попросите в центре ссылку для подключения.',
     badCode: 'Ссылка неверна или устарела. Попросите в центре новую или отправьте свой номер телефона.',

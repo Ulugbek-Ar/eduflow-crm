@@ -30,6 +30,10 @@ avtomatik ham), markaz bir nechta filialda ishlaydi.
   "Filiallar bo'yicha" (o'quvchi, guruh, kirim, xarajat, foyda). Xodimni bitta filialga cheklash — u faqat shu filial
   ma'lumotini ko'radi va yozadi (bulutda RLS bilan).
 - Tariflar: Standart — 1 filial, Pro va sinov — cheksiz. Demo markaz ikki filialli (Pro).
+- **Brend (sayt nomi va logosi) — har mijoz uchun**: kodga yozilmaydi, `VITE_BRAND_*` muhit o'zgaruvchilari bilan
+  beriladi (nom, qisqa nom, tavsif, logo, favicon, iPhone belgisi, havola rasmi); yagona manba `src/constants/brand.ts` —
+  sarlavhalar, landing, kirish ekrani, `index.html`, sahifalar sarlavhasi, fayl nomlari va matnlar shundan. Demo markaz
+  nomi brenddan mustaqil ("Namuna markaz"). `tests/branding.test.ts` brend nomi kodga yozilib qolmasligini tekshiradi.
 - `DEPLOY.md` §6–9: Payme/Click, Eskiz, Telegram bot, filiallar; pg_cron jadvallari.
 
 ### O'zgardi

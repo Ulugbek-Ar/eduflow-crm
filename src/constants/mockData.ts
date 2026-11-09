@@ -20,9 +20,10 @@ export const DEFAULT_REMINDER_RU =
   'Здравствуйте, {ism}! {markaz}: оплата за {oy}, группа «{guruh}» — {summa}. Пожалуйста, внесите оплату. Вопросы: {telefon}'
 
 export const DEFAULT_SETTINGS: Settings = {
-  orgName: 'EduFlow Academy',
+  // Namuna markaz (demo va sozlash ustasidan oldin) — mahsulot brendidan mustaqil
+  orgName: 'Namuna markaz',
   // Tashkilot nomining bosh harflari (Sidebar'dagi logo)
-  logoText: 'EA',
+  logoText: 'NM',
   logoImage: '',
   phone: '+998 71 200 00 00',
   address: 'Toshkent sh., Chilonzor tumani',

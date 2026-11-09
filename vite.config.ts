@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import type { Plugin } from 'vite'
-import { APP_DESCRIPTION, APP_NAME } from './src/constants/app.ts'
+import { resolveBrand } from './src/constants/brand.ts'
+import type { Brand } from './src/constants/brand.ts'
 
 // CSP uchun yagona manba — vercel.json (netlify.toml bilan mosligi tests/deploy-config.test.ts da tekshiriladi).
 // `npm run preview` ham shu sarlavhani yuboradi: build'ni prod sharoitida tekshirish mumkin
@@ -24,33 +25,59 @@ function siteUrl(): string {
   return vercel ? `https://${vercel}` : ''
 }
 
-// index.html dagi %APP_NAME% / %APP_DESCRIPTION% -> src/constants/app.ts dagi qiymatlar; sayt manzili ma'lum bo'lsa —
-// canonical va og:url qo'shiladi, og:image to'liq manzilga aylanadi (ijtimoiy tarmoqlar nisbiy manzilni o'qimaydi)
-function appMeta(): Plugin {
-  return {
-    name: 'app-meta',
-    // Vite base bilan yo'llarni o'zgartirgandan keyin ishlaydi (pastki papkada ham to'liq manzil to'g'ri chiqadi)
-    transformIndexHtml: { order: 'post', handler: (html) => {
-      const url = siteUrl()
-      let out = html.replaceAll('%APP_NAME%', APP_NAME).replaceAll('%APP_DESCRIPTION%', APP_DESCRIPTION)
-      if (url) {
-        out = out
-          .replace(/content="[^"]*og-image\.jpg"/, `content="${url}/og-image.jpg"`)
-          .replace('<meta property="og:type"', `<link rel="canonical" href="${url}/" />\n    <meta property="og:url" content="${url}/" />\n    <meta property="og:type"`)
-      }
-      return out
-    } },
-  }
+const escapeHtml = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// Brend (src/constants/brand.ts, VITE_BRAND_*) -> index.html: sarlavha, tavsif, favicon, iPhone belgisi, og:image.
+// Ilovadagi BRAND bilan bir xil resolveBrand() — nom kodda takrorlanmaydi.
+// "pre": yo'llar Vite'ga brend qiymati bilan yetadi (pastki papkada base prefiksi to'g'ri qo'shiladi).
+// "post": sayt manzili ma'lum bo'lsa — canonical va og:url, og:image to'liq manzilga (ijtimoiy tarmoqlar nisbiyni o'qimaydi)
+function brandMeta(brand: Brand): Plugin[] {
+  return [
+    {
+      name: 'brand-meta',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (html: string) =>
+          html
+            .replaceAll('%APP_NAME%', escapeHtml(brand.name))
+            .replaceAll('%APP_DESCRIPTION%', escapeHtml(brand.description))
+            .replaceAll('%BRAND_FAVICON_TYPE%', faviconType(brand.favicon))
+            .replaceAll('%BRAND_FAVICON%', escapeHtml(brand.favicon))
+            .replaceAll('%BRAND_APPLE_ICON%', escapeHtml(brand.appleIcon))
+            .replaceAll('%BRAND_OG_IMAGE%', escapeHtml(brand.ogImage)),
+      },
+    },
+    {
+      name: 'site-url-meta',
+      transformIndexHtml: {
+        order: 'post',
+        handler: (html: string) => {
+          const url = siteUrl()
+          if (!url) return html
+          return html
+            .replace(/(<meta property="og:image" content=")(\/[^"]*)"/, (_match: string, head: string, path: string) => `${head}${url}${path}"`)
+            .replace('<meta property="og:type"', `<link rel="canonical" href="${url}/" />\n    <meta property="og:url" content="${url}/" />\n    <meta property="og:type"`)
+        },
+      },
+    },
+  ]
+}
+
+const faviconType = (path: string) => {
+  const lower = path.toLowerCase()
+  if (lower.endsWith('.svg') || lower.startsWith('data:image/svg')) return 'image/svg+xml'
+  if (lower.endsWith('.ico')) return 'image/x-icon'
+  return 'image/png'
 }
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    babel({ presets: [reactCompilerPreset()] }),
-    appMeta(),
-  ],
-  preview: {
-    headers: { 'Content-Security-Policy': readCsp() },
-  },
+export default defineConfig(({ mode }) => {
+  // .env, .env.local va muhit o'zgaruvchilari (Vercel/GitHub) — ilovaga ham shu qiymatlar boradi
+  const brand = resolveBrand(loadEnv(mode, process.cwd(), 'VITE_BRAND_'))
+  return {
+    plugins: [react(), babel({ presets: [reactCompilerPreset()] }), ...brandMeta(brand)],
+    preview: {
+      headers: { 'Content-Security-Policy': readCsp() },
+    },
+  }
 })

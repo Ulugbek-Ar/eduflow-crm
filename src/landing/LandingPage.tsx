@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { APP_NAME } from '../constants/app'
 import { Icon } from '../constants/navigation'
 import type { IconName } from '../constants/navigation'
+import { BrandMark } from '../components/ui/BrandMark'
 import { PLANS, TRIAL_DAYS } from '../constants/plans'
 import { contactLinks, DEMO_ONLY, hasSupportContacts, MAIN_SITE_URL } from '../constants/support'
 import { tr } from '../i18n'
@@ -124,7 +125,7 @@ function Header() {
     <header className="lp-header">
       <a className="lp-brand" href={routeHref('landing')}>
         <span className="logo-mark" aria-hidden="true">
-          <Icon name="logo" size={20} />
+          <BrandMark />
         </span>
         <strong>{APP_NAME}</strong>
       </a>

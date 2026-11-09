@@ -101,8 +101,12 @@ select cron.schedule('eduflow-purge-trash', '15 3 * * *', $$select public.purge_
 | `VITE_SUPPORT_PHONE` | `+998 90 000 00 00` | tavsiya |
 | `VITE_SUPPORT_EMAIL` | `sales@eduflow.uz` | ixtiyoriy |
 | `VITE_OWNER_PASSWORD_HASH` | faqat lokal/demo `/owner` uchun (`npm run owner:password "..."`) | yo'q |
+| `VITE_BRAND_NAME`, `VITE_BRAND_SHORT_NAME` | sayt nomi va qisqa nomi (`Bilim CRM`, `Bilim`) | mijoz o'z nomini aytsa |
+| `VITE_BRAND_LOGO`, `VITE_BRAND_FAVICON`, `VITE_BRAND_APPLE_ICON`, `VITE_BRAND_OG_IMAGE` | `public/brand/` dagi fayllar (`/brand/logo.svg` ...) | mijoz logosi bo'lsa |
 
   `VITE_DEMO_ONLY` va `VITE_MAIN_SITE_URL` ni Vercel'da **bermang** — ular faqat namoyish sayti uchun.
+  Brend (nom va logo) kodga yozilmagan — har mijoz uchun shu o'zgaruvchilar bilan beriladi, berilmasa standart
+  (EduFlow CRM). To'liq tartib — README → "Brend (sayt nomi va logosi)".
 
 - [ ] *Deployments* → oxirgi deploy → **Redeploy** (o'zgaruvchilar faqat yangi build'da kiradi).
 - [ ] **Domen:** *Settings → Domains* → `eduflow.uz` va `www.eduflow.uz`. DNS: `A @ 76.76.21.21`,
@@ -145,6 +149,7 @@ Repozitoriya → *Settings → Secrets and variables → Actions → **Variables
 | `SUPPORT_TELEGRAM` | `@eduflow_uz` | footer, Yordam, "Ulanish uchun ariza" → Telegram |
 | `SUPPORT_PHONE` | `+998 90 000 00 00` | ariza → qo'ng'iroq / nusxa |
 | `SUPPORT_EMAIL` | `sales@eduflow.uz` | ariza → email |
+| `BRAND_NAME`, `BRAND_SHORT_NAME`, `BRAND_LOGO`, ... | `Bilim CRM`, `Bilim`, `/brand/logo.svg` | sayt nomi va logosi (README → "Brend") |
 
 - `MAIN_SITE_URL` bo'lmasa: asosiy tugma — "Demo'ni ko'rish", ikkinchisi — "Ulanish uchun ariza".
 - Hech qanday `SUPPORT_*` bo'lmasa: ariza tugmasi yashiriladi, faqat demo qoladi; workflow `::warning::` chiqaradi.

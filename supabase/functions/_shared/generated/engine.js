@@ -430,8 +430,8 @@ var COURSES = [
 var DEFAULT_REMINDER_UZ = "Assalomu alaykum, {ism}! {markaz}: «{guruh}» guruhi bo'yicha {oy} oyi to'lovi — {summa}. Iltimos, to'lovni amalga oshiring. Savollar bo'lsa: {telefon}";
 var DEFAULT_REMINDER_RU = "Здравствуйте, {ism}! {markaz}: оплата за {oy}, группа «{guruh}» — {summa}. Пожалуйста, внесите оплату. Вопросы: {telefon}";
 var DEFAULT_SETTINGS = {
-	orgName: "EduFlow Academy",
-	logoText: "EA",
+	orgName: "Namuna markaz",
+	logoText: "NM",
 	logoImage: "",
 	phone: "+998 71 200 00 00",
 	address: "Toshkent sh., Chilonzor tumani",

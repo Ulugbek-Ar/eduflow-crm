@@ -402,6 +402,11 @@ body.scroll-locked {
   overflow: hidden;
 }
 
+/* Mahsulot logosi (VITE_BRAND_LOGO): nisbati saqlanadi, kesilmaydi */
+.logo-image.brand-logo {
+  object-fit: contain;
+}
+
 .logo-upload {
   display: flex;
   align-items: flex-start;

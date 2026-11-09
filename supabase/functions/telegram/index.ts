@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   if (!safeEqual(req.headers.get('X-Telegram-Bot-Api-Secret-Token') ?? '', secret.webhookSecret)) return json(401, { error: 'auth' })
   const update: unknown = await req.json().catch(() => null)
   const { data: orgRow } = await sb.from('organizations').select('name, settings').eq('id', org).maybeSingle()
-  const replies = await handleUpdate(update, botStore(sb, org, secret, orgRow?.settings ?? {}), String(orgRow?.name ?? 'EduFlow')).catch(() => [])
+  const replies = await handleUpdate(update, botStore(sb, org, secret, orgRow?.settings ?? {}), String(orgRow?.name ?? '')).catch(() => [])
   const api = telegramApi(secret.token, fetch)
   for (const reply of replies) await api.sendMessage(reply.chatId, reply.text, reply.keyboard, reply.lang)
   return json(200, { ok: true })
