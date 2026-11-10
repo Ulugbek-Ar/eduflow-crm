@@ -1479,4 +1479,10 @@ export const RU: Readonly<Record<string, string>> = {
   "Guruh va davomat": "Группа и посещаемость",
   "{0}: maosh to'lash": "{0}: выплатить зарплату",
   "Standart'dagi hamma narsa": "Всё, что в «Стандарт»",
+  "Serverga ulanib bo'lmadi": "Не удалось подключиться к серверу",
+  "Internet aloqasini tekshiring. Hisobingizdan chiqilmagan — aloqa tiklangach ma'lumotlaringiz o'zi ochiladi.": "Проверьте подключение к интернету. Вы не вышли из аккаунта — данные откроются сами, когда связь восстановится.",
+  "Tarif muddati tugagan: ma'lumotni yuklab olishingiz mumkin, o'zgartirish va tiklash tarif yangilangach ochiladi.": "Срок тарифа истёк: данные можно скачать, изменение и восстановление откроются после продления тарифа.",
+  "Eski nusxani o'chirish": "Удалить старую копию",
+  "Bu nusxa brauzer xotirasida joy egallaydi. Kerak bo'lsa, avval \"Yuklab olish\" bilan kompyuterga saqlang. O'chirilsinmi?": "Эта копия занимает место в памяти браузера. При необходимости сначала сохраните её на компьютер кнопкой «Скачать». Удалить?",
+  "Yangilanishdan oldingi zaxira nusxasi saqlanmadi (brauzer xotirasi to'lgan). Sozlamalar → Ma'lumotlar'dan JSON zaxira yuklab oling.": "Резервная копия перед обновлением не сохранилась (память браузера заполнена). Скачайте JSON-копию в Настройки → Данные.",
 }

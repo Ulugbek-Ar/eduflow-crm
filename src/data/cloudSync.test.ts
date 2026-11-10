@@ -107,3 +107,32 @@ describe('Bulut bilan sinxronlash', () => {
     expect(calls).toEqual([{ op: 'rpc', table: 'log_event', args: { p_action: 'data.export', p_summary: 'Mijozlar — Excel', p_entity: null } }])
   })
 })
+
+describe('Sahifalab o\'qish (Supabase 1000 qator cheklovi)', () => {
+  const rows = Array.from({ length: 2345 }, (_, i) => ({ id: `r${i}` }))
+  // Server har javobda ko'pi bilan `cap` qator beradi (Max rows), count — jami soni
+  const pager = (cap: number, withCount = true) => (from: number, to: number) =>
+    Promise.resolve({ data: rows.slice(from, Math.min(to + 1, from + cap)), error: null, count: withCount ? rows.length : null })
+
+  it('hamma qator keladi — 1000 dan ko\'p bo\'lsa ham', async () => {
+    const { fetchAll } = await import('./supabase')
+    const result = await fetchAll(pager(1000))
+    expect(result.error).toBeNull()
+    expect(result.data).toHaveLength(2345)
+    expect(result.data.at(-1)).toEqual({ id: 'r2344' })
+  })
+
+  it('server sahifani kichikroq kessa ham (max_rows = 500) — count bo\'yicha davom etadi', async () => {
+    const { fetchAll } = await import('./supabase')
+    const result = await fetchAll(pager(500))
+    expect(result.data).toHaveLength(2345)
+    expect(new Set(result.data.map((r) => r.id)).size).toBe(2345)
+  })
+
+  it('count bo\'lmasa — to\'lmagan sahifada to\'xtaydi; xato qaytariladi', async () => {
+    const { fetchAll } = await import('./supabase')
+    expect((await fetchAll(pager(1000, false))).data).toHaveLength(2345)
+    const failing = await fetchAll(() => Promise.resolve({ data: null, error: { message: 'boom' } }))
+    expect(failing.error).toEqual({ message: 'boom' })
+  })
+})

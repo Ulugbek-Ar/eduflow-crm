@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { DashboardProvider } from '../../context/DashboardContext'
 import type { CloudBinding } from '../../context/DashboardContext'
@@ -19,6 +19,23 @@ export function CloudLoading({ text = tr('Yuklanmoqda...') }: { text?: string })
       <div className="section-loading" role="status" aria-live="polite">
         <span className="spinner" aria-hidden="true" />
         {text}
+      </div>
+    </main>
+  )
+}
+
+// Serverga ulanib bo'lmadi: seans saqlangan, kirish oynasi ko'rsatilmaydi — internet qaytsa o'zi qayta urinadi
+export function CloudConnectionError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <main className="login-page">
+      <div className="login-card auth-form" role="alert">
+        <h1>{tr('Serverga ulanib bo\'lmadi')}</h1>
+        <p className="muted">
+          {tr('Internet aloqasini tekshiring. Hisobingizdan chiqilmagan — aloqa tiklangach ma\'lumotlaringiz o\'zi ochiladi.')}
+        </p>
+        <Button icon="refresh" onClick={onRetry}>
+          {tr('Qayta urinish')}
+        </Button>
       </div>
     </main>
   )
@@ -100,16 +117,21 @@ export function CloudDataGate({ cloud, children }: { cloud: CloudAuthExtras; chi
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
 
-  useEffect(() => {
-    let alive = true
+  // Markaz o'zgarmasa qayta yuklanmaydi (profil yoki xodimlar yangilanganda `cloud` obyekti yangilanadi)
+  const orgId = cloud.org?.id
+  const load = useEffectEvent((isAlive: () => boolean) => {
     cloud
       .loadSnapshot()
-      .then((snapshot) => alive && setBinding({ initial: snapshot, sync: cloud.createSync(snapshot) }))
-      .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)))
+      .then((snapshot) => isAlive() && setBinding({ initial: snapshot, sync: cloud.createSync(snapshot), reload: () => cloud.loadSnapshot() }))
+      .catch((e: unknown) => isAlive() && setError(e instanceof Error ? e.message : String(e)))
+  })
+  useEffect(() => {
+    let alive = true
+    load(() => alive)
     return () => {
       alive = false
     }
-  }, [cloud, attempt])
+  }, [orgId, attempt])
 
   if (error) {
     return (

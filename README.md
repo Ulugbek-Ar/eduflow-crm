@@ -1,6 +1,6 @@
 # EduFlow CRM
 
-[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.1.0 · ma'lumot sxemasi v11 · [o'zgarishlar](CHANGELOG.md)
+[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.1.1 · ma'lumot sxemasi v11 · [o'zgarishlar](CHANGELOG.md)
 
 **O'quv markazlari uchun CRM.** Lidlar va mijozlar, guruhlar va dars jadvali, davomat, to'lovlar va kassa, qarzdorlar va
 to'lov eslatmalari, o'qituvchilar va maosh, Excel/CSV'dan import, hisobotlar, xodimlar va rollar — bitta brauzer ilovasida.
@@ -332,7 +332,7 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 
 ## Sifat: testlar va Lighthouse
 
-- **Unit va komponent testlari** (Vitest + Testing Library): 505 ta test, 73 fayl — `npm run test`. Formulalar (qarz, maosh,
+- **Unit va komponent testlari** (Vitest + Testing Library): 513 ta test, 75 fayl — `npm run test`. Formulalar (qarz, maosh,
   davomat, jadval), migratsiya, CSV/XLSX parser (xlsx fixture test ichida yasaladi), ruxsatlar jadvali va SQL
   `has_permission()` mosligi, tarjimalar to'liqligi.
 - **E2E** (Playwright, `e2e/`): landing, demo, ro'yxatdan o'tish → mijoz → to'lov → chek, xodim qo'shish; **guruh yaratish →

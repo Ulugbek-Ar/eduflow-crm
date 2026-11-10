@@ -182,11 +182,21 @@ export async function currentEmail(): Promise<string | null> {
 }
 
 // ===== Profil, xodimlar, markaz =====
+// Seans yo'q — null. Tarmoq/server xatosi — istisno (foydalanuvchi "chiqib ketgan" deb ko'rsatilmasin)
 export async function loadOwnProfile(): Promise<CloudProfile | null> {
   const sb = getClient()
-  const { data: auth } = await sb.auth.getUser()
+  const { data: session } = await sb.auth.getSession()
+  if (!session.session) return null
+  const { data: auth, error: authError } = await sb.auth.getUser()
+  if (authError) {
+    // Token yaroqsiz yoki foydalanuvchi o'chirilgan — haqiqatan ham kirilmagan
+    const status = (authError as { status?: number }).status
+    if (status && status >= 400 && status < 500) return null
+    throw new Error(authError.message)
+  }
   if (!auth.user) return null
-  const { data } = await sb.from('profiles').select('*').eq('id', auth.user.id).maybeSingle()
+  const { data, error } = await sb.from('profiles').select('*').eq('id', auth.user.id).maybeSingle()
+  fail(error)
   return data ? profileFromRow(data as Row, auth.user.email ?? '') : null
 }
 
@@ -250,18 +260,39 @@ export interface CloudSnapshot {
 // role — kirgan xodim roli: o'qituvchi mijozlar jadvalini ko'rmaydi (RLS) — o'quvchilar ismi teacher_roster() dan
 // (telefonsiz); o'qituvchilar ro'yxatini (maosh qoidasi bilan) faqat teachers.manage / payroll.view ko'radi,
 // qolganlar teacher_directory() dan ism va fanlarni oladi
+// Supabase (PostgREST) bitta javobda ko'pi bilan ~1000 qator beradi (loyiha sozlamasi "Max rows"), .limit() buni
+// oshirmaydi. Shuning uchun katta jadvallar sahifalab o'qiladi: hammasi kelguncha .range() bilan
+export const PAGE_SIZE = 1000
+type Page = { data: unknown[] | null; error: { message: string } | null; count?: number | null }
+type Pager = (from: number, to: number) => PromiseLike<Page>
+
+export async function fetchAll(page: Pager, pageSize = PAGE_SIZE): Promise<{ data: Row[]; error: { message: string } | null }> {
+  const all: Row[] = []
+  for (;;) {
+    const res = await page(all.length, all.length + pageSize - 1)
+    if (res.error) return { data: all, error: res.error }
+    const rows = (res.data ?? []) as Row[]
+    all.push(...rows)
+    // Jami soni ma'lum bo'lsa — unga qarab; bo'lmasa sahifa to'lmagan bo'lsa tugadi. Server sahifani kichikroq
+    // kessa ham (max_rows < pageSize), count bo'yicha davom etadi
+    const total = typeof res.count === 'number' ? res.count : null
+    if (rows.length === 0 || (total !== null ? all.length >= total : rows.length < pageSize)) return { data: all, error: null }
+  }
+}
+
 export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise<CloudSnapshot> {
   const sb = getClient()
   const seesTeachers = role === 'admin' || role === 'cashier' || role === 'viewer' || role === 'teacher'
+  const table = (name: string, order = 'id') => fetchAll((from, to) => sb.from(name).select('*', { count: 'exact' }).order(order).range(from, to))
   const [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions] = await Promise.all([
-    role === 'teacher' ? sb.rpc('teacher_roster') : sb.from('customers').select('*').limit(10000),
-    sb.from('transactions').select('*').order('date', { ascending: false }).limit(20000),
-    sb.from('courses').select('*'),
-    seesTeachers ? sb.from('teachers').select('*') : sb.rpc('teacher_directory'),
-    sb.from('groups').select('*'),
-    sb.from('enrollments').select('*').limit(20000),
-    sb.from('attendance').select('*').order('date', { ascending: false }).limit(50000),
-    sb.from('lesson_exceptions').select('*'),
+    role === 'teacher' ? fetchAll((from, to) => sb.rpc('teacher_roster').order('id').range(from, to)) : table('customers'),
+    table('transactions'),
+    table('courses'),
+    seesTeachers ? table('teachers') : fetchAll((from, to) => sb.rpc('teacher_directory').order('id').range(from, to)),
+    table('groups'),
+    table('enrollments'),
+    table('attendance'),
+    table('lesson_exceptions'),
   ])
   for (const r of [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions]) fail(r.error)
   const active = (rows: unknown[] | null) => ((rows ?? []) as Row[]).filter((r) => !r.deleted_at)
@@ -301,6 +332,11 @@ export class CloudSync {
 
   constructor(org: string, trash: readonly TrashEntry[]) {
     this.org = org
+    this.trashed = new Set(trash.map((e) => `${e.kind}:${e.id}`))
+  }
+
+  // Serverdan yangilangan savatcha (boshqa xodim o'chirgan yozuvni tiklash ham trash_restore orqali bo'lsin)
+  setTrash(trash: readonly TrashEntry[]) {
     this.trashed = new Set(trash.map((e) => `${e.kind}:${e.id}`))
   }
 
@@ -401,8 +437,15 @@ export async function logEvent(action: string, summary: string, entityId?: strin
 }
 
 export async function listAudit(): Promise<AuditEntry[]> {
-  const { data, error } = await getClient().from('audit_log').select('*').order('at', { ascending: false }).limit(3000)
-  fail(error)
+  // Oxirgi 3000 ta hodisa (sahifalab: server bir javobda 1000 tadan ko'p bermaydi)
+  const all: Row[] = []
+  for (let from = 0; from < 3000; from += PAGE_SIZE) {
+    const { data: page, error } = await getClient().from('audit_log').select('*').order('at', { ascending: false }).range(from, from + PAGE_SIZE - 1)
+    fail(error)
+    all.push(...((page ?? []) as Row[]))
+    if ((page ?? []).length < PAGE_SIZE) break
+  }
+  const data = all
   return ((data ?? []) as Row[]).map((r) => ({
     id: String(r.id),
     at: String(r.at),

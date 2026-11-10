@@ -2,6 +2,33 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.1.1] — 2026-11-10 · ma'lumot sxemasi v11
+
+Tuzatishlar: bulutli rejimda ma'lumot to'liqligi va internet uzilishi, tarif chegarasi, ma'lumotni tozalash.
+
+### Tuzatildi
+
+- **Bulut: 1000 tadan ortiq yozuv.** Supabase bitta javobda ~1000 qator beradi — endi barcha jadvallar (to'lovlar,
+  davomat, mijozlar ...) sahifalab to'liq o'qiladi. Avval 1000+ to'lovli markazda to'lagan o'quvchi "qarzdor" chiqardi.
+- **Bulut: internet qaytganda** yuborilmay qolgan o'zgarishlar o'zi qayta yuboriladi (avval faqat keyingi o'zgarishda).
+- **Bulut: boshqa xodimlar o'zgarishlari** oyna ochilganda, internet qaytganda va har 1,5 daqiqada serverdan olinadi;
+  yuborilmagan o'z o'zgarishingiz ustidan yozilmaydi.
+- **Bulut: ochilishda internet uzilsa** hisobdan chiqarib yuborilmaydi — "Serverga ulanib bo'lmadi" va "Qayta urinish",
+  aloqa tiklansa o'zi ochiladi.
+- **Tarif chegarasi serverda** (trigger): o'qituvchi kirishini menejerga aylantirib yoki bloklangan xodimni qayta yoqib
+  chegaradan oshib bo'lmaydi. Muddati tugagan markaz xodimlar va sozlamalarni o'zgartira olmaydi.
+- **Xodim bloklanganda yoki paroli tiklanganda** uning seanslari bekor qilinadi.
+- **Muddat tugaganda** hisobot eksporti va JSON zaxira ochiq; "Tarif" va "Ma'lumotlar" bo'limlari ko'rinadi.
+- **"Barcha ma'lumotni tozalash"** savatcha va migratsiyadan oldingi nusxani ham o'chiradi (mijozlar ma'lumoti
+  brauzerda qolmaydi). Migratsiyadan oldingi nusxani alohida o'chirish tugmasi; nusxa saqlanmasa — ogohlantirish.
+- Tarif muddati ochiq oynada ham har daqiqada qayta hisoblanadi.
+- `@supabase/supabase-js` 2.118 ga yangilandi (`npm audit` — 0 zaiflik).
+
+### Migratsiya
+
+- Supabase: `supabase/migrations/20261110000000_staff_limit_sessions.sql` — `supabase db push` bilan qo'llang,
+  so'ng `supabase functions deploy staff`. Lokal ma'lumot o'zgarmaydi.
+
 ## [1.1.0] — 2026-11-07 · ma'lumot sxemasi v11
 
 O'quv jarayoni: guruhlar, dars jadvali, davomat, o'qituvchilar va maosh; qarz har bir o'qish bo'yicha; eslatmalar va import.

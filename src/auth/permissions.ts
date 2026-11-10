@@ -106,6 +106,12 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   teacher: ['groups.view', 'attendance.view', 'attendance.mark'],
 }
 
+// Tarif muddati tugagan yoki markaz to'xtatilgan (faqat o'qish): ko'rish va o'z ma'lumotini yuklab olish (hisobot,
+// JSON zaxira) ochiq — ma'lumot markazniki, uni olib ketish huquqi muddatga bog'liq emas
+export function readOnlyAllows(permission: Permission): boolean {
+  return permission.endsWith('.view') || permission === 'reports.export'
+}
+
 export function can(role: Role | null | undefined, permission: Permission): boolean {
   return role ? ROLE_PERMISSIONS[role].includes(permission) : false
 }

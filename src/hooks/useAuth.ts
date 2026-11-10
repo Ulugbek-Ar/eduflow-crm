@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import { can as roleCan } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import type { AuditActor } from '../services/audit.service'
 import type { Access, Subscription } from '../services/subscription.service'
@@ -20,6 +21,9 @@ export interface CloudAuthExtras {
   signUp: (input: { email: string; password: string; orgName: string; fullName: string; title: string }) => Promise<ActionResult & { confirmEmail?: boolean }>
   sendPasswordReset: (email: string) => Promise<ActionResult>
   importLocal: (data: StoredData) => Promise<ActionResult>
+  // Serverga ulanib bo'lmadi (internet yo'q yoki server javob bermadi) — seans saqlangan, qayta urinish mumkin
+  connectionError?: boolean
+  retry: () => void
 }
 
 export interface AuthContextValue {
@@ -72,6 +76,12 @@ export function useAuditActor(): AuditActor | null {
 }
 
 // Ruxsat tekshiruvi: AuthProvider bo'lmasa (alohida komponent testlari) — hamma narsa ochiq
+// Rol ruxsati — tarif holatidan qat'i nazar (muddati tugaganda ham "Tarif" va "Ma'lumotlar"ni ko'rsatish uchun)
+export function useRoleCan(): (permission: Permission) => boolean {
+  const context = useContext(AuthContext)
+  return (permission) => (context ? roleCan(context.user?.role, permission) : true)
+}
+
 export function useCan(): (permission: Permission) => boolean {
   const context = useContext(AuthContext)
   return context ? context.can : () => true

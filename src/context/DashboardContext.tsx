@@ -23,6 +23,7 @@ import {
   loadData,
   physicalKey,
   readStored,
+  removePreMigrationBackup,
   resetToMock,
   saveAll,
   saveErrorMessage,
@@ -102,7 +103,12 @@ function modalPermission(modal: NonNullable<ModalState>): Permission {
 export interface CloudBinding {
   initial: CloudSnapshot
   sync: CloudSync
+  // Serverdan yangi holat (boshqa xodimlar o'zgarishlari): oyna ochilganda, internet qaytganda va davriy
+  reload?: () => Promise<CloudSnapshot>
 }
+
+// Bulut: boshqa xodimlar kiritgan o'zgarishlarni olib kelish oralig'i
+export const CLOUD_REFRESH_MS = 90_000
 
 export function DashboardProvider({ children, cloud }: { children: ReactNode; cloud?: CloudBinding }) {
   const toast = useToast()
@@ -157,6 +163,10 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   }, [initial.saveError])
 
   useEffect(() => {
+    if (initial.backupError) toast.error(tr('Yangilanishdan oldingi zaxira nusxasi saqlanmadi (brauzer xotirasi to\'lgan). Sozlamalar → Ma\'lumotlar\'dan JSON zaxira yuklab oling.'))
+  }, [initial.backupError, toast])
+
+  useEffect(() => {
     if (initial.dropped > 0 && !startupNoticeRef.current) {
       startupNoticeRef.current = true
       toast.info(tr('{0} ta buzuq yozuv topildi va tashlab yuborildi', { 0: initial.dropped }))
@@ -176,9 +186,13 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   // Bulut: oxirgi muvaffaqiyatli yuborilgan holat va navbat (o'zgarishlar ketma-ket, faqat farqi yuboriladi).
   // Xato bo'lsa holat yangilanmaydi — keyingi o'zgarishda farq qayta yuboriladi
   const synced = useRef(initial.data)
+  // Ilovadagi eng oxirgi holat (yuborilgan-yuborilmaganidan qat'i nazar) — qayta urinish va yangilash uchun
+  const latest = useRef<StoredData>(initial.data)
   const queue = useRef<Promise<void>>(Promise.resolve())
   const pushCloud = useEffectEvent(<K extends ListKey | 'settings'>(key: K, next: StoredData[K]) => {
-    if (!cloud || synced.current[key] === next) return
+    if (!cloud) return
+    latest.current = { ...latest.current, [key]: next }
+    if (synced.current[key] === next) return
     queue.current = queue.current.then(async () => {
       const prev = synced.current[key]
       try {
@@ -191,6 +205,74 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       }
     })
   })
+
+  // Yuborilmay qolgan o'zgarishlar (internet yo'q edi) — qayta yuboriladi
+  const retryCloud = useEffectEvent(() => {
+    for (const key of [...LIST_KEYS, 'settings'] as const) {
+      if (latest.current[key] !== synced.current[key]) pushCloud(key, latest.current[key])
+    }
+  })
+
+  // Serverdagi yangi holatni olish: faqat yuborilmagan o'zgarishi YO'Q ro'yxatlar almashtiriladi
+  const refreshCloud = useEffectEvent(() => {
+    const reload = cloud?.reload
+    if (!cloud || !reload) return
+    queue.current = queue.current.then(async () => {
+      try {
+        const snapshot = await reload()
+        const setters: { [K in ListKey | 'settings']: (value: never) => void } = {
+          customers: setCustomers,
+          transactions: setTransactions,
+          courses: setCourses,
+          teachers: setTeachers,
+          groups: setGroups,
+          enrollments: setEnrollments,
+          attendance: setAttendance,
+          lessonExceptions: setLessonExceptions,
+          settings: setSettings,
+        }
+        let clean = true
+        for (const key of [...LIST_KEYS, 'settings'] as const) {
+          if (latest.current[key] !== synced.current[key]) {
+            clean = false
+            continue
+          }
+          const fresh = snapshot.data[key]
+          if (JSON.stringify(fresh) === JSON.stringify(synced.current[key])) continue
+          synced.current = { ...synced.current, [key]: fresh }
+          latest.current = { ...latest.current, [key]: fresh }
+          setters[key](fresh as never)
+        }
+        if (clean) {
+          cloud.sync.setTrash(snapshot.trash)
+          setTrash((current) => (JSON.stringify(current) === JSON.stringify(snapshot.trash) ? current : snapshot.trash))
+        }
+      } catch {
+        // Tarmoq xatosi — keyingi safar
+      }
+    })
+  })
+
+  useEffect(() => {
+    if (!cloud) return
+    const onOnline = () => {
+      retryCloud()
+      refreshCloud()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') onOnline()
+    }
+    window.addEventListener('online', onOnline)
+    document.addEventListener('visibilitychange', onVisible)
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && navigator.onLine !== false) onOnline()
+    }, CLOUD_REFRESH_MS)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.clearInterval(timer)
+    }
+  }, [cloud])
 
   useEffect(() => (cloud ? pushCloud('customers', customers) : onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers))), [customers, cloud])
   useEffect(() => (cloud ? pushCloud('transactions', transactions) : onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions))), [transactions, cloud])
@@ -627,6 +709,12 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       setSearch('')
       setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
       setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+      // Lokal: savatcha va migratsiyadan oldingi nusxada ham mijozlar ma'lumoti bor — ular ham o'chadi.
+      // Bulut: yozuvlar savatchaga o'tadi (30 kundan keyin serverda butunlay o'chadi)
+      if (!cloud) {
+        setTrash([])
+        removePreMigrationBackup()
+      }
       setIsDemo(false)
       reportSave(STORAGE_KEYS.demo, setDemoMode(false))
       audit('data.clear', `${customers.length} mijoz, ${transactions.length} tranzaksiya, ${courses.length} kurs`)

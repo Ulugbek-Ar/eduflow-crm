@@ -1,8 +1,8 @@
 // Bulutli rejim (Supabase Auth + RLS): lokal AuthProvider bilan bir xil AuthContextValue beradi.
 // Demo bu rejimda ham lokal (alohida nom maydonida) — demo'ga kirish/chiqishda sahifa qayta yuklanadi
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { can as roleCan } from '../auth/permissions'
+import { can as roleCan, readOnlyAllows } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import * as cloudApi from '../data/supabase'
 import type { CloudOrg, CloudProfile } from '../data/supabase'
@@ -28,51 +28,81 @@ interface CloudState {
   org: CloudOrg | null
   // Email'dagi "parolni tiklash" havolasi bilan kirildi — yangi parol majburiy
   recovery: boolean
+  // Oxirgi yuklash tarmoq xatosi bilan tugadi
+  connectionError: boolean
 }
 
-async function fetchCloudState(): Promise<Omit<CloudState, 'recovery'>> {
+type Loaded = Omit<CloudState, 'recovery'>
+
+async function fetchCloudState(): Promise<Loaded> {
   try {
     await cloudApi.ensureOrganization().catch(() => undefined)
     const profile = await cloudApi.loadOwnProfile()
-    if (!profile || profile.status !== 'active') return { loading: false, profile: null, staff: [], org: null }
+    if (!profile || profile.status !== 'active') return { loading: false, profile: null, staff: [], org: null, connectionError: false }
     const [staff, org] = await Promise.all([cloudApi.loadStaff(), cloudApi.loadOrganization()])
-    return { loading: false, profile, staff, org }
+    return { loading: false, profile, staff, org, connectionError: false }
   } catch {
-    return { loading: false, profile: null, staff: [], org: null }
+    // Internet yo'q yoki server javob bermadi: bu "chiqib ketish" emas — seans brauzerda saqlangan
+    return { loading: false, profile: null, staff: [], org: null, connectionError: true }
   }
 }
 
+// Tarmoq xatosida avval kirgan foydalanuvchi holati saqlanadi (panel yopilib, kirish oynasi chiqmasin)
+function merge(s: CloudState, next: Loaded): CloudState {
+  if (next.connectionError && s.profile) return { ...s, loading: false, connectionError: true }
+  return { ...s, ...next }
+}
+
 const message = (error: unknown) => (error instanceof Error ? error.message : tr('Tarmoq xatosi. Qayta urinib ko\'ring.'))
+const MINUTE = 60_000
 
 export function CloudAuthProvider({ children }: { children: ReactNode }) {
   const toast = useToast()
-  const [state, setState] = useState<CloudState>({ loading: true, profile: null, staff: [], org: null, recovery: false })
-  const [openedAt] = useState(Date.now)
+  const [state, setState] = useState<CloudState>({ loading: true, profile: null, staff: [], org: null, recovery: false, connectionError: false })
+  // Tarif muddati shu vaqtga qarab hisoblanadi — ochiq oynada ham har daqiqada yangilanadi
+  const [now, setNow] = useState(Date.now)
+  // Ketma-ket yuklashlar (kirish + SIGNED_IN hodisasi): faqat eng oxirgisining natijasi qo'llanadi
+  const generation = useRef(0)
 
   // Serverdan qayta o'qish (kirish, chiqish, profil o'zgarishi)
   const refresh = () => {
-    fetchCloudState().then((next) => setState((s) => ({ ...s, ...next })))
+    const gen = ++generation.current
+    fetchCloudState().then((next) => gen === generation.current && setState((s) => merge(s, next)))
   }
 
   useEffect(() => {
     setAuditBackend({ log: (e) => cloudApi.logEvent(e.action, e.summary, e.entityId), list: cloudApi.listAudit })
     let alive = true
-    const load = () => fetchCloudState().then((next) => alive && setState((s) => ({ ...s, ...next })))
+    const load = () => {
+      const gen = ++generation.current
+      fetchCloudState().then((next) => alive && gen === generation.current && setState((s) => merge(s, next)))
+    }
     load()
     const { data } = cloudApi.getClient().auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') setState((s) => ({ ...s, recovery: true }))
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') load()
     })
+    const tick = window.setInterval(() => setNow(Date.now()), MINUTE)
     return () => {
       alive = false
       data.subscription.unsubscribe()
+      window.clearInterval(tick)
       setAuditBackend(null)
     }
   }, [])
 
+  // Internet qaytdi — ulanish xatosi bo'lgan bo'lsa qayta yuklash
+  const retryOnline = useEffectEvent(() => refresh())
+  useEffect(() => {
+    if (!state.connectionError) return
+    const onOnline = () => retryOnline()
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
+  }, [state.connectionError])
+
   const { profile, staff, org } = state
-  const access = computeAccess(org?.subscription ?? NO_SUBSCRIPTION, openedAt)
-  const allowed = (permission: Permission) => roleCan(profile?.role, permission) && (!access.readOnly || permission.endsWith('.view'))
+  const access = computeAccess(org?.subscription ?? NO_SUBSCRIPTION, now)
+  const allowed = (permission: Permission) => roleCan(profile?.role, permission) && (!access.readOnly || readOnlyAllows(permission))
 
   const run = async (action: () => Promise<unknown>, after = true): Promise<ActionResult> => {
     try {
@@ -182,9 +212,11 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
     switchDemoRole: () => undefined,
     cloud: {
       org,
-      loadSnapshot: () => {
-        if (!org) return Promise.reject(new Error(tr('Markaz topilmadi')))
-        return cloudApi.loadSnapshot(org, profile?.role)
+      // Markaz sozlamalari ham har safar serverdan (boshqa xodim o'zgartirgan bo'lishi mumkin)
+      loadSnapshot: async () => {
+        if (!org) throw new Error(tr('Markaz topilmadi'))
+        const fresh = await cloudApi.loadOrganization()
+        return cloudApi.loadSnapshot(fresh ?? org, profile?.role)
       },
       createSync: (snapshot) => new cloudApi.CloudSync(org?.id ?? '', snapshot.trash),
       signUp: async (input) => {
@@ -198,6 +230,11 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       },
       sendPasswordReset: (email) => run(() => cloudApi.sendPasswordReset(email), false),
       importLocal: (data) => run(() => cloudApi.importBackup(data), false),
+      connectionError: state.connectionError,
+      retry: () => {
+        setState((s) => ({ ...s, loading: !s.profile }))
+        refresh()
+      },
     },
   }
 

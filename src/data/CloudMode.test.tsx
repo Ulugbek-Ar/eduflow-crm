@@ -20,6 +20,7 @@ const tables: Record<string, Array<Record<string, unknown>>> = {
 class Query {
   private filters: Array<[string, unknown]> = []
   private single = false
+  private window: [number, number] | null = null
   private table: string
   constructor(table: string) {
     this.table = table
@@ -27,6 +28,7 @@ class Query {
   select() { return this }
   order() { return this }
   limit() { return this }
+  range(from: number, to: number) { this.window = [from, to]; return this }
   in() { return this }
   eq(col: string, value: unknown) { this.filters.push([col, value]); return this }
   maybeSingle() { this.single = true; return this }
@@ -35,8 +37,9 @@ class Query {
   update(values: unknown) { calls.push({ op: 'update', table: this.table, args: values }); return this }
   delete() { calls.push({ op: 'delete', table: this.table }); return this }
   then(ok?: (v: { data: unknown; error: null }) => unknown, bad?: (e: unknown) => unknown) {
-    const rows = (tables[this.table] ?? []).filter((r) => this.filters.every(([c, v]) => r[c] === v))
-    return Promise.resolve({ data: this.single ? (rows[0] ?? null) : rows, error: null as null }).then(ok, bad)
+    const matched = (tables[this.table] ?? []).filter((r) => this.filters.every(([c, v]) => r[c] === v))
+    const rows = this.window ? matched.slice(this.window[0], this.window[1] + 1) : matched
+    return Promise.resolve({ data: this.single ? (rows[0] ?? null) : rows, error: null as null, count: matched.length }).then(ok, bad)
   }
 }
 

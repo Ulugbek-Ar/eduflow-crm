@@ -1,7 +1,7 @@
 // Edge Function "staff": administrator xodim qo'shadi yoki parolini tiklaydi (service role kaliti faqat serverda).
 // Chaqirish: supabase.functions.invoke('staff', { body: { action: 'invite' | 'reset', ... } })
 // Deploy: supabase functions deploy staff
-import { createClient } from 'npm:@supabase/supabase-js@2.45.4'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -73,7 +73,8 @@ Deno.serve(async (req) => {
     })
     if (profileError) {
       await admin.auth.admin.deleteUser(created.user.id)
-      return json(400, { error: profileError.message })
+      // Tarif chegarasi (profiles_staff_limit trigger) — 409, matni foydalanuvchiga tushunarli
+      return json(profileError.code === '23514' ? 409 : 400, { error: profileError.message })
     }
     await admin.from('audit_log').insert({ organization_id: me.organization_id, user_id: me.id, action: 'staff.create', summary: `${fullName} (${role})`, entity_id: created.user.id })
     // O'qituvchi kirishi: o'qituvchi yozuviga bog'lanadi (RLS "o'z guruhlari"ni shu orqali aniqlaydi)
@@ -93,7 +94,9 @@ Deno.serve(async (req) => {
     const { error } = await admin.auth.admin.updateUserById(id, { password })
     if (error) return json(400, { error: error.message })
     await admin.from('profiles').update({ must_change_password: true }).eq('id', id)
-    // Eski parol bilan ochilgan seans JWT muddati (1 soat) tugaguncha ishlaydi; kirishda yangi parol majburiy (must_change_password)
+    // Eski parol bilan ochilgan seanslar bekor qilinadi (refresh token ishlamaydi); joriy access token ko'pi bilan
+    // jwt_expiry (1 soat) ichida tugaydi. Keyingi kirishda yangi parol majburiy (must_change_password)
+    await admin.rpc('revoke_auth_sessions', { p_user: id })
     await admin.from('audit_log').insert({ organization_id: me.organization_id, user_id: me.id, action: 'staff.password', summary: target.full_name, entity_id: id })
     return json(200, { password })
   }

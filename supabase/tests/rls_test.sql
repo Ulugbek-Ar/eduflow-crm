@@ -249,6 +249,50 @@ do $$ begin
 end $$;
 reset role;
 
+-- 7b) Tarif chegarasi serverda (trigger): sinov tarifi — 3 ta faol xodim, o'qituvchilar hisoblanmaydi
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000f1', 'ortiqcha@a.uz'),
+  ('00000000-0000-0000-0000-0000000000f2', 'oqituvchi3@a.uz');
+do $$
+declare v_org uuid := (select organization_id from public.profiles where id = '00000000-0000-0000-0000-00000000000a');
+begin
+  if (select count(*) from public.profiles where organization_id = v_org and status = 'active' and role <> 'teacher') <> 3 then
+    raise exception 'FAIL: test holati — A markazida 3 ta faol xodim kutilgan';
+  end if;
+  -- Edge Function (service_role) ham chegaradan o'ta olmaydi
+  begin
+    insert into public.profiles (id, organization_id, full_name, role) values ('00000000-0000-0000-0000-0000000000f1', v_org, 'Ortiqcha Xodim', 'manager');
+    raise exception 'FAIL: chegaradan ortiq xodim qo''shildi';
+  exception when check_violation then null;
+  end;
+  -- O'qituvchi kirishi chegarasiz
+  insert into public.profiles (id, organization_id, full_name, role) values ('00000000-0000-0000-0000-0000000000f2', v_org, 'Yana O''qituvchi', 'teacher');
+end $$;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  -- O'qituvchi kirishini menejerga aylantirib chegarani aylanib o'tib bo'lmaydi
+  begin
+    perform public.update_staff('00000000-0000-0000-0000-0000000000f2'::uuid, 'manager');
+    raise exception 'FAIL: o''qituvchi kirishi orqali chegara aylanib o''tildi';
+  exception when check_violation then null;
+  end;
+  -- Bloklangan xodimni qayta yoqish ham chegara ichida
+  begin
+    perform public.update_staff('00000000-0000-0000-0000-00000000000b'::uuid, null, 'active');
+    raise exception 'FAIL: bloklangan xodim chegaradan ortiq faollashdi';
+  exception when check_violation then null;
+  end;
+  -- Bitta xodimni bloklasa — o'rniga boshqasini yoqish mumkin
+  perform public.update_staff('00000000-0000-0000-0000-00000000000c'::uuid, null, 'blocked');
+  perform public.update_staff('00000000-0000-0000-0000-00000000000b'::uuid, null, 'active');
+  begin
+    perform public.update_staff('00000000-0000-0000-0000-00000000000b'::uuid, null, 'deleted');
+    raise exception 'FAIL: noto''g''ri holat qabul qilindi';
+  exception when invalid_parameter_value then null;
+  end;
+end $$;
+reset role;
+
 -- 8) Sotuvchi: markazlar ro'yxati, muddati tugasa markaz faqat o'qiydi
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000ff');
 do $$ begin
@@ -268,6 +312,15 @@ do $$ begin
     perform public.owner_list_orgs();
     raise exception 'FAIL: oddiy administrator sotuvchi ro''yxatini ko''rdi';
   exception when insufficient_privilege then null; end;
+  -- Muddati o'tganda xodimlar va sozlamalar ham o'zgarmaydi
+  begin
+    perform public.update_staff('00000000-0000-0000-0000-00000000000b'::uuid, 'viewer');
+    raise exception 'FAIL: muddati o''tgan markaz xodimni o''zgartirdi';
+  exception when insufficient_privilege then null; end;
+  update public.organizations set settings = '{"hacked": true}'::jsonb where id = public.current_org_id();
+  if (select settings ? 'hacked' from public.organizations where id = public.current_org_id()) then
+    raise exception 'FAIL: muddati o''tgan markaz sozlamani o''zgartirdi';
+  end if;
 end $$;
 reset role;
 select 'RLS_OK' as result, :'imported' as imported;

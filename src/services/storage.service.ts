@@ -78,6 +78,8 @@ export interface LoadResult {
   dropped: number
   // Yuklashda qayta saqlash (migratsiya) muvaffaqiyatsiz bo'lsa
   saveError?: SaveFailure
+  // Migratsiyadan oldingi avtomatik nusxani yozib bo'lmadi (odatda xotira to'lgan)
+  backupError?: SaveFailure
 }
 
 // ===== Nom maydoni: haqiqiy ma'lumot va demo =====
@@ -601,10 +603,13 @@ export function loadData(): LoadResult {
   const version = readJson(STORAGE_KEYS.version)
   const fromVersion = typeof version === 'number' ? version : 1
   // v11 gacha bo'lgan ma'lumot: migratsiyadan oldin xom holati zaxiraga (bir marta; mavjud zaxira ustidan yozilmaydi)
+  let backupError: SaveFailure | undefined
   if (fromVersion < 11 && readJson(STORAGE_KEYS.preMigrationBackup) === undefined) {
-    setItem(STORAGE_KEYS.preMigrationBackup, { app: BACKUP_APP_ID, version: fromVersion, exportedAt: new Date().toISOString(), ...readRaw() })
+    const backup = setItem(STORAGE_KEYS.preMigrationBackup, { app: BACKUP_APP_ID, version: fromVersion, exportedAt: new Date().toISOString(), ...readRaw() })
+    if (!backup.ok) backupError = backup.reason
   }
-  const result = readStored(fromVersion)
+  const stored = readStored(fromVersion)
+  const result: LoadResult = backupError ? { ...stored, backupError } : stored
   if (version !== SCHEMA_VERSION || result.dropped > 0) {
     const saved = saveAll(result.data)
     if (!saved.ok) return { ...result, saveError: saved.reason }
@@ -666,4 +671,10 @@ export function parseBackup(text: string): BackupParseResult {
 export function readPreMigrationBackup(): Record<string, unknown> | null {
   const value = readJson(STORAGE_KEYS.preMigrationBackup)
   return isRecord(value) ? value : null
+}
+
+// Nusxa butun bazaning ikkinchi nusxasi — brauzer xotirasini (~5 MB) tejash uchun foydalanuvchi o'chira oladi;
+// "Barcha ma'lumotni tozalash" ham o'chiradi (mijozlar ma'lumoti brauzerda qolib ketmasin)
+export function removePreMigrationBackup(): void {
+  removeItem(STORAGE_KEYS.preMigrationBackup)
 }
