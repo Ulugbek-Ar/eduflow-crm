@@ -136,3 +136,24 @@ describe('Sahifalab o\'qish (Supabase 1000 qator cheklovi)', () => {
     expect(failing.error).toEqual({ message: 'boom' })
   })
 })
+
+describe('Katta o\'chirishlar bo\'laklab', () => {
+  it('savatchani bo\'shatish: id\'lar 150 tadan (URL juda uzun bo\'lmasin)', async () => {
+    const calls: Call[] = []
+    setClient(fakeClient(calls))
+    const sync = new CloudSync('org-1', [])
+    const ids = Array.from({ length: 400 }, (_, i) => `c${i}`)
+    await sync.purge('customer', ids)
+    const deletes = calls.filter((c) => c.op === 'delete')
+    expect(deletes.map((c) => (c.args as { ids: string[] }).ids.length)).toEqual([150, 150, 100])
+    expect(deletes.flatMap((c) => (c.args as { ids: string[] }).ids)).toEqual(ids)
+  })
+})
+
+describe('createId', () => {
+  it('10 000 ta id bir zumda — hammasi noyob', async () => {
+    const { createId } = await import('../utils/format')
+    const ids = new Set(Array.from({ length: 10_000 }, () => createId('c')))
+    expect(ids.size).toBe(10_000)
+  })
+})

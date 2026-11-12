@@ -134,15 +134,19 @@ export async function signUp(input: { email: string; password: string; orgName: 
   return 'ready'
 }
 
-// Email tasdiqlangach birinchi kirish: markaz hali yaratilmagan bo'lsa — ro'yxatdan o'tishda berilgan ma'lumot bilan
-export async function ensureOrganization(): Promise<void> {
+// Kirgan foydalanuvchi profili; email tasdiqlangach birinchi kirishda markaz hali yaratilmagan bo'lsa —
+// ro'yxatdan o'tishda berilgan ma'lumot bilan yaratiladi. Profil bir marta o'qiladi (ortiqcha so'rovsiz)
+export async function ensureOrganization(): Promise<CloudProfile | null> {
   const sb = getClient()
+  const profile = await loadOwnProfile()
+  if (profile) return profile
   const { data } = await sb.auth.getUser()
   const meta = (data.user?.user_metadata ?? {}) as Record<string, string>
-  if (!data.user || (await loadOwnProfile())) return
-  if (!meta.org_name) return
+  if (!data.user || !meta.org_name) return null
   const { error } = await sb.rpc('create_organization', { p_name: meta.org_name, p_full_name: meta.full_name ?? data.user.email ?? '', p_title: meta.title ?? '' })
-  fail(error)
+  // Markaz yaratilmasa (masalan, allaqachon bor) — avvalgidek profilsiz davom etamiz, ulanish xatosi emas
+  if (error) return null
+  return loadOwnProfile()
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {
@@ -212,8 +216,11 @@ export async function loadOrganization(): Promise<CloudOrg | null> {
 }
 
 export async function saveSettings(org: string, settings: Settings): Promise<void> {
-  const { error } = await getClient().from('organizations').update({ name: settings.orgName, settings }).eq('id', org)
+  // RLS ruxsat bermasa (muddat tugagan, huquq yo'q) UPDATE xatosiz 0 qator qaytaradi — buni xato deb bilamiz,
+  // aks holda ilova "saqlandi" deb o'ylab qoladi
+  const { data, error } = await getClient().from('organizations').update({ name: settings.orgName, settings }).eq('id', org).select('id')
   fail(error)
+  if (Array.isArray(data) && data.length === 0) throw new Error('Sozlamalar saqlanmadi: ruxsat yo\'q yoki tarif muddati tugagan')
 }
 
 export async function updateOwnProfile(fullName: string, title: string): Promise<void> {
@@ -323,6 +330,14 @@ export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise
 }
 
 const UPSERT_CHUNK = 500
+// O'chirish so'rovida id'lar URL'da (?id=in.(...)) ketadi — juda uzun URL (414) bo'lmasin: 150 tadan
+const DELETE_CHUNK = 150
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
 
 // Holat o'zgarishini serverga yuborish: yangi/o'zgarganlar — upsert, olib tashlanganlar — savatchaga (trash_move).
 // Savatchada turgan id qayta paydo bo'lsa — tiklash (trash_restore)
@@ -378,12 +393,12 @@ export class CloudSync {
   // Savatchasiz jadvallar (davomat, bekor qilingan darslar): o'zgargani — upsert (noyob kalit bo'yicha), olib tashlangani — o'chiriladi
   private async plain<T extends { id: string }>(table: 'attendance' | 'lesson_exceptions', changes: Changes<T>, toRow: (item: T, org: string) => Row, conflict: string) {
     const sb = getClient()
-    if (changes.upserts.length) {
-      const { error } = await sb.from(table).upsert(changes.upserts.map((item) => toRow(item, this.org)), { onConflict: conflict })
+    for (const part of chunks(changes.upserts, UPSERT_CHUNK)) {
+      const { error } = await sb.from(table).upsert(part.map((item) => toRow(item, this.org)), { onConflict: conflict })
       fail(error)
     }
-    if (changes.removedIds.length) {
-      const { error } = await sb.from(table).delete().eq('organization_id', this.org).in('id', changes.removedIds)
+    for (const part of chunks(changes.removedIds, DELETE_CHUNK)) {
+      const { error } = await sb.from(table).delete().eq('organization_id', this.org).in('id', part)
       fail(error)
     }
   }
@@ -420,10 +435,12 @@ export class CloudSync {
   }
 
   async purge(kind: TrashKind, ids: readonly string[]) {
-    if (!ids.length) return
-    const { error } = await getClient().from(TABLES[kind]).delete().eq('organization_id', this.org).in('id', ids as string[])
-    fail(error)
-    for (const id of ids) this.trashed.delete(`${kind}:${id}`)
+    // Katta savatcha (masalan, bekor qilingan import) — bo'laklab: id'lar URL'da ketadi
+    for (const part of chunks(ids, DELETE_CHUNK)) {
+      const { error } = await getClient().from(TABLES[kind]).delete().eq('organization_id', this.org).in('id', part)
+      fail(error)
+      for (const id of part) this.trashed.delete(`${kind}:${id}`)
+    }
   }
 }
 

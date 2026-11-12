@@ -110,6 +110,14 @@ export interface CloudBinding {
 // Bulut: boshqa xodimlar kiritgan o'zgarishlarni olib kelish oralig'i
 export const CLOUD_REFRESH_MS = 90_000
 
+// Kalitlar tartibiga bog'liq bo'lmagan taqqoslash (serverdan kelgan obyektda kalitlar tartibi boshqacha bo'lishi mumkin —
+// bir xil ma'lumot bo'lsa ham har safar butun panel qayta chizilmasin)
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v,
+  )
+}
+
 export function DashboardProvider({ children, cloud }: { children: ReactNode; cloud?: CloudBinding }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -238,14 +246,14 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
             continue
           }
           const fresh = snapshot.data[key]
-          if (JSON.stringify(fresh) === JSON.stringify(synced.current[key])) continue
+          if (stableJson(fresh) === stableJson(synced.current[key])) continue
           synced.current = { ...synced.current, [key]: fresh }
           latest.current = { ...latest.current, [key]: fresh }
           setters[key](fresh as never)
         }
         if (clean) {
           cloud.sync.setTrash(snapshot.trash)
-          setTrash((current) => (JSON.stringify(current) === JSON.stringify(snapshot.trash) ? current : snapshot.trash))
+          setTrash((current) => (stableJson(current) === stableJson(snapshot.trash) ? current : snapshot.trash))
         }
       } catch {
         // Tarmoq xatosi — keyingi safar

@@ -36,8 +36,8 @@ type Loaded = Omit<CloudState, 'recovery'>
 
 async function fetchCloudState(): Promise<Loaded> {
   try {
-    await cloudApi.ensureOrganization().catch(() => undefined)
-    const profile = await cloudApi.loadOwnProfile()
+    // Profil (kerak bo'lsa markaz yaratilib) — bir marta. Tarmoq xatosi pastdagi catch'ga tushadi
+    const profile = await cloudApi.ensureOrganization()
     if (!profile || profile.status !== 'active') return { loading: false, profile: null, staff: [], org: null, connectionError: false }
     const [staff, org] = await Promise.all([cloudApi.loadStaff(), cloudApi.loadOrganization()])
     return { loading: false, profile, staff, org, connectionError: false }

@@ -4,6 +4,7 @@ import babel from '@rolldown/plugin-babel'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 import { APP_DESCRIPTION, APP_NAME } from './src/constants/app.ts'
+import { routePreload } from './scripts/route-preload.ts'
 
 // CSP uchun yagona manba — vercel.json (netlify.toml bilan mosligi tests/deploy-config.test.ts da tekshiriladi).
 // `npm run preview` ham shu sarlavhani yuboradi: build'ni prod sharoitida tekshirish mumkin
@@ -49,6 +50,8 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     appMeta(),
+    // Sahifa bo'lagi index.js bilan parallel yuklanadi (scripts/route-preload.mjs)
+    routePreload(),
   ],
   preview: {
     headers: { 'Content-Security-Policy': readCsp() },

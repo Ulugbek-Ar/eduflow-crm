@@ -4,7 +4,7 @@ import { useDashboard } from '../../context/useDashboard'
 import { tr } from '../../i18n'
 import type { PayRule, PayRuleType, TeacherInput, TeacherStatus } from '../../types/teacher.types'
 import { formatAmountInput, parseAmount } from '../../utils/format'
-import { formatPhone } from '../../utils/phone'
+import { formatPhone, isValidPhone, phoneDigits } from '../../utils/phone'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
@@ -40,7 +40,9 @@ export function TeacherFormModal({ teacherId }: { teacherId?: string }) {
     const clean = name.trim().replace(/\s+/g, ' ')
     if (clean.length < 2 || clean.length > 80) next.name = tr('Ism familiyani kiriting (2–80 belgi)')
     else if (teachers.some((t) => t.id !== editing?.id && t.name.toLowerCase() === clean.toLowerCase())) next.name = tr('Bu ismli o\'qituvchi bor')
-    if (phone.trim() && phone.replace(/\D/g, '').length < 12) next.phone = tr('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')
+    // Telefon ixtiyoriy: faqat "+998" qolgan bo'lsa — bo'sh hisoblanadi
+    const hasPhone = phoneDigits(phone).length > 0
+    if (hasPhone && !isValidPhone(phone)) next.phone = tr('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')
     const amount = type === 'percent' ? Number(value.replace(',', '.')) : parseAmount(value)
     if (!Number.isFinite(amount) || amount < 0 || (type === 'percent' && amount > 100)) next.value = type === 'percent' ? tr('Foiz 0 dan 100 gacha') : tr('Summa 0 yoki musbat son bo\'lishi kerak')
     setErrors(next)
@@ -51,7 +53,7 @@ export function TeacherFormModal({ teacherId }: { teacherId?: string }) {
     const payRule: PayRule = type === 'percent' ? { type, percent: amount } : { type, amount: Math.round(amount) }
     const input: TeacherInput = {
       name: clean,
-      phone: phone.trim(),
+      phone: phoneDigits(phone).length > 0 ? phone.trim() : '',
       subjects: subjects
         .split(',')
         .map((s) => s.trim())

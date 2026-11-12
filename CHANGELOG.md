@@ -2,6 +2,33 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.1.2] — 2026-11-12 · ma'lumot sxemasi v11
+
+Butun loyihani qayta ko'rib chiqish natijasidagi tuzatishlar.
+
+### Tuzatildi
+
+- **Telefon maydonlari**: Backspace bilan "+998" gacha o'chirilganda "+99" yana "+998 99" ga aylanib, maydonni
+  tozalab bo'lmasdi (mijoz, sozlamalar, sozlash ustasi, o'qituvchi). O'qituvchi telefoni ixtiyoriy — faqat "+998"
+  qolsa saqlanadi va bo'sh yoziladi.
+- **Noyob id'lar** kriptografik tasodifiy (avval `Math.random` ning 5 belgisi — katta Excel importda ikki yozuv bir
+  xil id olib, biri ikkinchisining ustidan yozilishi mumkin edi).
+- **Bulut: katta o'chirishlar** (savatchani bo'shatish, bekor qilingan import, davomat) 150 tadan bo'laklab — id'lar
+  URL'da ketadi, avval minglab yozuvda so'rov juda uzun bo'lib (414) muvaffaqiyatsiz tugardi. Davomat yozish ham bo'laklab.
+- **Bulut: sozlamalar** ruxsat bo'lmaganda (muddat tugagan) "saqlandi" deb ko'rinmaydi — xato ko'rsatiladi.
+- **Bulut: kirishda** profil bir marta o'qiladi (avval har yuklashda ikki marta); serverdan yangilashda bir xil ma'lumot
+  uchun panel qayta chizilmaydi.
+- **Excel import**: "zip-bomba" himoyasi — ochilgan hajm oqim davomida sanaladi (e'lon qilingan hajmga ishonilmaydi),
+  64 MB dan oshsa to'xtatiladi; avval maxsus fayl tabni qotirib qo'yishi mumkin edi.
+
+### Qo'shildi
+
+- **Huquqiy sahifalar rekvizitlari** muhit o'zgaruvchilaridan: `VITE_LEGAL_COMPANY`, `VITE_LEGAL_ADDRESS`,
+  `VITE_LEGAL_DATA_LOCATION`, `VITE_LEGAL_PAYMENT`, `VITE_LEGAL_REFUND`, `VITE_LEGAL_SUPPORT_HOURS`; aloqa —
+  `VITE_SUPPORT_*` dan. Kod o'zgartirmasdan `[qavs]` joylar to'ldiriladi (`DEPLOY.md`).
+- **Tezroq ochilish**: sahifa bo'lagi (ilova, landing, huquqiy) va CSS `index.js` bilan parallel yuklanadi
+  (`scripts/route-preload.ts`), rus tili tanlangan bo'lsa — lug'at ham. `/app` Lighthouse 94 → 96.
+
 ## [1.1.1] — 2026-11-10 · ma'lumot sxemasi v11
 
 Tuzatishlar: bulutli rejimda ma'lumot to'liqligi va internet uzilishi, tarif chegarasi, ma'lumotni tozalash.
