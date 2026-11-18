@@ -27,8 +27,11 @@ function contactsText(): string {
   return contactLinks().map((link) => link.value).join(', ')
 }
 
-function Fill({ value, placeholder }: { value: string; placeholder: string }) {
-  return <strong>{value || `[${placeholder}]`}</strong>
+// Berilmagan rekvizit: ishlab chiqishda — [qavs] eslatma (to'ldirish kerakligi ko'rinsin); tayyor saytda — oddiy
+// neytral matn (mijozga "[...]" ko'rinmasin, QA-04). Build paytida ogohlantirish — vite.config.ts (legalEnvWarning)
+function Fill({ value, placeholder, fallback }: { value: string; placeholder: string; fallback: string }) {
+  if (value) return <strong>{value}</strong>
+  return import.meta.env.PROD ? <>{fallback}</> : <strong>[{placeholder}]</strong>
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -48,7 +51,7 @@ function Privacy() {
       <Section title="1. Umumiy qoidalar">
         <p>
           Ushbu siyosat {APP_NAME} xizmati (keyingi o'rinlarda — «Xizmat») foydalanuvchilari va ular kiritadigan shaxsga doir ma'lumotlar
-          qanday yig'ilishi, saqlanishi va himoya qilinishini tushuntiradi. Xizmat egasi: <Fill value={[LEGAL.company, LEGAL.address].filter(Boolean).join(', ')} placeholder="Kompaniya nomi, STIR, manzil" />.
+          qanday yig'ilishi, saqlanishi va himoya qilinishini tushuntiradi. Xizmat egasi: <Fill value={[LEGAL.company, LEGAL.address].filter(Boolean).join(', ')} placeholder="Kompaniya nomi, STIR, manzil" fallback="sayt egasi (rekvizitlar so'rov bo'yicha beriladi)" />.
         </p>
         <p>Siyosat O'zbekiston Respublikasining «Shaxsga doir ma'lumotlar to'g'risida»gi Qonuni talablariga muvofiq tuzilgan.</p>
       </Section>
@@ -73,7 +76,7 @@ function Privacy() {
       </Section>
       <Section title="5. Saqlash joyi va muddati">
         <p>
-          Lokal rejimda ma'lumotlar foydalanuvchi brauzerida saqlanadi. Bulutli rejimda — <Fill value={LEGAL.dataLocation} placeholder="server joylashuvi" />dagi
+          Lokal rejimda ma'lumotlar foydalanuvchi brauzerida saqlanadi. Bulutli rejimda — <Fill value={LEGAL.dataLocation} placeholder="server joylashuvi" fallback="xizmat ko'rsatuvchi hosting provayderi" />dagi
           serverlarda. O'zbekiston fuqarolarining shaxsga doir ma'lumotlari qonunchilik talabiga ko'ra O'zbekiston hududidagi
           serverlarda saqlanishi lozim — bulutli rejimni yoqishdan oldin buni tekshiring.
         </p>
@@ -88,7 +91,7 @@ function Privacy() {
       <Section title="7. Huquqlaringiz">
         <p>
           Siz o'zingiz haqingizdagi ma'lumotni ko'rish, tuzatish, o'chirish va qayta ishlashga roziligingizni qaytarib olish huquqiga
-          egasiz. Murojaat: <Fill value={contactsText()} placeholder="email yoki telefon" />.
+          egasiz. Murojaat: <Fill value={contactsText()} placeholder="email yoki telefon" fallback="Yordam bo'limidagi aloqa kanallari orqali" />.
         </p>
       </Section>
       <Section title="8. O'zgarishlar">
@@ -105,7 +108,7 @@ function Terms() {
       <p className="muted">Oxirgi yangilanish: {UPDATED}</p>
       <Section title="1. Taraflar va predmet">
         <p>
-          Ushbu shartlar <Fill value={LEGAL.company} placeholder="Kompaniya nomi, STIR" /> (keyingi o'rinlarda — «Ijrochi») va {APP_NAME} xizmatidan
+          Ushbu shartlar <Fill value={LEGAL.company} placeholder="Kompaniya nomi, STIR" fallback="xizmat egasi" /> (keyingi o'rinlarda — «Ijrochi») va {APP_NAME} xizmatidan
           foydalanuvchi tashkilot yoki shaxs (keyingi o'rinlarda — «Foydalanuvchi») o'rtasidagi munosabatlarni tartibga soladi.
           Ro'yxatdan o'tish shartlarga rozilik bildirishni anglatadi (ommaviy oferta).
         </p>
@@ -119,7 +122,7 @@ function Terms() {
       <Section title="3. Sinov muddati va to'lov">
         <ul>
           <li>Birinchi 14 kun — bepul sinov, barcha asosiy imkoniyatlar bilan.</li>
-          <li>Keyin xizmat tanlangan tarif bo'yicha oyma-oy oldindan to'lanadi: <Fill value={LEGAL.payment} placeholder="to'lov usullari: Click, Payme, bank o'tkazmasi" />.</li>
+          <li>Keyin xizmat tanlangan tarif bo'yicha oyma-oy oldindan to'lanadi: <Fill value={LEGAL.payment} placeholder="to'lov usullari: Click, Payme, bank o'tkazmasi" fallback="bank o'tkazmasi yoki kelishilgan boshqa usulda" />.</li>
           <li>To'lov o'z vaqtida qilinmasa, hisob faqat ko'rish rejimiga o'tkazilishi mumkin; ma'lumotlar o'chirilmaydi.</li>
         </ul>
       </Section>
@@ -135,7 +138,7 @@ function Terms() {
           <li>Xizmatning barqaror ishlashini ta'minlash (rejali ishlar haqida oldindan xabar berish).</li>
           <li>Ma'lumotlarni maxfiy saqlash va Maxfiylik siyosatiga rioya qilish.</li>
           <li>
-            Yordam: <Fill value={[LEGAL.supportHours, contactsText()].filter(Boolean).join(' · ')} placeholder="ish vaqti va aloqa kanali" />.
+            Yordam: <Fill value={[LEGAL.supportHours, contactsText()].filter(Boolean).join(' · ')} placeholder="ish vaqti va aloqa kanali" fallback="Yordam bo'limidagi aloqa kanallari orqali" />.
           </li>
         </ul>
       </Section>
@@ -148,7 +151,7 @@ function Terms() {
       <Section title="7. Shartnomani bekor qilish">
         <p>
           Foydalanuvchi istalgan vaqtda xizmatdan voz kechishi mumkin. Ijrochi so'rov bo'yicha ma'lumotlarni JSON/Excel ko'rinishida
-          beradi. To'langan davr uchun qaytarish: <Fill value={LEGAL.refund} placeholder="shartlar" />.
+          beradi. To'langan davr uchun qaytarish: <Fill value={LEGAL.refund} placeholder="shartlar" fallback="taraflar kelishuviga ko'ra" />.
         </p>
       </Section>
       <Section title="8. Nizolar">
@@ -156,7 +159,7 @@ function Terms() {
       </Section>
       <Section title="9. Aloqa">
         <p>
-          <Fill value={[LEGAL.company, LEGAL.address, contactsText()].filter(Boolean).join(', ')} placeholder="Kompaniya nomi, manzil, telefon, email" />
+          <Fill value={[LEGAL.company, LEGAL.address, contactsText()].filter(Boolean).join(', ')} placeholder="Kompaniya nomi, manzil, telefon, email" fallback="Yordam bo'limidagi aloqa kanallari orqali murojaat qiling." />
         </p>
       </Section>
     </>

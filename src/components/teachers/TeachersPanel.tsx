@@ -22,6 +22,7 @@ import { formatAmountInput, parseAmount } from '../../utils/format'
 import { rateLabel, teacherAttendanceRate } from '../../utils/attendance'
 import { addDays } from '../../utils/groups'
 import './teachers.css'
+import { searchIncludes } from '../../utils/searchText'
 
 type Tab = 'teachers' | 'payroll'
 
@@ -58,7 +59,7 @@ function TeacherList() {
   const [issued, setIssued] = useState<{ title: string; fullName: string; login: string; password: string } | null>(null)
   const query = search.trim().toLowerCase()
   const visible = teachers
-    .filter((t) => !query || `${t.name} ${t.subjects.join(' ')} ${t.phone}`.toLowerCase().includes(query))
+    .filter((t) => searchIncludes(`${t.name} ${t.subjects.join(' ')} ${t.phone}`, query))
     .sort((a, b) => Number(a.status === 'archived') - Number(b.status === 'archived') || a.name.localeCompare(b.name))
   const { from, to } = monthBounds(today.slice(0, 7))
 

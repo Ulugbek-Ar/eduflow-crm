@@ -102,11 +102,27 @@ describe('Kutilayotgan to\'lovlar sanasi', () => {
   // Sana maydoni sozlamadagi formatda yoziladi (standart: kk.oo.yyyy)
   const inputDate = (d: Date) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
 
+  it('"Kurs to\'lovi" mijozsiz saqlanmaydi (QA-03); "Boshqa kirim" — mijozsiz mumkin', async () => {
+    const { user } = await openFinance({ customers: [makeCustomer()] })
+    await user.click(screen.getAllByRole('button', { name: 'To\'lov qabul qilish' })[0])
+    const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
+    await user.type(within(dialog).getByLabelText(/Summa/), '650000')
+    await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
+    expect(within(dialog).getByText(/Kurs to'lovi uchun mijozni tanlang/)).toBeTruthy()
+    expect(storedTx()).toHaveLength(0)
+    await user.selectOptions(within(dialog).getByLabelText('Kategoriya'), 'other_income')
+    await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(storedTx()).toMatchObject([{ category: 'other_income', amount: 650000 }])
+  })
+
   it('"Kutilmoqda" kelajakdagi sana bilan kiritiladi; "To\'langan" uchun kelajak rad etiladi', async () => {
     const { user } = await openFinance({ customers: [makeCustomer()] })
     await user.click(screen.getAllByRole('button', { name: 'To\'lov qabul qilish' })[0])
     const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
     await user.type(within(dialog).getByLabelText(/Summa/), '300000')
+    // Mijozsiz kirim — "Boshqa kirim" (kurs to'lovi mijozsiz saqlanmaydi)
+    await user.selectOptions(within(dialog).getByLabelText('Kategoriya'), 'other_income')
     const date = within(dialog).getByLabelText(/^Sana/)
     await user.clear(date)
     await user.type(date, inputDate(inDays(10)))

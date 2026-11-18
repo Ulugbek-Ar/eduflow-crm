@@ -15,6 +15,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Select } from '../ui/Select'
 import { Capacity } from './Capacity'
 import './groups.css'
+import { searchIncludes } from '../../utils/searchText'
 
 type StatusFilter = GroupStatus | 'all'
 
@@ -42,7 +43,7 @@ export function GroupsPanel() {
         (course === 'all' || g.courseId === course) &&
         (teacher === 'all' || (teacher === 'none' ? !g.teacherId : g.teacherId === teacher)) &&
         (day === 'all' || g.days.includes(day)) &&
-        (!query || `${g.name} ${courseName(g.courseId)} ${teacherName(g.teacherId)} ${g.room}`.toLowerCase().includes(query)),
+        searchIncludes(`${g.name} ${courseName(g.courseId)} ${teacherName(g.teacherId)} ${g.room}`, query),
     )
     .sort((a, b) => Number(hasLessonOn(b, today)) - Number(hasLessonOn(a, today)) || a.startTime.localeCompare(b.startTime) || a.name.localeCompare(b.name))
 

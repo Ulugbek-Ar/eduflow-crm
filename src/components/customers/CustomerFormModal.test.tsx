@@ -10,12 +10,19 @@ async function openForm(user: Awaited<ReturnType<typeof renderSignedIn>>['user']
 }
 
 describe('Mijoz qo\'shish', () => {
-  it('telefon raqami +998 XX XXX XX XX ko\'rinishida formatlanadi', async () => {
+  it('telefon raqami +998 XX XXX XX XX ko\'rinishida formatlanadi; "8 ..." eski uslubi to\'g\'ri o\'qiladi', async () => {
     const { user } = await renderSignedIn()
     const dialog = await openForm(user)
     const phone = within(dialog).getByLabelText(/Telefon/) as HTMLInputElement
-    await user.type(phone, '901234567999')
+    await user.type(phone, '901234567')
     expect(phone.value).toBe('+998 90 123 45 67')
+    await user.clear(phone)
+    await user.type(phone, '8931112233')
+    expect(phone.value).toBe('+998 93 111 22 33')
+    // Ortiqcha raqam jim kesilmaydi — ko'rinib turadi va forma xato beradi
+    await user.clear(phone)
+    await user.type(phone, '901234567999')
+    expect(phone.value).toBe('+998 90 123 45 67999')
   })
 
   it('yangi mijoz qo\'shiladi va ro\'yxatda ko\'rinadi', async () => {

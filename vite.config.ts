@@ -71,6 +71,20 @@ const faviconType = (path: string) => {
   return 'image/png'
 }
 
+// Huquqiy rekvizitlar berilmagan bo'lsa production build'da ogohlantirish (saytda [qavs] emas, neytral matn chiqadi —
+// lekin oferta va maxfiylik siyosati kompaniya nomi va STIR bilan to'ldirilishi kerak). DEMO_ONLY sayti bundan mustasno
+function legalEnvWarning(env: Record<string, string>): Plugin {
+  return {
+    name: 'eduflow-legal-env-warning',
+    apply: 'build',
+    buildStart() {
+      if (env.VITE_DEMO_ONLY === '1') return
+      const missing = ['VITE_LEGAL_COMPANY', 'VITE_LEGAL_ADDRESS'].filter((key) => !env[key]?.trim())
+      if (missing.length) this.warn(`Huquqiy rekvizitlar berilmagan: ${missing.join(', ')} — /privacy va /terms to'liq emas (DEPLOY.md)`)
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // .env, .env.local va muhit o'zgaruvchilari (Vercel/GitHub) — ilovaga ham shu qiymatlar boradi
@@ -82,6 +96,7 @@ export default defineConfig(({ mode }) => {
       ...brandMeta(brand),
       // Sahifa bo'lagi index.js bilan parallel yuklanadi (scripts/route-preload.ts)
       routePreload(),
+      legalEnvWarning(loadEnv(mode, process.cwd(), 'VITE_')),
     ],
     preview: {
       headers: { 'Content-Security-Policy': readCsp() },

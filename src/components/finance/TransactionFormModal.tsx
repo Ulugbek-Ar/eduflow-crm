@@ -155,6 +155,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     return new Date(`${form.date}T12:00:00`).toISOString()
   }
 
+  const customerRequired = form.type === 'income' && form.category === 'course_fee' && !(editing && !editing.customerId)
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const amount = parseAmount(form.amount)
@@ -164,9 +166,13 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     if (!form.date) next.date = tr('Sanani tanlang')
     // Kutilayotgan to'lov kelajakda bo'lishi mumkin; to'langan yoki bekor qilingan — yo'q
     else if (form.date > today && form.status !== 'pending') next.date = tr('Kelajakdagi sana faqat "Kutilmoqda" statusida')
+    // Kurs to'lovi — faqat mijoz bilan: aks holda hech kimning qarzi kamaymaydi, chekda mijoz bo'lmaydi va eslatma
+    // to'lagan ota-onaga ham ketaveradi. Eski mijozsiz yozuvni (import, onlayn) tahrirlash avvalgidek mumkin
+    if (customerRequired && !form.customerId) next.customer = tr('Kurs to\'lovi uchun mijozni tanlang — to\'lov uning qarziga yoziladi')
     setErrors(next)
     if (next.amount) return amountRef.current?.focus()
     if (next.date) return dateRef.current?.focus()
+    if (next.customer) return document.querySelector<HTMLInputElement>('.modal [role="combobox"]')?.focus()
 
     const data: TransactionInput = {
       type: form.type,
@@ -248,7 +254,7 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
               setAmountTouched(true)
               update('amount', formatAmountInput(e.target.value))
             }}
-            placeholder="650 000"
+            placeholder={tr('Masalan: 650 000')}
             data-autofocus
           />
           <DateInput
@@ -303,9 +309,14 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             label={tr('Mijoz')}
             options={customerOptions}
             value={form.customerId}
-            onChange={(value) => refill({ customerId: value })}
+            onChange={(value) => {
+              refill({ customerId: value })
+              setErrors((prev) => ({ ...prev, customer: undefined }))
+            }}
             placeholder={tr('Ism yoki telefon bo\'yicha qidiring')}
-            hint={tr('Ixtiyoriy')}
+            required={customerRequired}
+            error={errors.customer}
+            hint={customerRequired ? tr('To\'lov shu o\'quvchining qarziga yoziladi') : tr('Ixtiyoriy')}
           />
         )}
 

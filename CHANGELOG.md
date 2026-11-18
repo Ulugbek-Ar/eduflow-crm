@@ -2,6 +2,28 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.2.3] — 2026-11-18 · ma'lumot sxemasi v12
+
+QA hisobotidagi (`docs/QA-PROMPT.md`) yuqori darajadagi 5 ta va o'rta darajadagi 4 ta kamchilik tuzatildi.
+
+### Tuzatildi
+
+- **QA-01. Telefon**: "8 93 111 22 33", "0931112233", "8-90-123-45-67" — to'g'ri `+998 93 111 22 33`; 9 dan uzun
+  tushunarsiz raqam endi jim kesilmaydi (ko'rinadi va forma xato beradi). Excel importi ham shu qoida bilan.
+- **QA-02. Qidiruv**: o'zbekcha apostrof turlari tenglashtirildi — "G'ulom", "Gʻulom", "G‘ulom" va "gulom" bir xil
+  topiladi (mijozlar, Header qidiruvi, mijoz tanlash maydoni, moliya, guruhlar, o'qituvchilar, kurslar, jurnal).
+- **QA-06. Mijoz tanlash**: telefon bo'shliqsiz yozilsa ham ("931112233", "+998931112233") topiladi.
+- **QA-03. Kurs to'lovi** mijozsiz saqlanmaydi ("Mijoz" majburiy, xato matni bilan); "Boshqa kirim" — mijozsiz mumkin.
+  Eski mijozsiz yozuvlarni (import, onlayn) tahrirlash avvalgidek.
+- **QA-04. Huquqiy sahifalar**: tayyor saytda `[...]` ko'rinmaydi — rekvizit berilmasa neytral matn; build paytida
+  `VITE_LEGAL_COMPANY`/`VITE_LEGAL_ADDRESS` berilmagani haqida ogohlantirish.
+- **QA-05. Sozlash ustasi**: yangi markazda telefon va manzil bo'sh (namuna faqat placeholder va demo markazda) —
+  namunaviy raqam eslatma, chek va botga tushmaydi.
+- **QA-07. Ro'yxatdan o'tish**: barcha maydon xatolari birdaniga ko'rsatiladi (ism, login, parol, takror).
+- **QA-09. O'qituvchi "Bugun"**: o'quvchilar soni faqat bugun haqiqatan o'qiyotganlar.
+- **QA-10. Telefonda oynalar**: "Saqlash" va "Bekor qilish" pastda doim ko'rinadi (aylantirmasdan); iOS'da `100dvh`;
+  summa maydonida "Masalan: 650 000".
+
 ## [1.2.2] — 2026-11-18 · ma'lumot sxemasi v12
 
 ### Tuzatildi

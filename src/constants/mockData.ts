@@ -19,14 +19,19 @@ export const DEFAULT_REMINDER_UZ =
 export const DEFAULT_REMINDER_RU =
   'Здравствуйте, {ism}! {markaz}: оплата за {oy}, группа «{guruh}» — {summa}. Пожалуйста, внесите оплату. Вопросы: {telefon}'
 
+// Demo markaz kontaktlari (namuna)
+export const DEMO_CONTACTS = { phone: '+998 71 200 00 00', address: 'Toshkent sh., Chilonzor tumani' } as const
+
 export const DEFAULT_SETTINGS: Settings = {
   // Namuna markaz (demo va sozlash ustasidan oldin) — mahsulot brendidan mustaqil
   orgName: 'Namuna markaz',
   // Tashkilot nomining bosh harflari (Sidebar'dagi logo)
   logoText: 'NM',
   logoImage: '',
-  phone: '+998 71 200 00 00',
-  address: 'Toshkent sh., Chilonzor tumani',
+  // Yangi markazda bo'sh (QA-05): namunaviy raqam eslatma, chek va botga "haqiqiy" bo'lib tushmasin.
+  // Namuna faqat placeholder'da va demo markazda (DEMO_CONTACTS)
+  phone: '',
+  address: '',
   currency: 'UZS',
   dateFormat: 'dd.mm.yyyy',
   csvDelimiter: ';',

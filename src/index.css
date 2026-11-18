@@ -2404,6 +2404,8 @@ a.btn {
   width: 100%;
   max-width: 520px;
   max-height: calc(100vh - 32px);
+  /* iOS Safari: pastki panel ostida qolmasin */
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 24px;
   border-radius: var(--radius);
@@ -2451,6 +2453,19 @@ a.btn {
 
 .modal .modal-actions {
   margin-top: 20px;
+}
+
+/* Telefonda uzun forma (to'lov qabul qilish): "Saqlash" va "Bekor qilish" aylantirmasdan doim ko'rinadi (QA-10) */
+@media (max-width: 640px) {
+  .modal .modal-actions {
+    position: sticky;
+    bottom: -24px;
+    z-index: 2;
+    margin: 12px -24px -24px;
+    padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
 }
 
 .confirm-message {

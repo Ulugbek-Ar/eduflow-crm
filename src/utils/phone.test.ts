@@ -17,3 +17,32 @@ describe('telefon: prefiksni o\'chirish (Backspace)', () => {
     expect(isValidPhone('+998 90 123 45 67')).toBe(true)
   })
 })
+
+describe('telefon: eski uslub (8 / 0) va noto\'g\'ri uzun raqam (QA-01)', () => {
+  it.each([
+    ['8 93 111 22 33', '+998 93 111 22 33'],
+    ['0931112233', '+998 93 111 22 33'],
+    ['8-90-123-45-67', '+998 90 123 45 67'],
+    ['93 111 22 33', '+998 93 111 22 33'],
+    ['998931112233', '+998 93 111 22 33'],
+    ['+998 (93) 111-22-33', '+998 93 111 22 33'],
+    ['+998 8931112233', '+998 93 111 22 33'],
+  ])('%s -> %s', (input, expected) => {
+    expect(formatPhone(input)).toBe(expected)
+    expect(isValidPhone(input)).toBe(true)
+  })
+
+  it('9 dan uzun tushunarsiz raqam kesilmaydi va noto\'g\'ri hisoblanadi', () => {
+    expect(isValidPhone('93111223344')).toBe(false)
+    expect(formatPhone('93111223344')).toBe('+998 93 111 22 3344')
+    expect(isValidPhone('+998 93 111 22 33 4')).toBe(false)
+    // 0 bilan boshlangan 9 raqam — operator kodi emas
+    expect(isValidPhone('093111223')).toBe(false)
+  })
+
+  it('maydonda raqamma-raqam yozish: 10-raqamdan keyin to\'g\'ri raqamga aylanadi', () => {
+    let value = ''
+    for (const ch of '8931112233') value = formatPhone(value + ch)
+    expect(value).toBe('+998 93 111 22 33')
+  })
+})

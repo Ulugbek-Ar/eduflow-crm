@@ -12,6 +12,9 @@ describe('To\'lov cheki', () => {
     await user.click((await screen.findAllByRole('button', { name: 'To\'lov qabul qilish' }))[0])
     const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
     await user.type(within(dialog).getByLabelText(/Summa/), '650000')
+    // Kurs to'lovi — mijoz bilan
+    await user.click(within(dialog).getByRole('combobox', { name: /Mijoz/ }))
+    await user.click(await within(dialog).findByRole('option', { name: /Aziza Karimova/ }))
     await user.click(within(dialog).getByRole('button', { name: 'Saqlash' }))
     const toasts = screen.getByRole('region', { name: 'Bildirishnomalar' })
     await user.click(await within(toasts).findByRole('button', { name: 'Chek' }))

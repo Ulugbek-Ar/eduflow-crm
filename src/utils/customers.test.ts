@@ -26,7 +26,8 @@ describe('telefon maskasi', () => {
     ['998901234567', '+998 90 123 45 67'],
     ['+998 90 12', '+998 90 12'],
     ['+998', '+998'],
-    ['90123456789999', '+998 90 123 45 67'],
+    // Ortiqcha raqam jim kesilmaydi (QA-01): ko'rinib turadi, isValidPhone — false
+    ['90123456789999', '+998 90 123 45 6789999'],
   ])('%s -> %s', (input, expected) => {
     expect(formatPhone(input)).toBe(expected)
   })
@@ -34,6 +35,7 @@ describe('telefon maskasi', () => {
   it('isValidPhone', () => {
     expect(isValidPhone('+998 90 123 45 67')).toBe(true)
     expect(isValidPhone('+998 90 123')).toBe(false)
+    expect(isValidPhone('90123456789999')).toBe(false)
   })
 })
 
@@ -135,5 +137,18 @@ describe('voronka', () => {
     expect(neighbourStage('new', -1)).toBeNull()
     expect(neighbourStage('cancelled', 1)).toBeNull()
     expect(neighbourStage('paid', -1)).toBe('thinking')
+  })
+})
+
+describe('qidiruv: o\'zbekcha apostrof turlari (QA-02)', () => {
+  it('"Gʻulom Qoʻchqorov" — G\'ulom, G‘ulom, qo\'chqorov va apostrofsiz "gulom" bilan topiladi', async () => {
+    const { matchesCustomer } = await import('./customers')
+    const { makeCustomer } = await import('../test/helpers')
+    const customer = makeCustomer({ name: 'Gʻulom Qoʻchqorov', phone: '+998 93 111 22 33' })
+    for (const query of ["G'ulom", 'G‘ulom', "qo'chqorov", 'gulom', 'GʻULOM  qoʻch']) expect(matchesCustomer(customer, query), query).toBe(true)
+    expect(matchesCustomer(customer, 'Bahrom')).toBe(false)
+    // Telefon bo'shliqsiz ham
+    expect(matchesCustomer(customer, '931112233')).toBe(true)
+    expect(matchesCustomer(customer, '+998931112233')).toBe(true)
   })
 })

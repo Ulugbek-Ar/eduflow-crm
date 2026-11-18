@@ -55,6 +55,20 @@ describe('Ro\'yxatdan o\'tish (birinchi ishga tushish)', () => {
     await user.click(screen.getByRole('button', { name: 'Hisob yaratish' }))
     expect(await screen.findByText(/taxmin qilish juda oson/)).toBeTruthy()
   })
+
+  it('bo\'sh formada barcha majburiy maydonlarda xato birdaniga; qisqa parol va mos kelmagan takror — ikkalasi (QA-07)', async () => {
+    const { user } = renderApp()
+    await screen.findByRole('button', { name: 'Hisob yaratish' })
+    await user.click(screen.getByRole('button', { name: 'Hisob yaratish' }))
+    expect(screen.getByText('Markaz nomini kiriting')).toBeTruthy()
+    expect(screen.getByText(/Ism familiyani kiriting/)).toBeTruthy()
+    expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(4)
+    await user.type(screen.getByLabelText(/^Parol( \*)?$/, { selector: 'input' }), 'qisqa')
+    await user.type(screen.getByLabelText(/Parolni takrorlang/), 'boshqa')
+    await user.click(screen.getByRole('button', { name: 'Hisob yaratish' }))
+    expect(screen.getByText(/kamida 8 ta belgi/)).toBeTruthy()
+    expect(screen.getByText('Parollar mos kelmadi')).toBeTruthy()
+  })
 })
 
 describe('Kirish', () => {

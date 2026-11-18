@@ -5,6 +5,7 @@ import { pageTitle } from '../../constants/app'
 import { useAuth } from '../../hooks/useAuth'
 import { isCryptoAvailable, MIN_PASSWORD_LENGTH } from '../../services/auth.service'
 import { updateStoredSettings } from '../../services/storage.service'
+import { accountFieldErrors } from '../../services/users.service'
 import { getInitials } from '../../utils/customers'
 import { routeHref } from '../../router'
 import { Button } from '../ui/Button'
@@ -38,8 +39,14 @@ export function SetupAdminScreen() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Hamma maydon bir yo'la tekshiriladi (QA-07): xatolar bittalab emas, birdaniga ko'rinadi
     const next: Partial<Record<Field, string>> = {}
     if (form.orgName.trim().length < 2) next.orgName = tr('Markaz nomini kiriting')
+    const account = accountFieldErrors({ fullName: form.fullName, title: form.title, login: form.login, password: form.password })
+    if (account.fullName) next.fullName = account.fullName
+    if (account.title) next.title = account.title
+    if (account.login) next.login = account.login
+    if (account.password) next.password = account.password
     if (form.password && form.password !== form.confirm) next.confirm = tr('Parollar mos kelmadi')
     if (!form.confirm) next.confirm = tr('Parolni yana bir marta yozing')
     setErrors(next)
