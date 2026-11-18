@@ -1,6 +1,6 @@
 # EduFlow CRM
 
-[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.2.1 · ma'lumot sxemasi v12 · [o'zgarishlar](CHANGELOG.md)
+[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.2.2 · ma'lumot sxemasi v12 · [o'zgarishlar](CHANGELOG.md)
 
 **O'quv markazlari uchun CRM.** Lidlar va mijozlar, guruhlar va dars jadvali, davomat, to'lovlar va kassa, qarzdorlar va
 to'lov eslatmalari, o'qituvchilar va maosh, Excel/CSV'dan import, hisobotlar, xodimlar va rollar, filiallar — bitta brauzer
@@ -357,7 +357,7 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 
 ## Sifat: testlar va Lighthouse
 
-- **Unit va komponent testlari** (Vitest + Testing Library): 595 ta test, 94 fayl — `npm run test`. Formulalar (qarz, maosh,
+- **Unit va komponent testlari** (Vitest + Testing Library): 598 ta test, 95 fayl — `npm run test`. Formulalar (qarz, maosh,
   davomat, jadval), migratsiya, CSV/XLSX parser (xlsx fixture test ichida yasaladi), ruxsatlar jadvali va SQL
   `has_permission()` mosligi, tarjimalar to'liqligi; v1.2: Payme/Click protokoli (imzo, holatlar, xato kodlari), Eskiz
   mijozi, bot buyruqlari va ulash kodi, xabarlar navbati, server qarz hisobi ilova bilan bir xilligi, filiallar.

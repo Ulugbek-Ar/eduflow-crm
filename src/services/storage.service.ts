@@ -98,7 +98,9 @@ export type StorageNamespace = 'main' | 'demo'
 export const DEMO_PREFIX = 'eduflow-demo:'
 // Tab qaysi rejimda ochilgani (sessionStorage: tab yopilganda demo tugaydi)
 export const MODE_KEY = 'eduflow:mode'
-const SHARED_KEYS: ReadonlySet<string> = new Set(['apex:theme', 'apex:sidebar-collapsed', 'apex:customers-view', 'apex:lang'])
+// Demo va asosiy markaz uchun umumiy (demo xotirasi tozalanganda ham saqlanadi). apex:tour — tanishtiruv har odamga
+// bir marta: demo'ga qayta kirganda yana chiqmasin
+const SHARED_KEYS: ReadonlySet<string> = new Set(['apex:theme', 'apex:sidebar-collapsed', 'apex:customers-view', 'apex:lang', 'apex:tour'])
 
 let namespace: StorageNamespace = 'main'
 

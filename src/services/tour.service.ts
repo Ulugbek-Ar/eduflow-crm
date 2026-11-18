@@ -1,4 +1,6 @@
-// Tanishtiruv har xodimga bir marta ko'rsatiladi (demo markazda — bir marta hammaga)
+// Tanishtiruv har xodimga bir marta ko'rsatiladi (demo markazda — shu brauzerda bir marta). Birinchi ko'rsatilgan
+// zahoti belgilanadi: oxirigacha ko'rilmasa yoki sahifa yopilsa ham qayta chiqmaydi (Yordam → "Tanishtiruvni ko'rish").
+// Kalit demo nom maydoniga kirmaydi (storage.service SHARED_KEYS) — demo'ga qayta kirganda ham saqlanadi
 import { isRecord } from '../utils/guards'
 import { readJson, setItem } from './storage.service'
 
