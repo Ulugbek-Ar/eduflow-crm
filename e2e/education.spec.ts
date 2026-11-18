@@ -51,7 +51,7 @@ test('guruh → o\'quvchi → davomat → to\'lov → qarz yopiladi', async ({ p
   await drawer.getByRole('button', { name: 'Hammasi keldi' }).click()
   await expect(drawer.getByRole('button', { name: 'Hammasi keldi' })).toHaveCount(0)
   if (isMobile(page)) await expect(drawer.getByRole('group', { name: 'Aziza Karimova: davomat' }).getByRole('button', { name: 'Keldi' })).toHaveAttribute('aria-pressed', 'true')
-  else await expect(drawer.locator('button.att-cell', { hasText: 'P' })).toHaveCount(1)
+  else await expect(drawer.locator('button.att-cell', { hasText: '✓' })).toHaveCount(1)
   await noHorizontalScroll(page)
   await page.keyboard.press('Escape')
   await expect(drawer).toHaveCount(0)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AttendanceRecord } from '../types/attendance.types'
 import type { Enrollment, Group } from '../types/group.types'
-import { absentStreaks, attendanceRate, lessonDates, nextStatus, teacherAttendanceRate, todayLessons, trailingAbsences, unmarkedLessons } from './attendance'
+import { absentStreaks, ATTENDANCE_KEYS, ATTENDANCE_LABELS, ATTENDANCE_STATUSES, attendanceRate, lessonDates, nextStatus, simpleStatus, teacherAttendanceRate, todayLessons, trailingAbsences, unmarkedLessons } from './attendance'
 
 const group: Group = { id: 'g1', name: 'IELTS', courseId: 'k1', teacherId: 'p1', room: '', days: ['mon', 'wed', 'fri'], startTime: '09:00', endTime: '10:30', capacity: 12, startDate: '2026-11-04', status: 'active', createdAt: '' }
 const rec = (date: string, status: AttendanceRecord['status'], customerId = 'c1'): AttendanceRecord => ({ id: `${customerId}-${date}`, groupId: 'g1', customerId, date, status, updatedAt: `${date}T12:00:00.000Z` })
@@ -14,10 +14,19 @@ describe('davomat', () => {
     expect(lessonDates({ ...group, endDate: '2026-11-06' }, '2026-11-01', '2026-11-30', [], '2026-11-30')).toEqual(['2026-11-04', '2026-11-06'])
   })
 
-  it('foiz: (keldi + kechikdi) / (keldi + kechikdi + kelmadi); sababli hisobga kirmaydi', () => {
-    expect(attendanceRate([rec('2026-11-04', 'present'), rec('2026-11-06', 'late'), rec('2026-11-09', 'absent'), rec('2026-11-11', 'excused')])).toBeCloseTo(66.67, 1)
+  it('foiz: keldi / (keldi + kelmadi); eski "kechikdi" — keldi, "sababli" — kelmadi', () => {
+    expect(attendanceRate([rec('2026-11-04', 'present'), rec('2026-11-06', 'absent'), rec('2026-11-09', 'present'), rec('2026-11-11', 'present')])).toBe(75)
+    expect(attendanceRate([rec('2026-11-04', 'late'), rec('2026-11-06', 'excused')])).toBe(50)
     expect(attendanceRate([])).toBeNull()
-    expect(attendanceRate([rec('2026-11-04', 'excused')])).toBeNull()
+  })
+
+  it('faqat ikki holat: Keldi va Kelmadi', () => {
+    expect(ATTENDANCE_STATUSES).toEqual(['present', 'absent'])
+    expect(simpleStatus('late')).toBe('present')
+    expect(simpleStatus('excused')).toBe('absent')
+    expect(ATTENDANCE_LABELS.late).toBe('Keldi')
+    expect(ATTENDANCE_LABELS.excused).toBe('Kelmadi')
+    expect(Object.values(ATTENDANCE_KEYS).every((s) => s === 'present' || s === 'absent')).toBe(true)
   })
 
   it('ketma-ket kelmaganlar: oxirgi belgilangan darslardan', () => {
@@ -41,6 +50,6 @@ describe('davomat', () => {
   it('o\'qituvchi bo\'yicha foiz va katak holati ketma-ketligi', () => {
     expect(teacherAttendanceRate('p1', [group], [rec('2026-11-04', 'present'), rec('2026-11-06', 'absent')])).toBe(50)
     expect(teacherAttendanceRate('p2', [group], [rec('2026-11-04', 'present')])).toBeNull()
-    expect([undefined, 'present', 'absent', 'late', 'excused'].map((s) => nextStatus(s as never))).toEqual(['present', 'absent', 'late', 'excused', 'present'])
+    expect([undefined, 'present', 'absent', 'late', 'excused'].map((s) => nextStatus(s as never))).toEqual(['present', 'absent', 'present', 'absent', 'present'])
   })
 })

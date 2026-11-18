@@ -30,6 +30,19 @@ describe('O\'qituvchilar va maosh', () => {
     expect(stored<{ action: string }>('apex:audit').some((a) => a.action === 'teacher.create')).toBe(true)
   })
 
+  it('telefon ixtiyoriy: yozib o\'chirilsa (faqat "+998" qolsa) ham saqlanadi va bo\'sh yoziladi', async () => {
+    const { user } = await openTeachers()
+    await user.click((await screen.findAllByRole('button', { name: 'O\'qituvchi qo\'shish' }))[0])
+    const dialog = await screen.findByRole('dialog', { name: 'Yangi o\'qituvchi' })
+    await user.type(within(dialog).getByLabelText(/Ism familiya/), 'Telefonsiz Ustoz')
+    const phone = within(dialog).getByLabelText(/Telefon/)
+    await user.type(phone, '9')
+    await user.type(phone, '{backspace}{backspace}')
+    await user.click(within(dialog).getByRole('button', { name: 'Qo\'shish' }))
+    expect(await screen.findByRole('button', { name: 'Telefonsiz Ustoz' })).toBeTruthy()
+    expect(stored<Teacher>('apex:teachers')).toMatchObject([{ name: 'Telefonsiz Ustoz', phone: '' }])
+  })
+
   it('bitta tugma bilan kirish: o\'qituvchi rolidagi xodim va vaqtinchalik parol, yozuvga bog\'lanadi', async () => {
     const { user } = await openTeachers({ teachers: [teacher] })
     await user.click(await screen.findByRole('button', { name: 'Kirish yaratish' }))

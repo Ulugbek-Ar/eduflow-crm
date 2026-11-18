@@ -103,6 +103,14 @@ select cron.schedule('eduflow-purge-trash', '15 3 * * *', $$select public.purge_
 | `VITE_OWNER_PASSWORD_HASH` | faqat lokal/demo `/owner` uchun (`npm run owner:password "..."`) | yo'q |
 | `VITE_BRAND_NAME`, `VITE_BRAND_SHORT_NAME` | sayt nomi va qisqa nomi (`Bilim CRM`, `Bilim`) | mijoz o'z nomini aytsa |
 | `VITE_BRAND_LOGO`, `VITE_BRAND_FAVICON`, `VITE_BRAND_APPLE_ICON`, `VITE_BRAND_OG_IMAGE` | `public/brand/` dagi fayllar (`/brand/logo.svg` ...) | mijoz logosi bo'lsa |
+| `VITE_LEGAL_COMPANY` | `«EduFlow» MChJ, STIR 123456789` | sotuvdan oldin — ha |
+| `VITE_LEGAL_ADDRESS` | `Toshkent sh., ...` | tavsiya |
+| `VITE_LEGAL_DATA_LOCATION` | `Toshkent shahri, O'zbekiston` | bulutli rejimda — ha |
+| `VITE_LEGAL_PAYMENT` | `Click, Payme, bank o'tkazmasi` | tavsiya |
+| `VITE_LEGAL_REFUND` | `to'lanmagan oylar uchun 5 ish kunida qaytariladi` | tavsiya |
+| `VITE_LEGAL_SUPPORT_HOURS` | `Du–Sh, 9:00–18:00` | ixtiyoriy |
+
+  `VITE_LEGAL_*` — `/privacy` va `/terms` dagi `[qavs]` joylarini to'ldiradi (aloqa kanallari `VITE_SUPPORT_*` dan olinadi).
 
   `VITE_DEMO_ONLY` va `VITE_MAIN_SITE_URL` ni Vercel'da **bermang** — ular faqat namoyish sayti uchun.
   Brend (nom va logo) kodga yozilmagan — har mijoz uchun shu o'zgaruvchilar bilan beriladi, berilmasa standart

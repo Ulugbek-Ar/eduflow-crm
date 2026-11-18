@@ -137,15 +137,19 @@ export async function signUp(input: { email: string; password: string; orgName: 
   return 'ready'
 }
 
-// Email tasdiqlangach birinchi kirish: markaz hali yaratilmagan bo'lsa — ro'yxatdan o'tishda berilgan ma'lumot bilan
-export async function ensureOrganization(): Promise<void> {
+// Kirgan foydalanuvchi profili; email tasdiqlangach birinchi kirishda markaz hali yaratilmagan bo'lsa —
+// ro'yxatdan o'tishda berilgan ma'lumot bilan yaratiladi. Profil bir marta o'qiladi (ortiqcha so'rovsiz)
+export async function ensureOrganization(): Promise<CloudProfile | null> {
   const sb = getClient()
+  const profile = await loadOwnProfile()
+  if (profile) return profile
   const { data } = await sb.auth.getUser()
   const meta = (data.user?.user_metadata ?? {}) as Record<string, string>
-  if (!data.user || (await loadOwnProfile())) return
-  if (!meta.org_name) return
+  if (!data.user || !meta.org_name) return null
   const { error } = await sb.rpc('create_organization', { p_name: meta.org_name, p_full_name: meta.full_name ?? data.user.email ?? '', p_title: meta.title ?? '' })
-  fail(error)
+  // Markaz yaratilmasa (masalan, allaqachon bor) — avvalgidek profilsiz davom etamiz, ulanish xatosi emas
+  if (error) return null
+  return loadOwnProfile()
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {
@@ -185,11 +189,21 @@ export async function currentEmail(): Promise<string | null> {
 }
 
 // ===== Profil, xodimlar, markaz =====
+// Seans yo'q — null. Tarmoq/server xatosi — istisno (foydalanuvchi "chiqib ketgan" deb ko'rsatilmasin)
 export async function loadOwnProfile(): Promise<CloudProfile | null> {
   const sb = getClient()
-  const { data: auth } = await sb.auth.getUser()
+  const { data: session } = await sb.auth.getSession()
+  if (!session.session) return null
+  const { data: auth, error: authError } = await sb.auth.getUser()
+  if (authError) {
+    // Token yaroqsiz yoki foydalanuvchi o'chirilgan — haqiqatan ham kirilmagan
+    const status = (authError as { status?: number }).status
+    if (status && status >= 400 && status < 500) return null
+    throw new Error(authError.message)
+  }
   if (!auth.user) return null
-  const { data } = await sb.from('profiles').select('*').eq('id', auth.user.id).maybeSingle()
+  const { data, error } = await sb.from('profiles').select('*').eq('id', auth.user.id).maybeSingle()
+  fail(error)
   return data ? profileFromRow(data as Row, auth.user.email ?? '') : null
 }
 
@@ -205,8 +219,11 @@ export async function loadOrganization(): Promise<CloudOrg | null> {
 }
 
 export async function saveSettings(org: string, settings: Settings): Promise<void> {
-  const { error } = await getClient().from('organizations').update({ name: settings.orgName, settings }).eq('id', org)
+  // RLS ruxsat bermasa (muddat tugagan, huquq yo'q) UPDATE xatosiz 0 qator qaytaradi — buni xato deb bilamiz,
+  // aks holda ilova "saqlandi" deb o'ylab qoladi
+  const { data, error } = await getClient().from('organizations').update({ name: settings.orgName, settings }).eq('id', org).select('id')
   fail(error)
+  if (Array.isArray(data) && data.length === 0) throw new Error('Sozlamalar saqlanmadi: ruxsat yo\'q yoki tarif muddati tugagan')
 }
 
 export async function updateOwnProfile(fullName: string, title: string): Promise<void> {
@@ -259,20 +276,41 @@ export interface CloudSnapshot {
 // role — kirgan xodim roli: o'qituvchi mijozlar jadvalini ko'rmaydi (RLS) — o'quvchilar ismi teacher_roster() dan
 // (telefonsiz); o'qituvchilar ro'yxatini (maosh qoidasi bilan) faqat teachers.manage / payroll.view ko'radi,
 // qolganlar teacher_directory() dan ism va fanlarni oladi
+// Supabase (PostgREST) bitta javobda ko'pi bilan ~1000 qator beradi (loyiha sozlamasi "Max rows"), .limit() buni
+// oshirmaydi. Shuning uchun katta jadvallar sahifalab o'qiladi: hammasi kelguncha .range() bilan
+export const PAGE_SIZE = 1000
+type Page = { data: unknown[] | null; error: { message: string } | null; count?: number | null }
+type Pager = (from: number, to: number) => PromiseLike<Page>
+
+export async function fetchAll(page: Pager, pageSize = PAGE_SIZE): Promise<{ data: Row[]; error: { message: string } | null }> {
+  const all: Row[] = []
+  for (;;) {
+    const res = await page(all.length, all.length + pageSize - 1)
+    if (res.error) return { data: all, error: res.error }
+    const rows = (res.data ?? []) as Row[]
+    all.push(...rows)
+    // Jami soni ma'lum bo'lsa — unga qarab; bo'lmasa sahifa to'lmagan bo'lsa tugadi. Server sahifani kichikroq
+    // kessa ham (max_rows < pageSize), count bo'yicha davom etadi
+    const total = typeof res.count === 'number' ? res.count : null
+    if (rows.length === 0 || (total !== null ? all.length >= total : rows.length < pageSize)) return { data: all, error: null }
+  }
+}
+
 export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise<CloudSnapshot> {
   const sb = getClient()
   const seesTeachers = role === 'admin' || role === 'cashier' || role === 'viewer' || role === 'teacher'
+  const table = (name: string, order = 'id') => fetchAll((from, to) => sb.from(name).select('*', { count: 'exact' }).order(order).range(from, to))
   const [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions, branches] = await Promise.all([
-    role === 'teacher' ? sb.rpc('teacher_roster') : sb.from('customers').select('*').limit(10000),
-    sb.from('transactions').select('*').order('date', { ascending: false }).limit(20000),
-    sb.from('courses').select('*'),
-    seesTeachers ? sb.from('teachers').select('*') : sb.rpc('teacher_directory'),
-    sb.from('groups').select('*'),
-    sb.from('enrollments').select('*').limit(20000),
-    sb.from('attendance').select('*').order('date', { ascending: false }).limit(50000),
-    sb.from('lesson_exceptions').select('*'),
-    // Filiallar migratsiyasi qo'llanmagan bazada jadval yo'q — filialsiz ishlayveradi
-    sb.from('branches').select('*').order('created_at'),
+    role === 'teacher' ? fetchAll((from, to) => sb.rpc('teacher_roster').order('id').range(from, to)) : table('customers'),
+    table('transactions'),
+    table('courses'),
+    seesTeachers ? table('teachers') : fetchAll((from, to) => sb.rpc('teacher_directory').order('id').range(from, to)),
+    table('groups'),
+    table('enrollments'),
+    table('attendance'),
+    table('lesson_exceptions'),
+    // Filiallar migratsiyasi qo'llanmagan bazada jadval yo'q — filialsiz ishlayveradi (xato pastda e'tiborsiz qoldiriladi)
+    table('branches', 'created_at'),
   ])
   for (const r of [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions]) fail(r.error)
   const active = (rows: unknown[] | null) => ((rows ?? []) as Row[]).filter((r) => !r.deleted_at)
@@ -304,6 +342,14 @@ export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise
 }
 
 const UPSERT_CHUNK = 500
+// O'chirish so'rovida id'lar URL'da (?id=in.(...)) ketadi — juda uzun URL (414) bo'lmasin: 150 tadan
+const DELETE_CHUNK = 150
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
 
 // Holat o'zgarishini serverga yuborish: yangi/o'zgarganlar — upsert, olib tashlanganlar — savatchaga (trash_move).
 // Savatchada turgan id qayta paydo bo'lsa — tiklash (trash_restore)
@@ -313,6 +359,11 @@ export class CloudSync {
 
   constructor(org: string, trash: readonly TrashEntry[]) {
     this.org = org
+    this.trashed = new Set(trash.map((e) => `${e.kind}:${e.id}`))
+  }
+
+  // Serverdan yangilangan savatcha (boshqa xodim o'chirgan yozuvni tiklash ham trash_restore orqali bo'lsin)
+  setTrash(trash: readonly TrashEntry[]) {
     this.trashed = new Set(trash.map((e) => `${e.kind}:${e.id}`))
   }
 
@@ -354,12 +405,12 @@ export class CloudSync {
   // Savatchasiz jadvallar (davomat, bekor qilingan darslar): o'zgargani — upsert (noyob kalit bo'yicha), olib tashlangani — o'chiriladi
   private async plain<T extends { id: string }>(table: 'attendance' | 'lesson_exceptions' | 'branches', changes: Changes<T>, toRow: (item: T, org: string) => Row, conflict: string) {
     const sb = getClient()
-    if (changes.upserts.length) {
-      const { error } = await sb.from(table).upsert(changes.upserts.map((item) => toRow(item, this.org)), { onConflict: conflict })
+    for (const part of chunks(changes.upserts, UPSERT_CHUNK)) {
+      const { error } = await sb.from(table).upsert(part.map((item) => toRow(item, this.org)), { onConflict: conflict })
       fail(error)
     }
-    if (changes.removedIds.length) {
-      const { error } = await sb.from(table).delete().eq('organization_id', this.org).in('id', changes.removedIds)
+    for (const part of chunks(changes.removedIds, DELETE_CHUNK)) {
+      const { error } = await sb.from(table).delete().eq('organization_id', this.org).in('id', part)
       fail(error)
     }
   }
@@ -413,10 +464,12 @@ export class CloudSync {
   }
 
   async purge(kind: TrashKind, ids: readonly string[]) {
-    if (!ids.length) return
-    const { error } = await getClient().from(TABLES[kind]).delete().eq('organization_id', this.org).in('id', ids as string[])
-    fail(error)
-    for (const id of ids) this.trashed.delete(`${kind}:${id}`)
+    // Katta savatcha (masalan, bekor qilingan import) — bo'laklab: id'lar URL'da ketadi
+    for (const part of chunks(ids, DELETE_CHUNK)) {
+      const { error } = await getClient().from(TABLES[kind]).delete().eq('organization_id', this.org).in('id', part)
+      fail(error)
+      for (const id of part) this.trashed.delete(`${kind}:${id}`)
+    }
   }
 }
 
@@ -430,8 +483,15 @@ export async function logEvent(action: string, summary: string, entityId?: strin
 }
 
 export async function listAudit(): Promise<AuditEntry[]> {
-  const { data, error } = await getClient().from('audit_log').select('*').order('at', { ascending: false }).limit(3000)
-  fail(error)
+  // Oxirgi 3000 ta hodisa (sahifalab: server bir javobda 1000 tadan ko'p bermaydi)
+  const all: Row[] = []
+  for (let from = 0; from < 3000; from += PAGE_SIZE) {
+    const { data: page, error } = await getClient().from('audit_log').select('*').order('at', { ascending: false }).range(from, from + PAGE_SIZE - 1)
+    fail(error)
+    all.push(...((page ?? []) as Row[]))
+    if ((page ?? []).length < PAGE_SIZE) break
+  }
+  const data = all
   return ((data ?? []) as Row[]).map((r) => ({
     id: String(r.id),
     at: String(r.at),

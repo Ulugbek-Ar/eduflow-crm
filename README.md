@@ -1,6 +1,6 @@
 # EduFlow CRM
 
-[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.2.0 · ma'lumot sxemasi v12 · [o'zgarishlar](CHANGELOG.md)
+[![CI](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/Ulugbek-Ar/eduflow-crm/actions/workflows/ci.yml) · versiya 1.2.1 · ma'lumot sxemasi v12 · [o'zgarishlar](CHANGELOG.md)
 
 **O'quv markazlari uchun CRM.** Lidlar va mijozlar, guruhlar va dars jadvali, davomat, to'lovlar va kassa, qarzdorlar va
 to'lov eslatmalari, o'qituvchilar va maosh, Excel/CSV'dan import, hisobotlar, xodimlar va rollar, filiallar — bitta brauzer
@@ -357,7 +357,7 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 
 ## Sifat: testlar va Lighthouse
 
-- **Unit va komponent testlari** (Vitest + Testing Library): 565 ta test, 87 fayl — `npm run test`. Formulalar (qarz, maosh,
+- **Unit va komponent testlari** (Vitest + Testing Library): 595 ta test, 94 fayl — `npm run test`. Formulalar (qarz, maosh,
   davomat, jadval), migratsiya, CSV/XLSX parser (xlsx fixture test ichida yasaladi), ruxsatlar jadvali va SQL
   `has_permission()` mosligi, tarjimalar to'liqligi; v1.2: Payme/Click protokoli (imzo, holatlar, xato kodlari), Eskiz
   mijozi, bot buyruqlari va ulash kodi, xabarlar navbati, server qarz hisobi ilova bilan bir xilligi, filiallar.
@@ -371,13 +371,13 @@ yuklanadi). Til Sozlamalar → Ko'rinish'da yoki landing'da almashtiriladi va `a
 - **Edge Function'lar** Deno bilan tip tekshiruvidan o'tadi (`deno check --no-lock --node-modules-dir=none supabase/functions/*/index.ts`).
 - CI (`.github/workflows/ci.yml`) har push va PR'da hammasini bajaradi.
 
-**Lighthouse 13 (mobil, production build, v1.2.0):**
+**Lighthouse 13 (mobil, production build, v1.2.1):**
 
 | Sahifa | Performance | Accessibility | Best Practices | SEO |
 | --- | --- | --- | --- | --- |
-| `/` (landing) | 99 | 100 | 100 | 100 |
-| `/app` | 100 | 100 | 100 | 100 |
-| `/privacy` | 100 | 100 | 100 | 100 |
+| `/` (landing) | 98 | 100 | 100 | 100 |
+| `/app` | 97 | 100 | 100 | 100 |
+| `/privacy` | 99 | 100 | 100 | 100 |
 
 Boshlang'ich JS (gzip'siz): `index` ≈ 240 KB + `App` ≈ 201 KB; bo'limlar (guruhlar, jadval, davomat, o'qituvchilar, import)
 va bulutli rejim sozlamalari (integratsiyalar, SMS, Telegram bot, ota-ona havolasi) alohida lazy bo'laklarda yuklanadi —

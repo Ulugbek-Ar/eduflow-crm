@@ -74,7 +74,7 @@ describe('server hisobi (engine)', () => {
     expect(r.debt).toBe(customerDebt(customer, demo.courses, demo.transactions, now, { groups: demo.groups, enrollments: own, settings: DEFAULT_DEBT_SETTINGS })?.debt)
     expect(r.groups.length).toBeGreaterThan(0)
     const month = recordsFor(demo.attendance, { customerId: customer.id, from: '2026-10-21', to: '2026-11-20' })
-    expect(r.attendance.present + r.attendance.late + r.attendance.absent + r.attendance.excused).toBe(month.length)
+    expect(r.attendance.present + r.attendance.absent).toBe(month.length)
     expect(r.attendance.rate).toBe(attendanceRate(month))
     expect(r.attendance.recent.length).toBeLessThanOrEqual(5)
   })

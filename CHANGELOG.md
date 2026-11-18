@@ -2,7 +2,93 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
-## [1.2.0] — 2026-11-09 · ma'lumot sxemasi v12
+## [1.2.1] — 2026-11-18 · ma'lumot sxemasi v12
+
+Ikki parallel yo'nalish birlashtirildi: **1.2.0** (49–54-bosqichlar — Payme/Click, SMS, Telegram bot, filiallar, brending) va
+**bulut, xavfsizlik va qulaylik tuzatishlari** (55–57-bosqichlar). Tuzatishlar alohida branch'da 1.1.1–1.1.3 versiyalari va
+commitlarda «49–51-bosqich» deb yozilgan edi, lekin `main` ga chiqmagan — raqamlar takrorlanmasligi uchun bu yerda 55–57.
+
+### Birlashtirishda
+
+- `update_staff` (Supabase): filiallar qoidasi (filialli administrator faqat o'z filiali xodimlarini boshqaradi, kamida bitta
+  filialsiz administrator) **va** tuzatishlar (muddati tugaganda yopiq, holat tekshiruvi, bloklanganda seanslar bekor) —
+  bitta funksiyada, `20261110000000_staff_limit_sessions.sql` (filiallar migratsiyasidan keyin).
+- Bulutdan o'qish sahifalab (1000 qatordan ko'p) — filiallar jadvali ham; serverdan davriy yangilash filiallarni ham oladi;
+  onlayn to'lovlarni olib kelish (har daqiqada) o'zgarishsiz qoldi.
+- Edge Function'lar `@supabase/supabase-js` 2.118 da; ilovada 2.119.
+- Ma'lumot sxemasi zanjiri: v1 … v11 → v12 (filiallar); 55–57-bosqichlar sxemani o'zgartirmagan.
+
+### 57-bosqich — 2026-11-18 (oldin «1.1.3» deb belgilangan)
+
+Foydalanuvchi so'rovi bo'yicha o'zgarishlar.
+
+#### O'zgardi
+
+- **Kassa balansi** (chap menyu, "Moliya va kassa" dagi "Umumiy balans", manfiy balans eslatmasi) — faqat administrator va
+  kassirga ko'rinadi. Menejer, kuzatuvchi va o'qituvchi ko'rmaydi.
+- **Oynalar** (yangi mijoz, to'lov va boshqalar) tashqariga bosilganda yopilmaydi — faqat X, "Bekor qilish" yoki Escape bilan.
+  Kiritilgan ma'lumot tasodifan yo'qolmaydi.
+- **Davomat**: faqat ikki holat — "Keldi" va "Kelmadi" ("Kechikdi" va "Sababli" olib tashlandi). Setkada ✓ / ✗,
+  klaviatura: K — keldi, Y — kelmadi (P/A, 1/0 ham). Eski yozuvlar o'zgartirilmaydi: "Kechikdi" — Keldi,
+  "Sababli" — Kelmadi deb ko'rsatiladi va foizda shunday hisoblanadi.
+- **Header**: demo rejim tasmasidagi uzun sariq izoh o'rniga kichik "Demo" belgisi; tarif tasmasi bitta qisqa jumla va
+  faqat bulutli rejimda (lokal rejimda tarif — Sozlamalar → Tarif'da).
+
+### 56-bosqich — 2026-11-12 (oldin «1.1.2» deb belgilangan)
+
+Butun loyihani qayta ko'rib chiqish natijasidagi tuzatishlar.
+
+#### Tuzatildi
+
+- **Telefon maydonlari**: Backspace bilan "+998" gacha o'chirilganda "+99" yana "+998 99" ga aylanib, maydonni
+  tozalab bo'lmasdi (mijoz, sozlamalar, sozlash ustasi, o'qituvchi). O'qituvchi telefoni ixtiyoriy — faqat "+998"
+  qolsa saqlanadi va bo'sh yoziladi.
+- **Noyob id'lar** kriptografik tasodifiy (avval `Math.random` ning 5 belgisi — katta Excel importda ikki yozuv bir
+  xil id olib, biri ikkinchisining ustidan yozilishi mumkin edi).
+- **Bulut: katta o'chirishlar** (savatchani bo'shatish, bekor qilingan import, davomat) 150 tadan bo'laklab — id'lar
+  URL'da ketadi, avval minglab yozuvda so'rov juda uzun bo'lib (414) muvaffaqiyatsiz tugardi. Davomat yozish ham bo'laklab.
+- **Bulut: sozlamalar** ruxsat bo'lmaganda (muddat tugagan) "saqlandi" deb ko'rinmaydi — xato ko'rsatiladi.
+- **Bulut: kirishda** profil bir marta o'qiladi (avval har yuklashda ikki marta); serverdan yangilashda bir xil ma'lumot
+  uchun panel qayta chizilmaydi.
+- **Excel import**: "zip-bomba" himoyasi — ochilgan hajm oqim davomida sanaladi (e'lon qilingan hajmga ishonilmaydi),
+  64 MB dan oshsa to'xtatiladi; avval maxsus fayl tabni qotirib qo'yishi mumkin edi.
+
+#### Qo'shildi
+
+- **Huquqiy sahifalar rekvizitlari** muhit o'zgaruvchilaridan: `VITE_LEGAL_COMPANY`, `VITE_LEGAL_ADDRESS`,
+  `VITE_LEGAL_DATA_LOCATION`, `VITE_LEGAL_PAYMENT`, `VITE_LEGAL_REFUND`, `VITE_LEGAL_SUPPORT_HOURS`; aloqa —
+  `VITE_SUPPORT_*` dan. Kod o'zgartirmasdan `[qavs]` joylar to'ldiriladi (`DEPLOY.md`).
+- **Tezroq ochilish**: sahifa bo'lagi (ilova, landing, huquqiy) va CSS `index.js` bilan parallel yuklanadi
+  (`scripts/route-preload.ts`), rus tili tanlangan bo'lsa — lug'at ham. `/app` Lighthouse 94 → 96.
+
+### 55-bosqich — 2026-11-10 (oldin «1.1.1» deb belgilangan)
+
+Tuzatishlar: bulutli rejimda ma'lumot to'liqligi va internet uzilishi, tarif chegarasi, ma'lumotni tozalash.
+
+#### Tuzatildi
+
+- **Bulut: 1000 tadan ortiq yozuv.** Supabase bitta javobda ~1000 qator beradi — endi barcha jadvallar (to'lovlar,
+  davomat, mijozlar ...) sahifalab to'liq o'qiladi. Avval 1000+ to'lovli markazda to'lagan o'quvchi "qarzdor" chiqardi.
+- **Bulut: internet qaytganda** yuborilmay qolgan o'zgarishlar o'zi qayta yuboriladi (avval faqat keyingi o'zgarishda).
+- **Bulut: boshqa xodimlar o'zgarishlari** oyna ochilganda, internet qaytganda va har 1,5 daqiqada serverdan olinadi;
+  yuborilmagan o'z o'zgarishingiz ustidan yozilmaydi.
+- **Bulut: ochilishda internet uzilsa** hisobdan chiqarib yuborilmaydi — "Serverga ulanib bo'lmadi" va "Qayta urinish",
+  aloqa tiklansa o'zi ochiladi.
+- **Tarif chegarasi serverda** (trigger): o'qituvchi kirishini menejerga aylantirib yoki bloklangan xodimni qayta yoqib
+  chegaradan oshib bo'lmaydi. Muddati tugagan markaz xodimlar va sozlamalarni o'zgartira olmaydi.
+- **Xodim bloklanganda yoki paroli tiklanganda** uning seanslari bekor qilinadi.
+- **Muddat tugaganda** hisobot eksporti va JSON zaxira ochiq; "Tarif" va "Ma'lumotlar" bo'limlari ko'rinadi.
+- **"Barcha ma'lumotni tozalash"** savatcha va migratsiyadan oldingi nusxani ham o'chiradi (mijozlar ma'lumoti
+  brauzerda qolmaydi). Migratsiyadan oldingi nusxani alohida o'chirish tugmasi; nusxa saqlanmasa — ogohlantirish.
+- Tarif muddati ochiq oynada ham har daqiqada qayta hisoblanadi.
+- `@supabase/supabase-js` 2.118 ga yangilandi (`npm audit` — 0 zaiflik).
+
+#### Migratsiya
+
+- Supabase: `supabase/migrations/20261110000000_staff_limit_sessions.sql` — `supabase db push` bilan qo'llang,
+  so'ng `supabase functions deploy staff`. Lokal ma'lumot o'zgarmaydi.
+
+## [1.2.0] — 2026-11-09 · ma'lumot sxemasi v12 · 49–54-bosqichlar
 
 Pul va aloqa avtomatlashtirildi: onlayn to'lov kassaga o'zi tushadi, eslatmalar SMS va ota-onalar boti orqali (har kuni
 avtomatik ham), markaz bir nechta filialda ishlaydi.

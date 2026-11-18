@@ -21,7 +21,8 @@ export interface CustomerReport {
   link: string | null
   currency: string
   groups: Array<{ name: string; days: string[]; startTime: string; endTime: string; room: string }>
-  attendance: { present: number; late: number; absent: number; excused: number; rate: number | null; recent: Array<{ date: string; status: string; group: string }> }
+  // Davomat faqat ikki holatda (ilova bilan bir xil): eski "kechikdi" — keldi, "sababli" — kelmadi
+  attendance: { present: number; absent: number; rate: number | null; recent: Array<{ date: string; status: 'present' | 'absent'; group: string }> }
 }
 
 export interface DebtorReminder {

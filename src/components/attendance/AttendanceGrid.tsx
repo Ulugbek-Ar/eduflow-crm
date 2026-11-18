@@ -9,7 +9,7 @@ import { exportRows } from '../../services/export.service'
 import type { ExportColumn, ExportFormat } from '../../services/export.service'
 import type { AttendanceStatus } from '../../types/attendance.types'
 import type { Enrollment } from '../../types/group.types'
-import { ATTENDANCE_KEYS, ATTENDANCE_LABELS, ATTENDANCE_SHORT, attendanceRate, lessonDates, nextStatus, rateLabel } from '../../utils/attendance'
+import { ATTENDANCE_KEYS, ATTENDANCE_LABELS, ATTENDANCE_SHORT, ATTENDANCE_STATUSES, attendanceRate, lessonDates, nextStatus, rateLabel, simpleStatus } from '../../utils/attendance'
 import { cx } from '../../utils/cx'
 import { enrollmentActiveOn, parseDay, WEEKDAY_SHORT, weekdayOf } from '../../utils/groups'
 import { activeInMonth, monthBounds, periodLabel, shiftPeriod } from '../../utils/payroll'
@@ -18,7 +18,7 @@ import { Select } from '../ui/Select'
 import { LessonMarking } from './LessonMarking'
 import './attendance.css'
 
-// Oylik davomat setkasi: o'quvchilar × dars sanalari. Katak bosilsa yoki P/A/L/E tugmalari bilan holat almashadi,
+// Oylik davomat setkasi: o'quvchilar × dars sanalari. Katak bosilsa yoki K/Y (P/A, 1/0) tugmalari bilan holat almashadi,
 // strelkalar bilan katakdan katakka o'tiladi. Telefonda — tanlangan dars uchun katta tugmali ro'yxat
 export function AttendanceGrid({ groupId }: { groupId: string }) {
   const { getGroup, enrollments, attendance, lessonExceptions, getCustomerName, markAttendance, canMarkDay, settings, logExport } = useDashboard()
@@ -177,7 +177,7 @@ export function AttendanceGrid({ groupId }: { groupId: string }) {
                           <td key={d}>
                             <button
                               type="button"
-                              className={cx('att-cell', status && `is-${status}`)}
+                              className={cx('att-cell', status && `is-${simpleStatus(status)}`)}
                               data-att={`${group.id}:${r}:${c}`}
                               tabIndex={r === row && c === activeCol ? 0 : -1}
                               disabled={!editable}
@@ -200,13 +200,13 @@ export function AttendanceGrid({ groupId }: { groupId: string }) {
             </table>
           </div>
           <div className="att-legend" aria-hidden="true">
-            {(['present', 'late', 'absent', 'excused'] as AttendanceStatus[]).map((s) => (
+            {ATTENDANCE_STATUSES.map((s) => (
               <span key={s}>
                 <span className={cx('att-cell', `is-${s}`)}>{ATTENDANCE_SHORT[s]}</span>
                 {ATTENDANCE_LABELS[s]}
               </span>
             ))}
-            <span>{tr('Klaviatura: strelkalar, P / L / A / E')}</span>
+            <span>{tr('Klaviatura: strelkalar, K — keldi, Y — kelmadi')}</span>
           </div>
         </>
       )}

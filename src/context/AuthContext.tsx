@@ -1,7 +1,7 @@
 import { tr } from '../i18n'
 import { useEffect, useEffectEvent, useState } from 'react'
 import type { ReactNode } from 'react'
-import { can as roleCan, ROLE_LABELS } from '../auth/permissions'
+import { can as roleCan, readOnlyAllows, ROLE_LABELS } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import { AuthContext } from '../hooks/useAuth'
 import type { ActionResult, AuthContextValue } from '../hooks/useAuth'
@@ -76,13 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState(initial.sessions)
   const [subscription, setSubscription] = useState(loadSubscription)
   // Muddat tugaganda kun bo'yi qayta hisoblanmasligi uchun — sahifa ochilgan vaqt
-  const [openedAt] = useState(Date.now)
-  const access = computeAccess(subscription, openedAt)
+  // Tarif muddati shu vaqtga qarab — ochiq oynada ham har daqiqada yangilanadi
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(tick)
+  }, [])
+  const access = computeAccess(subscription, now)
 
   const current = session ? users.find((u) => u.id === session.userId && u.status === 'active') : undefined
   // Tarif muddati tugagan yoki bloklangan (majburiy rejim) — faqat ko'rish
   const allowed = (permission: Permission) =>
-    roleCan(current?.role, permission) && (!access.readOnly || permission.endsWith('.view'))
+    roleCan(current?.role, permission) && (!access.readOnly || readOnlyAllows(permission))
   const actorOf = (user: StaffUser) => ({ userId: user.id, userName: staff.displayName(user), role: user.role })
   const audit = (action: AuditAction, summary: string, entityId?: string, by: StaffUser | undefined = current) =>
     logAudit(by ? actorOf(by) : null, action, summary, entityId)

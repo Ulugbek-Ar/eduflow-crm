@@ -6,7 +6,7 @@ import { Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
 import type { Permission } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
-import { useCan } from '../../hooks/useAuth'
+import { useCan, useRoleCan } from '../../hooks/useAuth'
 import { useCloudOrgId } from '../../hooks/useCloudOrg'
 import { useTheme } from '../../hooks/useTheme'
 import type { ThemePreference } from '../../hooks/useTheme'
@@ -52,7 +52,8 @@ const DATE_FORMATS: DateFormat[] = ['dd.mm.yyyy', 'dd/mm/yyyy', 'yyyy-mm-dd']
 const SAMPLE_DATE = new Date(2026, 0, 31, 12).toISOString()
 
 // permission — bo'limni ko'rish uchun kerakli ruxsat (null — hammaga)
-const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null }> = [
+// anyPlan — tarif muddati tugaganda ham ko'rinadi (tarifni ko'rish va ma'lumotni yuklab olish uchun)
+const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null; anyPlan?: true }> = [
   { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
   { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
@@ -63,8 +64,8 @@ const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: P
   { id: 'auto-reminders', label: tr('Avtomatik eslatma'), icon: 'clock', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
-  { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
-  { id: 'data', label: tr('Ma\'lumotlar'), icon: 'database', permission: 'data.manage' },
+  { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage', anyPlan: true },
+  { id: 'data', label: tr('Ma\'lumotlar'), icon: 'database', permission: 'data.manage', anyPlan: true },
 ]
 
 type FormErrors = Partial<Record<'orgName' | 'logoText' | 'phone', string>>
@@ -86,6 +87,7 @@ function SettingsCard({ id, title, description, children }: { id: string; title:
 export function SettingsPanel() {
   const { settings, updateSettings, setUnsavedChanges, restrictedBranch } = useDashboard()
   const can = useCan()
+  const roleCan = useRoleCan()
   const canManage = can('settings.manage')
   const cloudOrgId = useCloudOrgId()
   const { preference, setPreference } = useTheme()
@@ -143,8 +145,8 @@ export function SettingsPanel() {
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label={tr('Sozlamalar bo\'limlari')}>
-        {/* Filiallarni faqat butun markazni ko'radigan administrator boshqaradi */}
-        {SECTIONS.filter((section) => (!section.permission || can(section.permission)) && !(section.id === 'branches' && restrictedBranch)).map((section) => (
+        {/* Filiallarni faqat butun markazni ko'radigan administrator boshqaradi; Tarif va Ma'lumotlar — tarif muddati tugaganda ham */}
+        {SECTIONS.filter((section) => (!section.permission || (section.anyPlan ? roleCan : can)(section.permission)) && !(section.id === 'branches' && restrictedBranch)).map((section) => (
           <a key={section.id} href={`#${section.id}`}>
             <Icon name={section.icon} size={16} />
             {section.label}
@@ -358,13 +360,13 @@ export function SettingsPanel() {
           <SecuritySettings />
         </SettingsCard>
 
-        {can('staff.manage') && (
+        {roleCan('staff.manage') && (
           <SettingsCard id="plan" title={tr('Tarif')} description={tr('Joriy tarif, muddat va xodimlar chegarasi')}>
             <PlanSettings />
           </SettingsCard>
         )}
 
-        {can('data.manage') && (
+        {roleCan('data.manage') && (
           <SettingsCard id="data" title={tr('Ma\'lumotlar')} description={tr('Zaxira, tiklash va demo ma\'lumotlar')}>
             <DataSettings />
           </SettingsCard>

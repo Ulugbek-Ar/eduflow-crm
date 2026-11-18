@@ -6,6 +6,7 @@ import { useNotifications } from '../../hooks/useNotifications'
 import { useCan } from '../../hooks/useAuth'
 import { cx } from '../../utils/cx'
 import { buildNotifications } from '../../utils/notifications'
+import { CASH_BALANCE_PERMISSION } from '../../auth/permissions'
 
 export function NotificationBell() {
   const { customers, transactions, courses, balance, money, setActiveSection, setCustomerFilters, customerFilters, groups, enrollments, attendance, lessonExceptions, settings } = useDashboard()
@@ -17,6 +18,7 @@ export function NotificationBell() {
       attendance,
       lessonExceptions,
       finance: can('payments.view'),
+      cashBalance: can(CASH_BALANCE_PERMISSION),
       settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay },
     }),
   )

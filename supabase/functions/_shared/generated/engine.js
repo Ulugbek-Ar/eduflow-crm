@@ -141,14 +141,17 @@ function enrollmentMonthlyFee(enrollment, course) {
 	const discount = Math.min(100, Math.max(0, enrollment.discountPercent ?? 0));
 	return Math.round(base * (1 - discount / 100));
 }
-tr("Keldi"), tr("Kechikdi"), tr("Kelmadi"), tr("Sababli");
+// src/utils/attendance.ts
+function simpleStatus(status) {
+	return status === "present" || status === "late" ? "present" : "absent";
+}
+tr("Keldi"), tr("Keldi"), tr("Kelmadi"), tr("Kelmadi");
 function attendanceRate(records) {
 	let came = 0;
 	let total = 0;
 	for (const r of records) {
-		if (r.status === "excused") continue;
 		total++;
-		if (r.status === "present" || r.status === "late") came++;
+		if (simpleStatus(r.status) === "present") came++;
 	}
 	return total > 0 ? came / total * 100 : null;
 }
@@ -525,6 +528,7 @@ var COUNTRY_CODE = "998";
 var LOCAL_LENGTH = 9;
 function phoneDigits(value) {
 	let digits = value.replace(/\D/g, "");
+	if (value.trim().startsWith("+") && COUNTRY_CODE.startsWith(digits)) return "";
 	if (digits.startsWith(COUNTRY_CODE)) digits = digits.slice(3);
 	return digits.slice(0, LOCAL_LENGTH);
 }
@@ -673,7 +677,6 @@ function customerReports(rows, customerIds, options) {
 			from,
 			to: today
 		}).sort((a, b) => b.date.localeCompare(a.date));
-		const count = (status) => records.filter((r) => r.status === status).length;
 		const amount = debt?.debt ?? 0;
 		return [{
 			customerId: id,
@@ -694,14 +697,12 @@ function customerReports(rows, customerIds, options) {
 				}] : [];
 			}),
 			attendance: {
-				present: count("present"),
-				late: count("late"),
-				absent: count("absent"),
-				excused: count("excused"),
+				present: records.filter((r) => simpleStatus(r.status) === "present").length,
+				absent: records.filter((r) => simpleStatus(r.status) === "absent").length,
 				rate: attendanceRate(records),
 				recent: records.slice(0, 5).map((r) => ({
 					date: r.date,
-					status: r.status,
+					status: simpleStatus(r.status),
 					group: groupName(r.groupId)
 				}))
 			}

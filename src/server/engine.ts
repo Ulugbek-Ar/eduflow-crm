@@ -3,7 +3,7 @@
 // Faqat sof funksiyalar: brauzer API'lari, React va tarjima lug'ati yig'maga kirmaydi (vite.engine.config.ts)
 import { rowToAttendance, rowToCourse, rowToCustomer, rowToEnrollment, rowToGroup, rowToTransaction } from '../data/mappers'
 import type { Row } from '../data/mappers'
-import { attendanceRate, recordsFor } from '../utils/attendance'
+import { attendanceRate, recordsFor, simpleStatus } from '../utils/attendance'
 import { computeDebts, customerDebt } from '../utils/debts'
 import { addDays, dayString, enrollmentActiveOn } from '../utils/groups'
 import { formatNumber } from '../utils/format'
@@ -32,7 +32,8 @@ export interface CustomerReport {
   link: string | null
   currency: string
   groups: Array<{ name: string; days: string[]; startTime: string; endTime: string; room: string }>
-  attendance: { present: number; late: number; absent: number; excused: number; rate: number | null; recent: Array<{ date: string; status: string; group: string }> }
+  // Davomat faqat ikki holatda (ilova bilan bir xil): eski "kechikdi" — keldi, "sababli" — kelmadi
+  attendance: { present: number; absent: number; rate: number | null; recent: Array<{ date: string; status: 'present' | 'absent'; group: string }> }
 }
 
 export interface DebtorReminder {
@@ -107,7 +108,6 @@ export function customerReports(rows: OrgRows, customerIds: readonly string[], o
     const debt = customerDebt(customer, courses, transactions, options.now, { ...ctx, enrollments: enrollments.filter((e) => e.customerId === id) })
     const own = enrollments.filter((e) => e.customerId === id && enrollmentActiveOn(e, today))
     const records = recordsFor(attendance, { customerId: id, from, to: today }).sort((a, b) => b.date.localeCompare(a.date))
-    const count = (status: string) => records.filter((r) => r.status === status).length
     const amount = debt?.debt ?? 0
     return [
       {
@@ -123,12 +123,10 @@ export function customerReports(rows: OrgRows, customerIds: readonly string[], o
           return g ? [{ name: g.name, days: g.days, startTime: g.startTime, endTime: g.endTime, room: g.room }] : []
         }),
         attendance: {
-          present: count('present'),
-          late: count('late'),
-          absent: count('absent'),
-          excused: count('excused'),
+          present: records.filter((r) => simpleStatus(r.status) === 'present').length,
+          absent: records.filter((r) => simpleStatus(r.status) === 'absent').length,
           rate: attendanceRate(records),
-          recent: records.slice(0, 5).map((r) => ({ date: r.date, status: r.status, group: groupName(r.groupId) })),
+          recent: records.slice(0, 5).map((r) => ({ date: r.date, status: simpleStatus(r.status), group: groupName(r.groupId) })),
         },
       },
     ]

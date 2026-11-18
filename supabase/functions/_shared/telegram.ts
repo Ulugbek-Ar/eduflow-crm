@@ -31,7 +31,8 @@ export interface StudentReport {
   link: string | null
   currency: string
   groups: Array<{ name: string; days: string[]; startTime: string; endTime: string; room: string }>
-  attendance: { present: number; late: number; absent: number; excused: number; rate: number | null; recent: Array<{ date: string; status: string; group: string }> }
+  // Davomat faqat ikki holatda (ilova bilan bir xil): eski "kechikdi" — keldi, "sababli" — kelmadi
+  attendance: { present: number; absent: number; rate: number | null; recent: Array<{ date: string; status: 'present' | 'absent'; group: string }> }
 }
 
 export interface BotStore {
@@ -60,9 +61,9 @@ const TEXT = {
     noDebt: (name: string) => `${name}: qarz yo'q ✅`,
     advance: (money: string) => `oldindan to'langan: ${money}`,
     pay: (link: string) => `To'lash: ${link}`,
-    attendance: (name: string, p: number, l: number, a: number, e: number, rate: string) => `${name} — oxirgi 30 kun: keldi ${p}, kechikdi ${l}, kelmadi ${a}, sababli ${e} (${rate})`,
+    attendance: (name: string, p: number, a: number, rate: string) => `${name} — oxirgi 30 kun: keldi ${p}, kelmadi ${a} (${rate})`,
     noLessons: (name: string) => `${name}: oxirgi 30 kunda davomat yo'q`,
-    status: { present: 'Keldi', late: 'Kechikdi', absent: 'Kelmadi', excused: 'Sababli' } as Record<string, string>,
+    status: { present: 'Keldi', absent: 'Kelmadi' } as Record<string, string>,
     schedule: (name: string) => `${name}:`,
     noGroups: (name: string) => `${name}: hozir guruhda emas`,
     room: (room: string) => `${room}`,
@@ -87,9 +88,9 @@ const TEXT = {
     noDebt: (name: string) => `${name}: долга нет ✅`,
     advance: (money: string) => `оплачено вперёд: ${money}`,
     pay: (link: string) => `Оплатить: ${link}`,
-    attendance: (name: string, p: number, l: number, a: number, e: number, rate: string) => `${name} — за 30 дней: был ${p}, опоздал ${l}, не был ${a}, уважительно ${e} (${rate})`,
+    attendance: (name: string, p: number, a: number, rate: string) => `${name} — за 30 дней: был ${p}, не был ${a} (${rate})`,
     noLessons: (name: string) => `${name}: за последние 30 дней посещаемости нет`,
-    status: { present: 'Был', late: 'Опоздал', absent: 'Не был', excused: 'Уважительно' } as Record<string, string>,
+    status: { present: 'Был', absent: 'Не был' } as Record<string, string>,
     schedule: (name: string) => `${name}:`,
     noGroups: (name: string) => `${name}: сейчас не в группе`,
     room: (room: string) => `${room}`,
@@ -139,11 +140,11 @@ export function formatReports(kind: 'debt' | 'attendance' | 'schedule', reports:
       }
       if (kind === 'attendance') {
         const a = r.attendance
-        if (a.present + a.late + a.absent + a.excused === 0) return t.noLessons(r.name)
+        if (a.present + a.absent === 0) return t.noLessons(r.name)
         // attendanceRate — foizda (0–100)
         const rate = a.rate === null ? '—' : `${Math.round(a.rate)}%`
         const recent = a.recent.map((x) => `• ${displayDate(x.date).slice(0, 5)} — ${t.status[x.status] ?? x.status} (${x.group})`)
-        return [t.attendance(r.name, a.present, a.late, a.absent, a.excused, rate), ...recent].join('\n')
+        return [t.attendance(r.name, a.present, a.absent, rate), ...recent].join('\n')
       }
       if (r.groups.length === 0) return t.noGroups(r.name)
       const lines = r.groups.map((g) => {

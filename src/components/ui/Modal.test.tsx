@@ -15,6 +15,18 @@ function Disappearing({ onClose }: { onClose: () => void }) {
 }
 
 describe('Modal', () => {
+  it('tashqariga (fonga) bosilganda yopilmaydi, faqat X bilan yopiladi', () => {
+    const onClose = vi.fn()
+    const { unmount } = render(<Disappearing onClose={onClose} />)
+    const overlay = screen.getByRole('dialog').parentElement as HTMLElement
+    fireEvent.mouseDown(overlay)
+    fireEvent.click(overlay)
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Yopish' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    unmount()
+  })
+
   it('bosilgan tugma yo\'qolib fokus body\'ga tushsa ham Escape yopadi, Tab oynaga qaytaradi', () => {
     const onClose = vi.fn()
     render(<Disappearing onClose={onClose} />)

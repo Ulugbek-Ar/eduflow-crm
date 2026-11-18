@@ -5,6 +5,7 @@ import { defineConfig, loadEnv } from 'vite'
 import type { Plugin } from 'vite'
 import { resolveBrand } from './src/constants/brand.ts'
 import type { Brand } from './src/constants/brand.ts'
+import { routePreload } from './scripts/route-preload.ts'
 
 // CSP uchun yagona manba — vercel.json (netlify.toml bilan mosligi tests/deploy-config.test.ts da tekshiriladi).
 // `npm run preview` ham shu sarlavhani yuboradi: build'ni prod sharoitida tekshirish mumkin
@@ -75,7 +76,13 @@ export default defineConfig(({ mode }) => {
   // .env, .env.local va muhit o'zgaruvchilari (Vercel/GitHub) — ilovaga ham shu qiymatlar boradi
   const brand = resolveBrand(loadEnv(mode, process.cwd(), 'VITE_BRAND_'))
   return {
-    plugins: [react(), babel({ presets: [reactCompilerPreset()] }), ...brandMeta(brand)],
+    plugins: [
+      react(),
+      babel({ presets: [reactCompilerPreset()] }),
+      ...brandMeta(brand),
+      // Sahifa bo'lagi index.js bilan parallel yuklanadi (scripts/route-preload.ts)
+      routePreload(),
+    ],
     preview: {
       headers: { 'Content-Security-Policy': readCsp() },
     },

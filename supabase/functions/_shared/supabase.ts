@@ -1,7 +1,7 @@
 // Faqat Edge Function'lar uchun (Deno): Supabase mijozi, CORS, chaqiruvchi xodim va SQL funksiyalari asosidagi to'lov ombori.
 // Vitest bu faylni import qilmaydi (npm: spetsifikatori Deno'ga xos)
-import { createClient } from 'npm:@supabase/supabase-js@2.45.4'
-import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4'
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0'
 import type { PaymentProvider, PaymentStore, PaymentTx } from './payments.ts'
 
 export type { SupabaseClient }

@@ -8,6 +8,7 @@ import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
 import { cx } from '../../utils/cx'
 import { Hint } from '../ui/Hint'
+import { CASH_BALANCE_PERMISSION } from '../../auth/permissions'
 
 export function Sidebar() {
   const { activeSection, setActiveSection, balance, money, settings, sidebarOpen, toggleSidebar, sidebarCollapsed, toggleSidebarCollapsed } =
@@ -63,7 +64,7 @@ export function Sidebar() {
           ))}
         </nav>
 
-        {can('payments.view') && (
+        {can(CASH_BALANCE_PERMISSION) && (
           <div className="sidebar-balance">
             <small>
               {tr('Kassa balansi')} <Hint term="balance" className="hint-on-dark" />

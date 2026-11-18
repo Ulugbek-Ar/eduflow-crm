@@ -742,7 +742,7 @@ function demoAttendance(plan: DemoPlan, groups: readonly Group[], enrollments: r
         if (e.groupId !== group.id || e.startDate > day || (e.endDate && e.endDate < day)) continue
         if (e.status === 'paused' && e.pausedFrom && e.pausedFrom <= day) continue
         // PRNG har dars uchun bir xil iste'mol qilinadi (kun ichidagi soatdan qat'i nazar)
-        const status: AttendanceStatus = rng.weighted([['present', 86], ['late', 4], ['absent', 6], ['excused', 4]] as const)
+        const status: AttendanceStatus = rng.weighted([['present', 90], ['absent', 10]] as const)
         // Bugun: faqat tugagan darslar (oxirgisidan tashqari)
         if (day === today && (toMinutes(group.endTime) > nowMinutes || group === unmarked)) continue
         attendance.push({ id: `d${attendance.length + 1}`, groupId: group.id, customerId: e.customerId, date: day, status, markedBy: teacher?.name, updatedAt: atTime(date, 20, 0).toISOString() })

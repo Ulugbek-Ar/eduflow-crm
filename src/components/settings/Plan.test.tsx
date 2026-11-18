@@ -7,13 +7,14 @@ import { makeCustomer, renderApp, renderSignedIn, seedData, seedSession, seedUse
 const DAY = 86_400_000
 
 describe('Tarif', () => {
-  it('Sozlamalarda tarif kartasi; sinov oxirida ogohlantirish', async () => {
+  it('Sozlamalarda tarif kartasi; lokal rejimda header\'da sariq tasma chiqmaydi', async () => {
     await seedUsers()
     seedSession()
     seedData()
     saveSubscription({ plan: 'trial', status: 'active', trialEndsAt: new Date(Date.now() + 2.5 * DAY).toISOString(), enforced: false })
     const { user } = renderApp()
-    expect(await screen.findByText(/"Sinov" tarifi tugashiga 3 kun qoldi/)).toBeTruthy()
+    await screen.findByRole('button', { name: 'Sozlamalar' })
+    expect(screen.queryByText(/tarifi: 3 kun qoldi/)).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Sozlamalar' }))
     const card = await screen.findByRole('region', { name: 'Tarif' })
     expect(within(card).getByText('Sinov')).toBeTruthy()
@@ -39,7 +40,7 @@ describe('Tarif', () => {
   it('bulutli (majburiy) rejimda muddati tugasa — faqat ko\'rish', async () => {
     saveSubscription({ plan: 'standard', status: 'active', paidUntil: new Date(Date.now() - DAY).toISOString(), enforced: true })
     const { user } = await renderSignedIn({ customers: [makeCustomer()] })
-    expect(screen.getByText(/tarifi muddati tugadi/)).toBeTruthy()
+    expect(screen.getByText(/tarifi tugadi/)).toBeTruthy()
     expect(screen.getByText(/faqat ko'rish mumkin/)).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
     await screen.findByRole('heading', { name: 'Mijozlar va lidlar', level: 2 })

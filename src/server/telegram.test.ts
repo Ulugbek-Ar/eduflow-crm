@@ -14,7 +14,7 @@ const report = (patch: Partial<StudentReport> = {}): StudentReport => ({
   link: 'https://checkout.paycom.uz/abc',
   currency: 'UZS',
   groups: [{ name: 'IELTS — kechki', days: ['mon', 'wed', 'fri'], startTime: '18:00', endTime: '19:30', room: '101-xona' }],
-  attendance: { present: 10, late: 1, absent: 1, excused: 1, rate: 91.66, recent: [{ date: '2026-11-06', status: 'absent', group: 'IELTS — kechki' }] },
+  attendance: { present: 11, absent: 2, rate: 84.6, recent: [{ date: '2026-11-06', status: 'absent', group: 'IELTS — kechki' }] },
   ...patch,
 })
 
@@ -88,7 +88,8 @@ describe('Telegram bot (ota-onalar uchun)', () => {
     await handleUpdate(message('', { contact: { phone_number: '998901234567', user_id: 77 } }), store, 'X')
     expect((await handleUpdate(message('💳 Qarz'), store, 'X'))[0].text).toBe('Aziza Karimova: qarz 650 000 so\'m\nTo\'lash: https://checkout.paycom.uz/abc')
     const attendance = (await handleUpdate(message('📅 Davomat'), store, 'X'))[0].text
-    expect(attendance).toContain('keldi 10, kechikdi 1, kelmadi 1, sababli 1 (92%)')
+    expect(attendance).toContain('keldi 11, kelmadi 2 (85%)')
+    expect(attendance).not.toMatch(/kechikdi|sababli/)
     expect(attendance).toContain('• 06.11 — Kelmadi (IELTS — kechki)')
     expect((await handleUpdate(message('🗓 Jadval'), store, 'X'))[0].text).toBe('Aziza Karimova:\n• IELTS — kechki — Du, Cho, Ju 18:00–19:30, 101-xona')
     const lang = await handleUpdate(message('🌐 Til'), store, 'X')
@@ -102,7 +103,7 @@ describe('Telegram bot (ota-onalar uchun)', () => {
 
   it('hisobot matnlari: qarz yo\'q va avans, darssiz, guruhsiz; buyruqlar tahlili', () => {
     expect(formatReports('debt', [report({ debt: 0, advance: 100_000, link: null })], 'uz')).toBe('Aziza Karimova: qarz yo\'q ✅\noldindan to\'langan: 100 000 so\'m')
-    expect(formatReports('attendance', [report({ attendance: { present: 0, late: 0, absent: 0, excused: 0, rate: null, recent: [] } })], 'ru')).toContain('посещаемости нет')
+    expect(formatReports('attendance', [report({ attendance: { present: 0, absent: 0, rate: null, recent: [] } })], 'ru')).toContain('посещаемости нет')
     expect(formatReports('schedule', [report({ groups: [] })], 'uz')).toBe('Aziza Karimova: hozir guruhda emas')
     expect(parseInput('/start@EduBot kod')).toEqual({ command: 'start', arg: 'kod' })
     expect(parseInput('/qarz').command).toBe('debt')

@@ -98,6 +98,13 @@ export function parseAmount(value: string): number {
   return digits ? Number(digits) : 0
 }
 
+// Noyob id: vaqt + 10 ta kriptografik tasodifiy belgi. Avval Math.random'ning 5 belgisi edi — bir millisekundda
+// minglab yozuv (Excel import) yaratilganda to'qnashuv ehtimoli sezilarli edi (bir mijoz boshqasining ustidan yozilardi)
+const ID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
 export function createId(prefix: string): string {
-  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
+  const bytes = new Uint8Array(10)
+  crypto.getRandomValues(bytes)
+  let random = ''
+  for (const b of bytes) random += ID_ALPHABET[b % ID_ALPHABET.length]
+  return `${prefix}${Date.now().toString(36)}${random}`
 }

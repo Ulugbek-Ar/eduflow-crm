@@ -1,14 +1,12 @@
 import { useDashboard } from '../../context/useDashboard'
 import { tr } from '../../i18n'
 import type { AttendanceStatus } from '../../types/attendance.types'
-import { ATTENDANCE_LABELS } from '../../utils/attendance'
+import { ATTENDANCE_LABELS, ATTENDANCE_STATUSES, simpleStatus } from '../../utils/attendance'
 import { enrollmentActiveOn } from '../../utils/groups'
 import { Button } from '../ui/Button'
 import './attendance.css'
 
-const STATUSES: AttendanceStatus[] = ['present', 'late', 'absent', 'excused']
-
-// Bir dars uchun katta tugmali ro'yxat (telefonda bugungi dars): har o'quvchi — Keldi / Kechikdi / Kelmadi / Sababli
+// Bir dars uchun katta tugmali ro'yxat (telefonda bugungi dars): har o'quvchi — Keldi / Kelmadi
 export function LessonMarking({ groupId, date }: { groupId: string; date: string }) {
   const { enrollments, attendance, getCustomerName, markAttendance, canMarkDay } = useDashboard()
   const students = enrollments
@@ -36,12 +34,12 @@ export function LessonMarking({ groupId, date }: { groupId: string; date: string
             <li key={e.id} className="lesson-student">
               <strong>{name}</strong>
               <div className="lesson-buttons" role="group" aria-label={tr('{0}: davomat', { 0: name })}>
-                {STATUSES.map((status) => (
+                {ATTENDANCE_STATUSES.map((status: AttendanceStatus) => (
                   <button
                     key={status}
                     type="button"
                     className={`is-${status}`}
-                    aria-pressed={current === status}
+                    aria-pressed={current !== undefined && simpleStatus(current) === status}
                     disabled={!editable}
                     onClick={() => markAttendance([{ groupId, customerId: e.customerId, date, status }], { silent: true })}
                   >

@@ -1,6 +1,8 @@
 import { tr } from '../../i18n'
 import { CATEGORY_LABELS, EXPENSE_CATEGORIES, METHOD_LABELS } from '../../constants/navigation'
+import { CASH_BALANCE_PERMISSION } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import type { PaymentMethod, Transaction } from '../../types/finance.types'
 import { breakdown, sumExpense, sumIncome } from '../../utils/analytics'
 import type { BreakdownRow } from '../../utils/analytics'
@@ -59,6 +61,7 @@ function BreakdownCard<K extends string>({ title, subtitle, rows, labels, tone }
 
 export function FinanceSummary({ transactions, periodLabel }: { transactions: Transaction[]; periodLabel: string }) {
   const { money, balance } = useDashboard()
+  const showBalance = useCan()(CASH_BALANCE_PERMISSION)
   // Faqat "To'langan" tranzaksiyalar (sumIncome/sumExpense va breakdown ham shunday hisoblaydi)
   const income = sumIncome(transactions)
   const expense = sumExpense(transactions)
@@ -66,11 +69,13 @@ export function FinanceSummary({ transactions, periodLabel }: { transactions: Tr
   return (
     <>
       <div className="summary-grid">
-        <div className="card summary">
-          <small>{tr('Umumiy balans (kassa)')}</small>
-          <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
-          <span className="summary-hint">{tr('Barcha vaqt · faqat to\'langanlar')}</span>
-        </div>
+        {showBalance && (
+          <div className="card summary">
+            <small>{tr('Umumiy balans (kassa)')}</small>
+            <strong className={balance < 0 ? 'text-danger' : undefined}>{money(balance)}</strong>
+            <span className="summary-hint">{tr('Barcha vaqt · faqat to\'langanlar')}</span>
+          </div>
+        )}
         <div className="card summary">
           <small>{tr('Jami kirim ·')} {periodLabel}</small>
           <strong className="text-success">{money(income)}</strong>
