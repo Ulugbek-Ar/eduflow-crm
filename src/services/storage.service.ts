@@ -4,11 +4,13 @@ import type { Course } from '../types/course.types'
 import type { Teacher } from '../types/teacher.types'
 import type { Enrollment, Group } from '../types/group.types'
 import type { AttendanceRecord, LessonException } from '../types/attendance.types'
+import type { Branch } from '../types/branch.types'
 import type { Customer, CustomerStatus, LegacyCustomerStatus } from '../types/customer.types'
 import type { Settings } from '../types/dashboard.types'
 import type { LegacyPaymentMethod, PaymentMethod, Transaction, TransactionCategory, TransactionType } from '../types/finance.types'
 import {
   isAttendanceRecord,
+  isBranch,
   isCourse,
   isCustomer,
   isEnrollment,
@@ -37,6 +39,8 @@ export const STORAGE_KEYS = {
   enrollments: 'apex:enrollments',
   attendance: 'apex:attendance',
   lessonExceptions: 'apex:lesson-exceptions',
+  // v12: filiallar
+  branches: 'apex:branches',
   // v10 -> v11 migratsiyasidan oldin avtomatik olingan JSON zaxira (Sozlamalar -> Ma'lumotlar'dan yuklab olinadi)
   preMigrationBackup: 'apex:backup-pre-v11',
 } as const
@@ -53,8 +57,9 @@ type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS]
 // v9 — mijozda "To'lov qildi" bosqichiga o'tgan vaqt (customer.paidAt);
 // v10 — kurs davomiyligi noma'lum bo'lsa 0 ("muddatsiz"), v6 migratsiyasidagi "1 oy" tuzatiladi;
 // v11 — o'qituvchilar, guruhlar, enrollment, davomat; "To'lov qildi" o'quvchilari kurs bo'yicha "1-guruh"ga yoziladi,
-//       Course.activeGroups olib tashlanadi (guruhlardan hisoblanadi); tranzaksiyada enrollmentId, teacherId, period
-export const SCHEMA_VERSION = 11
+//       Course.activeGroups olib tashlanadi (guruhlardan hisoblanadi); tranzaksiyada enrollmentId, teacherId, period;
+// v12 — filiallar (apex:branches); guruh, mijoz va tranzaksiyada ixtiyoriy branchId (eski ma'lumot o'zgarmaydi)
+export const SCHEMA_VERSION = 12
 
 export interface StoredData {
   customers: Customer[]
@@ -66,10 +71,12 @@ export interface StoredData {
   enrollments: Enrollment[]
   attendance: AttendanceRecord[]
   lessonExceptions: LessonException[]
+  branches: Branch[]
 }
 
-// StoredData'dagi ro'yxat kalitlari (sozlamalardan tashqari) — saqlash, sinxron va tablar orasida bir xil tartibda
-export const LIST_KEYS = ['customers', 'transactions', 'courses', 'teachers', 'groups', 'enrollments', 'attendance', 'lessonExceptions'] as const
+// StoredData'dagi ro'yxat kalitlari (sozlamalardan tashqari) — saqlash, sinxron va tablar orasida bir xil tartibda.
+// Filiallar birinchi: bulutda guruh, mijoz va to'lov filialga tashqi kalit bilan bog'langan
+export const LIST_KEYS = ['branches', 'customers', 'transactions', 'courses', 'teachers', 'groups', 'enrollments', 'attendance', 'lessonExceptions'] as const
 export type ListKey = (typeof LIST_KEYS)[number]
 
 export interface LoadResult {
@@ -444,6 +451,26 @@ function uniqueExceptions(items: readonly LessonException[]): LessonException[] 
   })
 }
 
+// Filial nomlari takrorlanmaydi
+function uniqueBranchNames(branches: readonly Branch[]): Branch[] {
+  const seen = new Set<string>()
+  return branches.filter((b) => {
+    const key = b.name.trim().toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+// Mavjud bo'lmagan filialga havola olib tashlanadi (qisman zaxira, o'chirilgan filial; bulutda tashqi kalit buzilmasin)
+export function dropUnknownBranch<T extends { branchId?: string }>(items: readonly T[], branchIds: ReadonlySet<string>): T[] {
+  return items.map((item) => {
+    if (!item.branchId || branchIds.has(item.branchId)) return item
+    const { branchId: _unknown, ...rest } = item
+    return rest as T
+  })
+}
+
 // Kurs nomlari takrorlanmasligi kerak (mijoz kursga nom orqali bog'lanadi)
 function uniqueCourseNames(courses: readonly Course[]): Course[] {
   const seen = new Set<string>()
@@ -467,13 +494,18 @@ export interface RawData {
   enrollments?: unknown
   attendance?: unknown
   lessonExceptions?: unknown
+  branches?: unknown
 }
 
 export function normalizeData(raw: RawData, fromVersion: number = SCHEMA_VERSION): LoadResult {
+  const list = (value: unknown) => (Array.isArray(value) ? value : [])
+  // v12: filiallar (bo'lmasa — bo'sh); noma'lum filialga havolalar olib tashlanadi
+  const branches = uniqueBranchNames(keepValid(list(raw.branches), isBranch))
+  const branchIds = new Set(branches.map((b) => b.id))
   const rawCustomers = Array.isArray(raw.customers) ? raw.customers.map(migrateCustomer) : []
   const rawTransactions = Array.isArray(raw.transactions) ? raw.transactions.map(migrateTransaction) : []
-  const valid = keepValid(rawTransactions, isTransaction)
-  const customers = fillPaidAt(keepValid(rawCustomers, isCustomer), valid)
+  const valid = dropUnknownBranch(keepValid(rawTransactions, isTransaction), branchIds)
+  const customers = dropUnknownBranch(fillPaidAt(keepValid(rawCustomers, isCustomer), valid), branchIds)
   const transactions = fillCustomerNames(valid, customers)
   const settings = sanitizeSettings(raw.settings)
   // Kurslar massivi bo'lsa (v6+) — tekshiriladi; bo'lmasa (eski ma'lumot/zaxira) — migratsiya
@@ -482,9 +514,8 @@ export function normalizeData(raw: RawData, fromVersion: number = SCHEMA_VERSION
     rawCourses ? fixLegacyCourseDuration(uniqueCourseNames(keepValid(rawCourses, isCourse)), fromVersion) : migrateCourses(raw.settings, customers),
   )
   // v11 ro'yxatlari: bo'lmasa — bo'sh
-  const list = (value: unknown) => (Array.isArray(value) ? value : [])
   const teachers = keepValid(list(raw.teachers), isTeacher)
-  let groups = keepValid(list(raw.groups), isGroup)
+  let groups = dropUnknownBranch(keepValid(list(raw.groups), isGroup), branchIds)
   let enrollments = keepValid(list(raw.enrollments), isEnrollment)
   const attendance = uniqueAttendance(keepValid(list(raw.attendance), isAttendanceRecord))
   const lessonExceptions = uniqueExceptions(keepValid(list(raw.lessonExceptions), isLessonException))
@@ -496,7 +527,7 @@ export function normalizeData(raw: RawData, fromVersion: number = SCHEMA_VERSION
   }
   const invalid = (rawList: unknown, kept: readonly unknown[]) => (Array.isArray(rawList) ? Math.max(0, rawList.length - kept.length) : 0)
   return {
-    data: { customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions },
+    data: { customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions, branches },
     dropped:
       rawCustomers.length -
       customers.length +
@@ -505,7 +536,8 @@ export function normalizeData(raw: RawData, fromVersion: number = SCHEMA_VERSION
       invalid(raw.teachers, teachers) +
       (fromVersion < 11 ? 0 : invalid(raw.groups, groups) + invalid(raw.enrollments, enrollments)) +
       invalid(raw.attendance, attendance) +
-      invalid(raw.lessonExceptions, lessonExceptions),
+      invalid(raw.lessonExceptions, lessonExceptions) +
+      invalid(raw.branches, branches),
   }
 }
 
@@ -532,6 +564,7 @@ export function createEmptyData(): StoredData {
     enrollments: [],
     attendance: [],
     lessonExceptions: [],
+    branches: [],
   }
 }
 
@@ -547,6 +580,7 @@ function readRaw(): RawData {
     enrollments: readJson(STORAGE_KEYS.enrollments),
     attendance: readJson(STORAGE_KEYS.attendance),
     lessonExceptions: readJson(STORAGE_KEYS.lessonExceptions),
+    branches: readJson(STORAGE_KEYS.branches),
   }
 }
 
@@ -656,6 +690,7 @@ export function parseBackup(text: string): BackupParseResult {
       enrollments: json.enrollments,
       attendance: json.attendance,
       lessonExceptions: json.lessonExceptions,
+      branches: json.branches,
     },
     fromVersion,
   )

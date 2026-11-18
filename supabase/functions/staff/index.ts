@@ -36,13 +36,16 @@ Deno.serve(async (req) => {
 
   // Chaqiruvchi — shu markaz administratori bo'lishi kerak (uning tokeni bilan tekshiriladi)
   const asCaller = createClient(url, anon, { global: { headers: { Authorization: authHeader } } })
-  const { data: me } = await asCaller.from('profiles').select('id, organization_id, role, status').single()
+  // '*' — filiallar migratsiyasi qo'llanmagan bazada ham ishlaydi (branch_id bo'lmasa — undefined)
+  const { data: me } = await asCaller.from('profiles').select('*').single()
   if (!me || me.role !== 'admin' || me.status !== 'active') return json(403, { error: 'Faqat administrator' })
   const { data: writable } = await asCaller.rpc('org_writable')
   if (!writable) return json(403, { error: 'Tarif muddati tugagan yoki markaz to\'xtatilgan' })
 
   const admin = createClient(url, service)
   const body = await req.json().catch(() => ({}))
+  // Filialga cheklangan administrator faqat o'z filiali xodimlarini qo'shadi va parolini tiklaydi
+  const ownBranch: string | null = typeof me.branch_id === 'string' && me.branch_id ? me.branch_id : null
 
   if (body.action === 'invite') {
     const email = String(body.email ?? '').trim().toLowerCase()
@@ -59,6 +62,14 @@ Deno.serve(async (req) => {
     if (role !== 'teacher' && limit !== null && (count ?? 0) >= limit) return json(409, { error: `Tarifingizda ${limit} tagacha xodim` })
 
     // Ilova yaratgan vaqtinchalik parol (administrator uni xodimga beradi) yoki serverda yangisi
+    // Xodim filiali: cheklangan administrator — o'z filiali; aks holda tanlangan (markazda mavjud bo'lsa) yoki butun markaz
+    let branchId = ownBranch
+    if (!branchId && typeof body.branchId === 'string' && body.branchId) {
+      const { data: branch } = await admin.from('branches').select('id').eq('organization_id', me.organization_id).eq('id', body.branchId).maybeSingle()
+      if (!branch) return json(400, { error: 'Filial topilmadi' })
+      branchId = branch.id
+    }
+
     const given = String(body.password ?? '')
     const password = given.length >= 8 && given.length <= 128 ? given : tempPassword()
     const { data: created, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true })
@@ -70,6 +81,7 @@ Deno.serve(async (req) => {
       title: String(body.title ?? '').trim().slice(0, 40),
       role,
       must_change_password: true,
+      ...(branchId ? { branch_id: branchId } : {}),
     })
     if (profileError) {
       await admin.auth.admin.deleteUser(created.user.id)
@@ -87,8 +99,9 @@ Deno.serve(async (req) => {
 
   if (body.action === 'reset') {
     const id = String(body.id ?? '')
-    const { data: target } = await admin.from('profiles').select('id, organization_id, full_name').eq('id', id).single()
+    const { data: target } = await admin.from('profiles').select('*').eq('id', id).single()
     if (!target || target.organization_id !== me.organization_id) return json(404, { error: 'Xodim topilmadi' })
+    if (ownBranch && target.branch_id !== ownBranch) return json(403, { error: 'Faqat o\'z filialingiz xodimlari' })
     const password = tempPassword()
     const { error } = await admin.auth.admin.updateUserById(id, { password })
     if (error) return json(400, { error: error.message })

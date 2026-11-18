@@ -4,6 +4,7 @@ import type { StaffUser } from '../types/user.types'
 import { logAudit, resetAuditCache } from './audit.service'
 import type { AuditAction } from './audit.service'
 import { clearDemoStorage, saveAll, setDemoMode, setStorageNamespace } from './storage.service'
+import { saveSubscription } from './subscription.service'
 import type { StoredData } from './storage.service'
 import { displayName, saveDemoStaff } from './users.service'
 
@@ -35,6 +36,8 @@ export function openDemoWorkspace(data: StoredData): StaffUser[] {
   clearDemoStorage()
   saveAll(data)
   setDemoMode(true)
+  // Demo markaz — Pro tarifida (ikki filial, cheklovsiz xodimlar): mahsulot to'liq ko'rinadi
+  saveSubscription({ plan: 'pro', status: 'active', enforced: false })
   const staff = saveDemoStaff()
   seedDemoAudit(staff, data)
   resetAuditCache()

@@ -6,6 +6,7 @@ import type { PaymentMethod, Transaction, TransactionCategory, TransactionStatus
 import type { Enrollment, EnrollmentStatus, Group, GroupStatus, Weekday } from '../types/group.types'
 import type { PayRule, Teacher, TeacherStatus } from '../types/teacher.types'
 import type { AttendanceRecord, AttendanceStatus, LessonException } from '../types/attendance.types'
+import type { Branch, BranchStatus } from '../types/branch.types'
 
 // Record<T, true> ko'rinishi: yangi qiymat qo'shilsa TypeScript bu yerni ham yangilashni talab qiladi
 const STATUSES: Record<CustomerStatus, true> = { new: true, contacted: true, thinking: true, paid: true, cancelled: true }
@@ -33,6 +34,7 @@ const GROUP_STATUSES: Record<GroupStatus, true> = { active: true, finished: true
 const ENROLLMENT_STATUSES: Record<EnrollmentStatus, true> = { active: true, paused: true, finished: true, left: true }
 const TEACHER_STATUSES: Record<TeacherStatus, true> = { active: true, archived: true }
 const ATTENDANCE_STATUSES: Record<AttendanceStatus, true> = { present: true, absent: true, late: true, excused: true }
+const BRANCH_STATUSES: Record<BranchStatus, true> = { active: true, archived: true }
 
 // 'YYYY-MM-DD' (haqiqiy sana)
 export function isDay(value: unknown): value is string {
@@ -89,7 +91,30 @@ export function isCustomer(value: unknown): value is Customer {
     isOptionalString(value.email) &&
     isOptionalString(value.note) &&
     (value.updatedAt === undefined || isIsoDate(value.updatedAt)) &&
-    (value.paidAt === undefined || isIsoDate(value.paidAt))
+    (value.paidAt === undefined || isIsoDate(value.paidAt)) &&
+    isOptionalBranchId(value.branchId)
+  )
+}
+
+// v12: filial id'si ('' — aniq filialsiz)
+export function isOptionalBranchId(value: unknown): boolean {
+  return value === undefined || (typeof value === 'string' && value.length <= 64)
+}
+
+export function isBranch(value: unknown): value is Branch {
+  return (
+    isRecord(value) &&
+    isText(value.id) &&
+    isText(value.name) &&
+    value.name.trim().length >= 2 &&
+    value.name.length <= 60 &&
+    typeof value.address === 'string' &&
+    value.address.length <= 120 &&
+    typeof value.phone === 'string' &&
+    value.phone.length <= 20 &&
+    oneOf(BRANCH_STATUSES, value.status) &&
+    isIsoDate(value.createdAt) &&
+    (value.updatedAt === undefined || isIsoDate(value.updatedAt))
   )
 }
 
@@ -113,7 +138,10 @@ export function isTransaction(value: unknown): value is Transaction {
     (value.updatedAt === undefined || isIsoDate(value.updatedAt)) &&
     (value.enrollmentId === undefined || isText(value.enrollmentId)) &&
     (value.teacherId === undefined || isText(value.teacherId)) &&
-    (value.period === undefined || isPeriod(value.period))
+    (value.period === undefined || isPeriod(value.period)) &&
+    (value.provider === undefined || value.provider === 'payme' || value.provider === 'click') &&
+    (value.providerRef === undefined || isText(value.providerRef)) &&
+    isOptionalBranchId(value.branchId)
   )
 }
 
@@ -145,7 +173,17 @@ export function isSettings(value: unknown): value is Settings {
     typeof value.prorateFirstMonth === 'boolean' &&
     isWholeNumber(value.paymentDueDay, 1, 28) &&
     typeof value.reminderTemplateUz === 'string' &&
-    typeof value.reminderTemplateRu === 'string'
+    typeof value.reminderTemplateRu === 'string' &&
+    typeof value.paymeMerchantId === 'string' &&
+    typeof value.clickServiceId === 'string' &&
+    typeof value.clickMerchantId === 'string' &&
+    typeof value.smsSender === 'string' &&
+    typeof value.autoReminders === 'boolean' &&
+    isWholeNumber(value.autoRemindEveryDays, 3, 30) &&
+    (value.autoRemindLang === 'uz' || value.autoRemindLang === 'ru') &&
+    typeof value.telegramBot === 'string' &&
+    typeof value.botAbsenceAlerts === 'boolean' &&
+    typeof value.botPaymentAlerts === 'boolean'
   )
 }
 
@@ -216,6 +254,7 @@ export function isGroup(value: unknown): value is Group {
     isDay(value.startDate) &&
     isOptionalDay(value.endDate) &&
     oneOf(GROUP_STATUSES, value.status) &&
+    isOptionalBranchId(value.branchId) &&
     isIsoDate(value.createdAt) &&
     (value.updatedAt === undefined || isIsoDate(value.updatedAt))
   )
@@ -282,6 +321,19 @@ export function sanitizeSettings(value: unknown): Settings {
     paymentDueDay: isWholeNumber(raw.paymentDueDay, 1, 28) ? raw.paymentDueDay : DEFAULT_SETTINGS.paymentDueDay,
     reminderTemplateUz: isText(raw.reminderTemplateUz) ? raw.reminderTemplateUz.slice(0, 1000) : DEFAULT_REMINDER_UZ,
     reminderTemplateRu: isText(raw.reminderTemplateRu) ? raw.reminderTemplateRu.slice(0, 1000) : DEFAULT_REMINDER_RU,
+    // v1.2: onlayn to'lov id'lari (Payme merchant — 24 belgili hex, Click — raqamlar)
+    paymeMerchantId: typeof raw.paymeMerchantId === 'string' && /^[0-9a-f]{24}$/i.test(raw.paymeMerchantId) ? raw.paymeMerchantId : '',
+    clickServiceId: typeof raw.clickServiceId === 'string' && /^\d{1,10}$/.test(raw.clickServiceId) ? raw.clickServiceId : '',
+    clickMerchantId: typeof raw.clickMerchantId === 'string' && /^\d{1,10}$/.test(raw.clickMerchantId) ? raw.clickMerchantId : '',
+    // v1.2: SMS va avtomatik eslatma
+    smsSender: typeof raw.smsSender === 'string' && /^[\w.-]{2,11}$/.test(raw.smsSender) ? raw.smsSender : '',
+    autoReminders: raw.autoReminders === true,
+    autoRemindEveryDays: isWholeNumber(raw.autoRemindEveryDays, 3, 30) ? raw.autoRemindEveryDays : DEFAULT_SETTINGS.autoRemindEveryDays,
+    autoRemindLang: raw.autoRemindLang === 'ru' ? 'ru' : 'uz',
+    // v1.2: ota-onalar boti (Telegram username: 5–32 belgi)
+    telegramBot: typeof raw.telegramBot === 'string' && /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(raw.telegramBot) ? raw.telegramBot : '',
+    botAbsenceAlerts: raw.botAbsenceAlerts !== false,
+    botPaymentAlerts: raw.botPaymentAlerts !== false,
   }
 }
 

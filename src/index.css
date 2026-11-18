@@ -402,6 +402,11 @@ body.scroll-locked {
   overflow: hidden;
 }
 
+/* Mahsulot logosi (VITE_BRAND_LOGO): nisbati saqlanadi, kesilmaydi */
+.logo-image.brand-logo {
+  object-fit: contain;
+}
+
 .logo-upload {
   display: flex;
   align-items: flex-start;
@@ -658,6 +663,51 @@ body.scroll-locked {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+/* Filial tanlovi (Header): sarlavha yonida ixcham "tabletka" */
+.branch-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.branch-switch:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.branch-switch select {
+  min-width: 0;
+  max-width: 180px;
+  padding: 4px 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.branch-switch select:focus {
+  outline: none;
+}
+
+.branch-switch.is-fixed .branch-switch-name {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-icons {
@@ -2953,7 +3003,8 @@ a.btn {
   gap: 8px;
 }
 
-.reminder-actions > :first-child {
+.reminder-actions > :first-child,
+.reminder-actions > .reminder-wide {
   grid-column: 1 / -1;
 }
 
@@ -2985,6 +3036,138 @@ a.btn {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+.copy-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.copy-field > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.integration {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.integration + .integration {
+  margin-top: 4px;
+}
+
+.integration-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.integration-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sms-log {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sms-log li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.sms-log li > div {
+  min-width: 0;
+}
+
+.sms-text {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Telegram bot: BotFather qadamlari, ota-ona qanday ulanadi */
+.steps-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text-secondary);
+  list-style: disc;
+}
+
+ol.steps-list {
+  list-style: decimal;
+}
+
+/* Integratsiya bloklaridagi kichik sarlavhalar bir xil o'lchamda */
+.integration > h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Sozlamalar → Filiallar */
+.branch-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.branch-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.branch-list li:first-child {
+  border-top: 0;
+}
+
+.branch-list li > div:first-child {
+  min-width: 0;
+}
+
+.branch-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+/* O'quvchi kartasi: ota-ona Telegram'i */
+.parent-bot {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.parent-bot .detail-subtitle {
+  margin-bottom: 0;
+}
+
+.parent-bot-status {
+  margin: 0;
+  font-weight: 600;
 }
 
 .check-field {
@@ -3386,6 +3569,16 @@ a.btn {
     font-size: 1.1rem;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .branch-switch {
+    max-width: 150px;
+    min-height: 28px;
+    padding: 0 8px;
+  }
+
+  .branch-switch select {
+    max-width: 112px;
   }
 
   .header-actions {

@@ -25,6 +25,8 @@ export interface StaffUser {
   createdAt: string
   updatedAt?: string
   lastLoginAt?: string
+  // v12: filialga cheklangan xodim (yo'q — butun markaz)
+  branchId?: string
 }
 
 // Interfeysga beriladigan ko'rinish — parol xeshi hech qachon komponentlarga chiqmaydi

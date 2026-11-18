@@ -5,9 +5,9 @@ import type { Teacher } from '../types/teacher.types'
 import { GROUP_LIMITS } from './guards'
 import { daysLabel, minutesOf, sortDays } from './groups'
 
-export type GroupFormErrors = Partial<Record<'name' | 'courseId' | 'days' | 'startTime' | 'endTime' | 'capacity' | 'startDate' | 'endDate' | 'conflict', string>>
+export type GroupFormErrors = Partial<Record<'name' | 'courseId' | 'branchId' | 'days' | 'startTime' | 'endTime' | 'capacity' | 'startDate' | 'endDate' | 'conflict', string>>
 
-type Schedule = Pick<Group, 'room' | 'days' | 'startTime' | 'endTime' | 'startDate' | 'endDate'> & { teacherId?: string }
+type Schedule = Pick<Group, 'room' | 'days' | 'startTime' | 'endTime' | 'startDate' | 'endDate'> & { teacherId?: string; branchId?: string }
 
 export interface GroupConflict {
   group: Group
@@ -26,6 +26,8 @@ export function datesOverlap(a: Pick<Group, 'startDate' | 'endDate'>, b: Pick<Gr
 }
 
 const sameRoom = (a: string, b: string) => a.trim() !== '' && a.trim().toLowerCase() === b.trim().toLowerCase()
+// Xona — filial ichida (ikki filialda bir xil "101-xona" bo'lishi mumkin); o'qituvchi — butun markaz bo'yicha
+const sameBranch = (a?: string, b?: string) => (a || '') === (b || '')
 
 // Boshqa faol guruhlar bilan ziddiyatlar
 export function findConflicts(candidate: Schedule, groups: readonly Group[], excludeId?: string): GroupConflict[] {
@@ -34,7 +36,7 @@ export function findConflicts(candidate: Schedule, groups: readonly Group[], exc
     if (other.id === excludeId || other.status !== 'active') continue
     const days = sortDays(candidate.days.filter((d) => other.days.includes(d)))
     if (days.length === 0 || !timesOverlap(candidate.startTime, candidate.endTime, other.startTime, other.endTime) || !datesOverlap(candidate, other)) continue
-    if (sameRoom(candidate.room, other.room)) result.push({ group: other, kind: 'room', days })
+    if (sameRoom(candidate.room, other.room) && sameBranch(candidate.branchId, other.branchId)) result.push({ group: other, kind: 'room', days })
     else if (candidate.teacherId && candidate.teacherId === other.teacherId) result.push({ group: other, kind: 'teacher', days })
   }
   return result

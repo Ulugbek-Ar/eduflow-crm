@@ -67,6 +67,10 @@ export type AuditAction =
   | 'reminder.sent'
   | 'import.run'
   | 'import.undo'
+  | 'branch.create'
+  | 'branch.update'
+  | 'branch.archive'
+  | 'branch.delete'
 
 export type AuditCategory = 'customers' | 'payments' | 'courses' | 'groups' | 'attendance' | 'teachers' | 'staff' | 'auth' | 'data'
 
@@ -138,6 +142,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'reminder.sent': tr('To\'lov eslatmasi yuborildi'),
   'import.run': tr('Mijozlar import qilindi'),
   'import.undo': tr('Import bekor qilindi'),
+  'branch.create': tr('Filial qo\'shildi'),
+  'branch.update': tr('Filial tahrirlandi'),
+  'branch.archive': tr('Filial arxivlandi'),
+  'branch.delete': tr('Filial o\'chirildi'),
 }
 
 const ACTIONS = AUDIT_ACTION_LABELS as Record<AuditAction, unknown>

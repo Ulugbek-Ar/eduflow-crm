@@ -135,7 +135,15 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       if (!allowed('staff.manage')) return { ok: false, error: tr('Bu amal uchun ruxsatingiz yo\'q') }
       if (!EMAIL.test(input.login.trim())) return { ok: false, field: 'login', error: tr('Bulutli rejimda login — xodimning emaili') }
       try {
-        const created = await cloudApi.inviteStaff({ email: input.login, fullName: input.fullName, title: input.title, role: input.role, password: input.password, teacherId: input.teacherId })
+        const created = await cloudApi.inviteStaff({
+          email: input.login,
+          fullName: input.fullName,
+          title: input.title,
+          role: input.role,
+          password: input.password,
+          teacherId: input.teacherId,
+          branchId: input.branchId,
+        })
         refresh()
         return { ok: true, userId: created.id }
       } catch (error) {
@@ -147,8 +155,24 @@ export function CloudAuthProvider({ children }: { children: ReactNode }) {
       if (id === profile?.id && (patch.status === 'blocked' || (patch.role && patch.role !== profile.role))) {
         return { ok: false, field: patch.status ? 'status' : 'role', error: tr('O\'z rolingizni o\'zgartira olmaysiz — buni boshqa administrator qiladi') }
       }
-      setState((s) => ({ ...s, staff: s.staff.map((u) => (u.id === id ? { ...u, ...patch } : u)) }))
-      run(() => cloudApi.updateStaff(id, patch)).then((r) => {
+      const { branchId, ...rest } = patch
+      setState((s) => ({
+        ...s,
+        staff: s.staff.map((u) => {
+          if (u.id !== id) return u
+          const next = { ...u, ...rest }
+          if (branchId !== undefined) {
+            if (branchId) next.branchId = branchId
+            else delete next.branchId
+          }
+          return next
+        }),
+      }))
+      run(async () => {
+        if (Object.keys(rest).length > 0) await cloudApi.updateStaff(id, rest)
+        // Filial — alohida RPC (serverda: oxirgi filialsiz administrator himoyasi)
+        if (branchId !== undefined) await cloudApi.setStaffBranch(id, branchId || null)
+      }).then((r) => {
         if (!r.ok) {
           toast.error(r.error)
           refresh()

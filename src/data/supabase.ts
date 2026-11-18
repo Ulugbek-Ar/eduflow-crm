@@ -15,12 +15,14 @@ import { diffById } from './diff'
 import type { Changes } from './diff'
 import {
   attendanceToRow,
+  branchToRow,
   courseToRow,
   customerToRow,
   enrollmentToRow,
   exceptionToRow,
   groupToRow,
   rowToAttendance,
+  rowToBranch,
   rowToCourse,
   rowToCustomer,
   rowToEnrollment,
@@ -81,6 +83,7 @@ function profileFromRow(r: Row, email = ''): CloudProfile {
     mustChange: Boolean(r.must_change_password),
     createdAt: String(r.created_at),
     ...(r.last_login_at ? { lastLoginAt: String(r.last_login_at) } : {}),
+    ...(typeof r.branch_id === 'string' && r.branch_id ? { branchId: r.branch_id } : {}),
   }
 }
 
@@ -211,6 +214,12 @@ export async function updateOwnProfile(fullName: string, title: string): Promise
   fail(error)
 }
 
+// Xodimni filialga biriktirish (null — butun markaz). Serverda: faqat filialsiz administrator, oxirgi filialsiz administrator himoyasi
+export async function setStaffBranch(id: string, branchId: string | null): Promise<void> {
+  const { error } = await getClient().rpc('set_staff_branch', { p_id: id, p_branch: branchId })
+  fail(error)
+}
+
 export async function updateStaff(id: string, patch: { role?: Role; status?: UserStatus; fullName?: string; title?: string }): Promise<void> {
   const { error } = await getClient().rpc('update_staff', {
     p_id: id,
@@ -233,7 +242,7 @@ async function invokeStaff(body: Record<string, unknown>): Promise<{ id?: string
   return data as { id?: string; password: string }
 }
 
-export function inviteStaff(input: { email: string; fullName: string; title: string; role: Role; password: string; teacherId?: string }) {
+export function inviteStaff(input: { email: string; fullName: string; title: string; role: Role; password: string; teacherId?: string; branchId?: string }) {
   return invokeStaff({ action: 'invite', ...input })
 }
 
@@ -253,7 +262,7 @@ export interface CloudSnapshot {
 export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise<CloudSnapshot> {
   const sb = getClient()
   const seesTeachers = role === 'admin' || role === 'cashier' || role === 'viewer' || role === 'teacher'
-  const [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions] = await Promise.all([
+  const [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions, branches] = await Promise.all([
     role === 'teacher' ? sb.rpc('teacher_roster') : sb.from('customers').select('*').limit(10000),
     sb.from('transactions').select('*').order('date', { ascending: false }).limit(20000),
     sb.from('courses').select('*'),
@@ -262,6 +271,8 @@ export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise
     sb.from('enrollments').select('*').limit(20000),
     sb.from('attendance').select('*').order('date', { ascending: false }).limit(50000),
     sb.from('lesson_exceptions').select('*'),
+    // Filiallar migratsiyasi qo'llanmagan bazada jadval yo'q — filialsiz ishlayveradi
+    sb.from('branches').select('*').order('created_at'),
   ])
   for (const r of [customers, transactions, courses, teachers, groups, enrollments, attendance, exceptions]) fail(r.error)
   const active = (rows: unknown[] | null) => ((rows ?? []) as Row[]).filter((r) => !r.deleted_at)
@@ -286,6 +297,7 @@ export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise
       enrollments: active(enrollments.data).map(rowToEnrollment),
       attendance: ((attendance.data ?? []) as Row[]).map(rowToAttendance),
       lessonExceptions: ((exceptions.data ?? []) as Row[]).map(rowToException),
+      branches: branches.error ? [] : ((branches.data ?? []) as Row[]).map(rowToBranch),
     },
     trash,
   }
@@ -340,7 +352,7 @@ export class CloudSync {
   }
 
   // Savatchasiz jadvallar (davomat, bekor qilingan darslar): o'zgargani — upsert (noyob kalit bo'yicha), olib tashlangani — o'chiriladi
-  private async plain<T extends { id: string }>(table: 'attendance' | 'lesson_exceptions', changes: Changes<T>, toRow: (item: T, org: string) => Row, conflict: string) {
+  private async plain<T extends { id: string }>(table: 'attendance' | 'lesson_exceptions' | 'branches', changes: Changes<T>, toRow: (item: T, org: string) => Row, conflict: string) {
     const sb = getClient()
     if (changes.upserts.length) {
       const { error } = await sb.from(table).upsert(changes.upserts.map((item) => toRow(item, this.org)), { onConflict: conflict })
@@ -350,6 +362,20 @@ export class CloudSync {
       const { error } = await sb.from(table).delete().eq('organization_id', this.org).in('id', changes.removedIds)
       fail(error)
     }
+  }
+
+  // Onlayn to'lovlar (Payme/Click Edge Function'lari yozgan kirimlar): shu vaqtdan keyin o'zgarganlari
+  async providerPayments(since: string): Promise<StoredData['transactions']> {
+    const { data, error } = await getClient()
+      .from('transactions')
+      .select('*')
+      .not('provider', 'is', null)
+      .is('deleted_at', null)
+      .gt('updated_at', since)
+      .order('updated_at')
+      .limit(500)
+    fail(error)
+    return ((data ?? []) as Row[]).map(rowToTransaction)
   }
 
   // DashboardContext: istalgan ro'yxat o'zgarishi
@@ -369,6 +395,9 @@ export class CloudSync {
         return this.apply('enrollment', diffById(prev as StoredData['enrollments'], next as StoredData['enrollments']), enrollmentToRow)
       case 'attendance':
         return this.plain('attendance', diffById(prev as StoredData['attendance'], next as StoredData['attendance']), attendanceToRow, 'organization_id,group_id,customer_id,date')
+      // Filial savatchaga tushmaydi: arxivlanadi yoki (ishlatilmagan bo'lsa) o'chiriladi
+      case 'branches':
+        return this.plain('branches', diffById(prev as StoredData['branches'], next as StoredData['branches']), branchToRow, 'organization_id,id')
       default:
         return this.plain(
           'lesson_exceptions',

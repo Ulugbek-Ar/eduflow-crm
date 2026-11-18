@@ -1,7 +1,7 @@
 {
   "name": "eduflow-crm",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,10 +12,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run check:engine",
     "owner:password": "node scripts/owner-password.mjs",
     "e2e": "playwright test",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "build:engine": "vite build --config vite.engine.config.ts",
+    "check:engine": "node scripts/check-engine.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

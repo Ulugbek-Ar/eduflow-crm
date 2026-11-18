@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { APP_NAME } from '../constants/app'
-import { Icon } from '../constants/navigation'
+import { BrandMark } from '../components/ui/BrandMark'
 import { getLang, tr } from '../i18n'
 import { currentRoute, routeHref } from '../router'
 import { LanguageSwitch } from '../components/ui/LanguageSwitch'
@@ -151,7 +151,7 @@ export function LegalPage() {
       <header className="lp-header">
         <a className="lp-brand" href={routeHref('landing')}>
           <span className="logo-mark" aria-hidden="true">
-            <Icon name="logo" size={20} />
+            <BrandMark />
           </span>
           <strong>{APP_NAME}</strong>
         </a>

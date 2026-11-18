@@ -7,6 +7,8 @@ import type { GroupInput, GroupStatus, Weekday } from '../../types/group.types'
 import { validateGroup } from '../../utils/groupForm'
 import type { GroupFormErrors } from '../../utils/groupForm'
 import { GROUP_STATUS_LABELS, seatsTaken, sortDays, WEEKDAY_LONG, WEEKDAY_SHORT, WEEKDAYS } from '../../utils/groups'
+import { defaultBranchId } from '../../utils/branches'
+import { BranchSelect } from '../branches/BranchSelect'
 import { Button } from '../ui/Button'
 import { DateInput } from '../ui/DateInput'
 import { Input } from '../ui/Input'
@@ -14,7 +16,7 @@ import { Modal } from '../ui/Modal'
 import { Select } from '../ui/Select'
 import './groups.css'
 
-const FIELD_ORDER = ['name', 'courseId', 'days', 'startTime', 'endTime', 'capacity', 'startDate', 'endDate'] as const
+const FIELD_ORDER = ['name', 'courseId', 'branchId', 'days', 'startTime', 'endTime', 'capacity', 'startDate', 'endDate'] as const
 
 interface FormState {
   name: string
@@ -28,10 +30,11 @@ interface FormState {
   startDate: string
   endDate: string
   status: GroupStatus
+  branchId: string
 }
 
 export function GroupFormModal({ groupId }: { groupId?: string }) {
-  const { groups, courses, teachers, enrollments, getGroup, addGroup, updateGroup, closeModal, openModal, settings } = useDashboard()
+  const { courses, teachers, enrollments, getGroup, addGroup, updateGroup, closeModal, openModal, settings, branches, branchFilter, restrictedBranch, exportData } = useDashboard()
   const today = useToday()
   const editing = getGroup(groupId)
   const [form, setForm] = useState<FormState>(() => ({
@@ -46,6 +49,7 @@ export function GroupFormModal({ groupId }: { groupId?: string }) {
     startDate: editing?.startDate ?? today,
     endDate: editing?.endDate ?? '',
     status: editing?.status ?? 'active',
+    branchId: editing?.branchId ?? defaultBranchId(branches, branchFilter, restrictedBranch),
   }))
   const [errors, setErrors] = useState<GroupFormErrors>({})
   const taken = editing ? seatsTaken(editing.id, enrollments, today) : 0
@@ -71,8 +75,11 @@ export function GroupFormModal({ groupId }: { groupId?: string }) {
       startDate: form.startDate,
       endDate: form.endDate || undefined,
       status: form.status,
+      ...(form.branchId ? { branchId: form.branchId } : {}),
     }
-    const next = validateGroup(data, groups, editing?.id, teachers)
+    // Ziddiyat butun markaz bo'yicha (o'qituvchi boshqa filialda dars berayotgan bo'lishi mumkin), tanlangan filial emas
+    const next = validateGroup(data, exportData().groups, editing?.id, teachers)
+    if (branches.length > 0 && !form.branchId) next.branchId = tr('Filialni tanlang')
     setErrors(next)
     const first = FIELD_ORDER.find((key) => next[key])
     if (first) {
@@ -138,6 +145,7 @@ export function GroupFormModal({ groupId }: { groupId?: string }) {
           <Select id="group-courseId" label={tr('Kurs')} required value={form.courseId} error={errors.courseId} onChange={(e) => update('courseId', e.target.value)} options={[{ value: '', label: tr('Tanlang') }, ...courseOptions]} />
           <Select label={tr('O\'qituvchi')} value={form.teacherId} onChange={(e) => update('teacherId', e.target.value)} options={teacherOptions} />
         </div>
+        <BranchSelect id="group-branchId" value={form.branchId} error={errors.branchId} onChange={(v) => update('branchId', v)} />
         <fieldset className="fieldset-plain field">
           <legend>
             {tr('Dars kunlari')}

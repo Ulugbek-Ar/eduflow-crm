@@ -215,7 +215,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (input.role !== 'teacher' && access.staffLimit !== null && activeCount >= access.staffLimit) {
         return { ok: false, error: tr('Tarifingizda {0} tagacha xodim. Ko\'proq xodim uchun tarifni almashtiring.', { 0: access.staffLimit }) }
       }
-      const result = await staff.addUser(input)
+      // Filialga cheklangan administrator xodimni faqat o'z filialiga qo'shadi
+      const result = await staff.addUser(current?.branchId ? { ...input, branchId: current.branchId } : input)
       if (!result.ok) return result
       audit('staff.create', `${staff.displayName(result.user)} (${ROLE_LABELS[result.user.role]})`, result.user.id)
       setUsers(result.users)
@@ -224,6 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateUser: (id, patch) => {
       if (!current || !allowed('staff.manage')) return DENIED
       const before = users.find((u) => u.id === id)
+      // Filialga cheklangan administrator faqat o'z filiali xodimlarini boshqaradi va filialni o'zgartirmaydi
+      if (current.branchId && (before?.branchId !== current.branchId || patch.branchId !== undefined)) return DENIED
       const result = staff.updateUser(current.id, id, patch)
       if (result.ok && patch.status === 'blocked') {
         revokeUserSessions(id)

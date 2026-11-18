@@ -32,6 +32,7 @@ export interface SeedUser {
   role?: Role
   status?: StaffUser['status']
   mustChange?: boolean
+  branchId?: string
 }
 
 // Xesh bir marta hisoblanadi (PBKDF2 sekin) — bir xil parolli foydalanuvchilar uchun keshlanadi
@@ -59,6 +60,7 @@ export async function buildUser(seed: SeedUser = {}): Promise<StaffUser> {
     iterations: PBKDF2_ITERATIONS,
     mustChange: seed.mustChange ?? false,
     createdAt: '2026-09-01T09:00:00.000Z',
+    ...(seed.branchId ? { branchId: seed.branchId } : {}),
   }
 }
 
