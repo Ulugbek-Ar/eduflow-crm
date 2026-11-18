@@ -87,3 +87,17 @@ Skriptlar: `tests/qa-retest.mjs`, `tests/qa06.mjs`, `tests/qa-mobile-live.mjs`, 
 Cloud sync (kod auditi): `src/data/supabase.ts:376` butun qatorni `upsert` qiladi, `updated_at` bo'yicha konflikt tekshiruvi yo'q → bir yozuvni ikki xodim ≤90 s ichida tahrirlasa, oxirgisi g'olib (B). Brauzerda bulut bilan — Tekshirilmadi.
 
 Offline (lokal/demo): ma'lumot yozish ishlaydi ✅; lekin 4 bo'lim (O'qituvchilar, Dars jadvali, Boshqaruv, Yordam) oldindan yuklanmagan → offline'da ochilmaydi va internet qaytgach ham "Qayta yuklash"siz tiklanmaydi (A-04, `tests/offline.mjs`).
+
+## 7. Modullar, a11y, tezlik — QISMAN BAJARILDI
+
+- Forma validatsiyasi (admin, 1440): mijoz (bo'sh/bo'shliqlar/qisqa telefon ✅; 300 belgilik ism saqlanadi — A-06), kurs (bo'sh ✅, manfiy narx kiritib bo'lmaydi ✅), guruh (bo'sh ✅).
+- Qidiruv/saralash/pagination ✅ (1–10 / 476 → 11–20 / 476); "Python 1" → 250 natija (A-05).
+- Eksport: CSV UTF-8 BOM ✅, formula injection ekranlangan ✅; telefon `'+998…` (A-07).
+- Import chekka holatlar (`tests/import-edge.mjs`): XSS bajarilmadi ✅, formula matn ✅, `8…`/`0…` telefon rad etiladi (QA-01 bilan nomuvofiq).
+- axe-core WCAG 2.1 AA: 12 sahifa × light/dark = 0 buzilish ✅. Klaviatura fokusi ko'rinadi ✅.
+- Lighthouse mobil: lokal landing 98 / app 70 (CLS 0.601), jonli landing 100 / app 73 (CLS 0.973, SEO 63 — `/app` atayin noindex).
+- 390 px: < 24 px bosish nishonlari (QA-17) — moliya 26, mijozlar 14.
+
+## Yakuniy holat
+- REPORT.md (A/B/C, QA jadvali, xulosa, tuzatish prompti) va REMAINING.md (bajarilmaganlar + davom ettirish prompti) yozildi.
+- Audit klonida `git status` toza (0 o'zgarish), HEAD = d62889e.
