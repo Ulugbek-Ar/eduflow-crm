@@ -95,8 +95,9 @@ export function Modal({ title, description, onClose, children, footer, size = 'm
 
   return createPortal(
     <div
+      // Tashqariga (fonga) bosilganda oyna YOPILMAYDI — kiritilgan ma'lumot tasodifan yo'qolmasin.
+      // Yopish: X tugmasi, "Bekor qilish" yoki Escape
       className={cx('modal-overlay', variant === 'drawer' && 'is-drawer')}
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       onKeyDown={handleKeyDown}
     >
       <div

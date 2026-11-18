@@ -2,6 +2,22 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.1.3] — 2026-11-18 · ma'lumot sxemasi v11
+
+Foydalanuvchi so'rovi bo'yicha o'zgarishlar.
+
+### O'zgardi
+
+- **Kassa balansi** (chap menyu, "Moliya va kassa" dagi "Umumiy balans", manfiy balans eslatmasi) — faqat administrator va
+  kassirga ko'rinadi. Menejer, kuzatuvchi va o'qituvchi ko'rmaydi.
+- **Oynalar** (yangi mijoz, to'lov va boshqalar) tashqariga bosilganda yopilmaydi — faqat X, "Bekor qilish" yoki Escape bilan.
+  Kiritilgan ma'lumot tasodifan yo'qolmaydi.
+- **Davomat**: faqat ikki holat — "Keldi" va "Kelmadi" ("Kechikdi" va "Sababli" olib tashlandi). Setkada ✓ / ✗,
+  klaviatura: K — keldi, Y — kelmadi (P/A, 1/0 ham). Eski yozuvlar o'zgartirilmaydi: "Kechikdi" — Keldi,
+  "Sababli" — Kelmadi deb ko'rsatiladi va foizda shunday hisoblanadi.
+- **Header**: demo rejim tasmasidagi uzun sariq izoh o'rniga kichik "Demo" belgisi; tarif tasmasi bitta qisqa jumla va
+  faqat bulutli rejimda (lokal rejimda tarif — Sozlamalar → Tarif'da).
+
 ## [1.1.2] — 2026-11-12 · ma'lumot sxemasi v11
 
 Butun loyihani qayta ko'rib chiqish natijasidagi tuzatishlar.

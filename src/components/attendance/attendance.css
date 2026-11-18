@@ -99,11 +99,6 @@
   color: var(--success-text);
 }
 
-.att-cell.is-late {
-  border-color: transparent;
-  background: var(--warning-soft);
-  color: var(--warning-text);
-}
 
 .att-cell.is-absent {
   border-color: transparent;
@@ -111,11 +106,6 @@
   color: var(--danger-text);
 }
 
-.att-cell.is-excused {
-  border-color: transparent;
-  background: var(--info-soft);
-  color: var(--info-text);
-}
 
 .att-out {
   color: var(--neutral);
@@ -194,11 +184,6 @@
   color: var(--success-text);
 }
 
-.lesson-buttons button[aria-pressed='true'].is-late {
-  border-color: var(--warning);
-  background: var(--warning-soft);
-  color: var(--warning-text);
-}
 
 .lesson-buttons button[aria-pressed='true'].is-absent {
   border-color: var(--danger);
@@ -206,11 +191,6 @@
   color: var(--danger-text);
 }
 
-.lesson-buttons button[aria-pressed='true'].is-excused {
-  border-color: var(--info);
-  background: var(--info-soft);
-  color: var(--info-text);
-}
 
 .lesson-cards {
   display: grid;

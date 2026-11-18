@@ -1485,4 +1485,9 @@ export const RU: Readonly<Record<string, string>> = {
   "Eski nusxani o'chirish": "Удалить старую копию",
   "Bu nusxa brauzer xotirasida joy egallaydi. Kerak bo'lsa, avval \"Yuklab olish\" bilan kompyuterga saqlang. O'chirilsinmi?": "Эта копия занимает место в памяти браузера. При необходимости сначала сохраните её на компьютер кнопкой «Скачать». Удалить?",
   "Yangilanishdan oldingi zaxira nusxasi saqlanmadi (brauzer xotirasi to'lgan). Sozlamalar → Ma'lumotlar'dan JSON zaxira yuklab oling.": "Резервная копия перед обновлением не сохранилась (память браузера заполнена). Скачайте JSON-копию в Настройки → Данные.",
+  "Klaviatura: strelkalar, K — keldi, Y — kelmadi": "Клавиатура: стрелки, K — пришёл, Y — не пришёл",
+  "Demo": "Демо",
+  "Markaz to'xtatilgan — faqat ko'rish mumkin.": "Центр приостановлен — доступен только просмотр.",
+  "\"{0}\" tarifi tugadi — faqat ko'rish mumkin.": "Тариф «{0}» истёк — доступен только просмотр.",
+  "\"{0}\" tarifi: {1} kun qoldi.": "Тариф «{0}»: осталось {1} дн.",
 }

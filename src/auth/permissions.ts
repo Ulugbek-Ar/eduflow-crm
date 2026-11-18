@@ -106,6 +106,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   teacher: ['groups.view', 'attendance.view', 'attendance.mark'],
 }
 
+// Kassa balansi (markazdagi umumiy pul) — maxfiy: faqat moliya bilan ishlaydiganlar (administrator, kassir).
+// Menejer, kuzatuvchi va o'qituvchi ko'rmaydi
+export const CASH_BALANCE_PERMISSION: Permission = 'payments.manage'
+
 // Tarif muddati tugagan yoki markaz to'xtatilgan (faqat o'qish): ko'rish va o'z ma'lumotini yuklab olish (hisobot,
 // JSON zaxira) ochiq — ma'lumot markazniki, uni olib ketish huquqi muddatga bog'liq emas
 export function readOnlyAllows(permission: Permission): boolean {
