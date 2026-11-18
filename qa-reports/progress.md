@@ -22,3 +22,31 @@ Muhit cheklovlari: Docker daemon yo'q → `supabase start` imkonsiz. RLS faqat o
 
 ## Keyingi qadamlar
 Rollar/ruxsatlar → moliya/qarz → ma'lumot yo'qolishi → QA-01…23 → qolgan modullar → dizayn/a11y/tezlik.
+
+## 2. Rollar va ruxsatlar — BAJARILDI (lokal build, demo rejim)
+
+Skriptlar: `tests/roles.mjs` (5 rol × 11 bo'lim × 1440/768/390), `tests/roles-modals.mjs`, `tests/esc-probe.mjs`, `tests/manager-expense.mjs`.
+
+| Rol | Menyu (1440/768/390 bir xil) | Kassa balansi | Kutilgan (permissions.ts) |
+|---|---|---|---|
+| admin | hammasi (attendance'siz) | ✅ ko'rinadi | ✅ mos |
+| manager | overview, customers, groups, schedule, finance, courses, settings, help | yashirin | ✅ mos |
+| cashier | + teachers, analytics (admin, groups.edit yo'q) | ✅ ko'rinadi | ✅ mos |
+| viewer | cashier menyusi, lekin hech qanday tahrirlash tugmasi yo'q; "Qo'shish" va "Hisobot yuklash" yo'q | yashirin | ✅ mos |
+| teacher | Bugun, Guruhlarim, Mening jadvalim, Davomat, Sozlamalar, Yordam; telefon 0 ta | yashirin | ✅ mos |
+
+- 15 kombinatsiyada konsol xatosi 0, network xatosi 0, sahifa gorizontal siljishi yo'q.
+- "N" tezkor tugmasi faqat `customers.edit` bor rollarda oyna ochadi (admin, manager) ✅.
+- Bo'limlar URL'da saqlanmaydi (faqat `/app`), shuning uchun URL orqali bo'limga kirish imkonsiz; amallar `DashboardContext.allowed()` bilan ikkinchi qatlamda himoyalangan ✅.
+- Lokal rejimda rollar faqat brauzerda (README:590 da hujjatlashtirilgan) — C guruhiga.
+
+**Topilmalar:** A-02 (menejerga "Chiqim" ko'rinadi, saqlashda rad, ma'lumot yo'qoladi), A-03 (o'chirilgan birinchi maydonli oynada fokus/Escape ishlamaydi — kuzatuvchi/kassir mijoz kartasi).
+
+## 3. Moliya / qarz / davomat hisob-kitoblari — ASOSIY QISMI BAJARILDI
+
+- Mustaqil hisob (`tests/verify-money.mjs`, `tests/verify-debts.mjs`) demo ma'lumotida UI bilan **to'liq mos**: kassa balansi 190 305 000, shu oy kirim 31 726 000 / chiqim 26 091 000 / sof 5 635 000, 59 yozuv, faol o'quvchilar 54, qarzdorlar 7 ta / 9 020 000.
+- **A-01 (High):** oy o'rtasida boshqa guruhga ko'chirilgan, to'liq to'lagan o'quvchida soxta qarz (650 000) va ikki baravar "Oylik" (1 300 000) — `tests/transfer.mjs`, `screenshots/A-transfer-double-charge.png`.
+- B: `utils/attendance.ts:78` `trailingAbsences` eski `excused` yozuvini "kelmadi" deb sanamaydi (`simpleStatus` bilan nomuvofiq).
+
+## Joriy holat
+Keyingi: ma'lumot yo'qolishi (refresh/rol almashish), QA-01…QA-23 qayta sinash.
