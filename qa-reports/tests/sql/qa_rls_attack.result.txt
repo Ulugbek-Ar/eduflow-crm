@@ -1,0 +1,30 @@
+                     test                      |                    outcome                    
+-----------------------------------------------+-----------------------------------------------
+ A admin sees forged audit rows                | 3
+ B reads A audit_log                           | PASS
+ B reads A customers                           | PASS
+ B reads A profiles                            | PASS
+ B reads A transactions                        | PASS
+ B trash_move A customers                      | PASS
+ B updates A customers                         | PASS
+ B updates A org                               | PASS
+ branch mgr inserts into other branch          | PASS
+ branch mgr moves own customer to other branch | FAIL (moved to b2)
+ branch mgr reads other-branch customer        | PASS
+ branch mgr reads other-branch tx              | PASS
+ cashier edits org settings                    | PASS
+ cashier escalates to admin                    | PASS
+ teacher marks future date                     | PASS
+ teacher marks other group                     | PASS
+ teacher reads customers table                 | PASS
+ teacher reads transactions                    | PASS
+ teacher sees other group                      | PASS
+ teacher sees own group                        | PASS
+ teacher_roster columns                        | course,created_at,id,name,phone,source,status
+ teacher_roster rows (only own group?)         | 1
+ write_audit cross-org (B admin)               | FAIL (1 row)
+ write_audit cross-org (anon)                  | FAIL (1 row)
+ write_audit cross-org (no-org user)           | FAIL (1 row)
+(25 rows)
+
+ cashier edits provider payment | FAIL (amount=1, provider=NULL)

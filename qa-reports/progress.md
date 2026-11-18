@@ -66,3 +66,24 @@ Keyingi: ma'lumot yo'qolishi (refresh/rol almashish), QA-01…QA-23 qayta sinash
 
 Natija: 21 ta "Hali mavjud", QA-04 va QA-15/QA-16 — qisman. To'liq jadval REPORT.md da bo'ladi.
 Skriptlar: `tests/qa-retest.mjs`, `tests/qa06.mjs`, `tests/qa-mobile-live.mjs`, `tests/local-onboarding.mjs`, `tests/live-legal.mjs`.
+
+## 6. Supabase RLS, sync, offline — BAJARILDI (izolyatsiyalangan lokal PostgreSQL 16)
+
+`supabase start` imkonsiz (Docker daemon yo'q). Migratsiyalar + `stub_auth.sql` toza `qa_rls` bazasiga qo'llandi, o'z hujum testlarim: `tests/sql/qa_rls_attack.sql`, natija: `tests/sql/qa_rls_attack.result.txt`.
+
+| Test | Natija |
+|---|---|
+| B markaz admini A ning customers/transactions/profiles/audit_log ni o'qiydi | PASS (0 qator) |
+| B admin A ma'lumotini/org'ini UPDATE, trash_move | PASS (0 qator) |
+| **`write_audit(p_org, …)` — B admin / tashkilotsiz foydalanuvchi / `anon` A jurnaliga yozadi** | **FAIL — 3 ta soxta yozuv A administratoriga ko'rinadi** |
+| O'qituvchi: customers, transactions jadvali, boshqa guruh, boshqa guruhga/kelajak sanaga davomat | PASS |
+| `teacher_roster` / `teacher_directory` telefon va maoshni niqoblaydi | PASS |
+| Filial (b1) menejeri: boshqa filial mijozi/tranzaksiyasini o'qish, boshqa filialga qo'shish | PASS |
+| **Filial menejeri o'z mijozini boshqa filialga ko'chiradi (`branch_id='b2'`)** | **FAIL** |
+| Kassir: o'zini admin qilish (`update_staff`, `profiles` UPDATE), org settings | PASS |
+| **Kassir Payme to'lovi summasini 1 ga o'zgartiradi va `provider` ni o'chiradi** | **FAIL** (UI'da readOnly, serverda himoya yo'q) |
+| anon customers o'qiydi | PASS |
+
+Cloud sync (kod auditi): `src/data/supabase.ts:376` butun qatorni `upsert` qiladi, `updated_at` bo'yicha konflikt tekshiruvi yo'q → bir yozuvni ikki xodim ≤90 s ichida tahrirlasa, oxirgisi g'olib (B). Brauzerda bulut bilan — Tekshirilmadi.
+
+Offline (lokal/demo): ma'lumot yozish ishlaydi ✅; lekin 4 bo'lim (O'qituvchilar, Dars jadvali, Boshqaruv, Yordam) oldindan yuklanmagan → offline'da ochilmaydi va internet qaytgach ham "Qayta yuklash"siz tiklanmaydi (A-04, `tests/offline.mjs`).
