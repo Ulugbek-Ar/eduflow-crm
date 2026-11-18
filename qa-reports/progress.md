@@ -50,3 +50,19 @@ Skriptlar: `tests/roles.mjs` (5 rol × 11 bo'lim × 1440/768/390), `tests/roles-
 
 ## Joriy holat
 Keyingi: ma'lumot yo'qolishi (refresh/rol almashish), QA-01…QA-23 qayta sinash.
+
+## 4. Ma'lumot yo'qolishi — BAJARILDI
+
+| Holat | Natija |
+|---|---|
+| Demo: mijoz qo'shish → sahifani yangilash | ✅ ma'lumot va demo rejim saqlanadi; ⚠️ joriy bo'lim "Umumiy ko'rinish"ga qaytadi (bo'lim URL'da yo'q) |
+| Demo: rol almashtirish | ✅ yangi mijoz menejerga ham ko'rinadi |
+| Forma qoralamasi (yangilashdan keyin) | ✅ tiklanadi |
+| Qoralama boshqa xodimga | ⚠️ `apex:draft:*` kaliti foydalanuvchiga bog'lanmagan — admin yozgan qoralama menejerga ochiladi (B, Low) |
+| Lokal: ikki tab bir vaqtda mijoz qo'shadi | ✅ ikkalasi ham saqlanadi, ikkala tabda ko'rinadi (`tests/twotabs.mjs`) |
+| Menejer "Chiqim"ni to'ldirib saqlaydi | ❌ rad etiladi va qoralama `clear()` bilan o'chadi — kiritilgan ma'lumot yo'qoladi (A-02) |
+
+## 5. QA-01…QA-23 qayta sinash — BAJARILDI (QA-11 — Lighthouse bosqichida)
+
+Natija: 21 ta "Hali mavjud", QA-04 va QA-15/QA-16 — qisman. To'liq jadval REPORT.md da bo'ladi.
+Skriptlar: `tests/qa-retest.mjs`, `tests/qa06.mjs`, `tests/qa-mobile-live.mjs`, `tests/local-onboarding.mjs`, `tests/live-legal.mjs`.
