@@ -3,7 +3,7 @@
 import { tr } from '../../i18n'
 import type { Course } from '../../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../../types/customer.types'
-import { formatPhone, phoneDigits } from '../phone'
+import { formatPhone, isValidPhone, phoneDigits } from '../phone'
 
 export const MAX_IMPORT_ROWS = 5000
 export const MAX_IMPORT_BYTES = 5 * 1024 * 1024
@@ -98,13 +98,9 @@ export function guessMapping(rows: readonly string[][]): ColumnMapping {
 }
 
 // Telefon: +998 90 123 45 67, 998901234567, 901234567, (90) 123-45-67 ... -> "+998 90 123 45 67"; bo'lmasa null
+// Ilova formalari bilan bir xil qoida (phoneDigits): 998..., 9 raqam yoki eski uslub 8.../0... (10 raqam)
 export function normalizePhone(raw: string): string | null {
-  const digits = raw.replace(/\D/g, '')
-  let local: string | null = null
-  if (digits.length === 12 && digits.startsWith('998')) local = digits.slice(3)
-  else if (digits.length === 9) local = digits
-  if (!local || !/^[1-9]/.test(local)) return null
-  return formatPhone(local)
+  return isValidPhone(raw) ? formatPhone(raw) : null
 }
 
 const STATUS_SYNONYMS: Record<CustomerStatus, readonly string[]> = {

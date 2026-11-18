@@ -1684,4 +1684,7 @@ export const RU: Readonly<Record<string, string>> = {
   "Markaz to'xtatilgan — faqat ko'rish mumkin.": "Центр приостановлен — доступен только просмотр.",
   "\"{0}\" tarifi tugadi — faqat ko'rish mumkin.": "Тариф «{0}» истёк — доступен только просмотр.",
   "\"{0}\" tarifi: {1} kun qoldi.": "Тариф «{0}»: осталось {1} дн.",
+  "Kurs to'lovi uchun mijozni tanlang — to'lov uning qarziga yoziladi": "Для оплаты курса выберите клиента — оплата засчитается в его долг",
+  "To'lov shu o'quvchining qarziga yoziladi": "Оплата засчитывается в долг этого ученика",
+  "Masalan: 650 000": "Например: 650 000",
 }

@@ -151,6 +151,20 @@ function validateNewAccount(users: readonly StaffUser[], login: string, password
   return null
 }
 
+// Formada hamma xatoni bir yo'la ko'rsatish uchun (QA-07): createFirstAdmin bilan bir xil qoidalar
+export function accountFieldErrors(input: { fullName: string; title: string; login: string; password: string }): Partial<Record<UserField, string>> {
+  const errors: Partial<Record<UserField, string>> = {}
+  const fullName = input.fullName.trim()
+  if (fullName.length < 2) errors.fullName = tr('Ism familiyani kiriting (kamida 2 ta harf)')
+  else if (fullName.length > MAX_NAME_LENGTH) errors.fullName = tr('Ism {0} belgidan oshmasin', { 0: MAX_NAME_LENGTH })
+  if (input.title.trim().length > MAX_TITLE_LENGTH) errors.title = tr('Lavozim {0} belgidan oshmasin', { 0: MAX_TITLE_LENGTH })
+  const loginError = validateLogin(input.login.trim())
+  if (loginError) errors.login = loginError
+  const passwordError = validatePassword(input.password, input.login.trim())
+  if (passwordError) errors.password = passwordError
+  return errors
+}
+
 async function buildUser(input: NewUserInput, mustChange: boolean): Promise<StaffUser> {
   return {
     id: createId('u'),

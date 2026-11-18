@@ -436,8 +436,8 @@ var DEFAULT_SETTINGS = {
 	orgName: "Namuna markaz",
 	logoText: "NM",
 	logoImage: "",
-	phone: "+998 71 200 00 00",
-	address: "Toshkent sh., Chilonzor tumani",
+	phone: "",
+	address: "",
 	currency: "UZS",
 	dateFormat: "dd.mm.yyyy",
 	csvDelimiter: ";",
@@ -525,12 +525,12 @@ function sanitizeSettings(value) {
 }
 // src/utils/phone.ts
 var COUNTRY_CODE = "998";
-var LOCAL_LENGTH = 9;
 function phoneDigits(value) {
 	let digits = value.replace(/\D/g, "");
 	if (value.trim().startsWith("+") && COUNTRY_CODE.startsWith(digits)) return "";
 	if (digits.startsWith(COUNTRY_CODE)) digits = digits.slice(3);
-	return digits.slice(0, LOCAL_LENGTH);
+	if (digits.length === 10 && (digits.startsWith("8") || digits.startsWith("0"))) digits = digits.slice(1);
+	return digits;
 }
 // src/utils/paymentLinks.ts
 function paymeCheckoutUrl(merchantId, phone, amountSom, lang = "uz") {

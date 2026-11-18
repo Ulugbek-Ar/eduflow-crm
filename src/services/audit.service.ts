@@ -5,6 +5,7 @@ import type { Role } from '../types/user.types'
 import { createId } from '../utils/format'
 import { isIsoDate, isRecord, isText, keepValid, oneOf } from '../utils/guards'
 import { physicalKey, readJson, setItem } from './storage.service'
+import { searchIncludes } from '../utils/searchText'
 
 export const AUDIT_KEY = 'apex:audit'
 // Brauzer xotirasini to'ldirmaslik uchun: oxirgi 3000 ta yozuv yoki 1 yil
@@ -320,7 +321,7 @@ export function filterAudit(entries: readonly AuditEntry[], filters: AuditFilter
     const day = localDay(e.at)
     if (filters.from && day < filters.from) return false
     if (filters.to && day > filters.to) return false
-    if (query && !`${e.summary} ${e.userName} ${AUDIT_ACTION_LABELS[e.action]}`.toLowerCase().includes(query)) return false
+    if (query && !searchIncludes(`${e.summary} ${e.userName} ${AUDIT_ACTION_LABELS[e.action]}`, query)) return false
     return true
   })
 }

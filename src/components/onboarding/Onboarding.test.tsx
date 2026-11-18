@@ -20,6 +20,15 @@ async function next(user: User) {
 }
 
 describe('Sozlash ustasi', () => {
+  it('yangi markazda telefon va manzil bo\'sh — namuna faqat placeholder\'da (QA-05)', async () => {
+    await openWizard()
+    const phone = screen.getByLabelText('Telefon') as HTMLInputElement
+    const address = screen.getByLabelText('Manzil') as HTMLInputElement
+    expect(phone.value === '' || phone.value === '+998').toBe(true)
+    expect(address.value).toBe('')
+    expect(phone.placeholder).toContain('+998')
+  })
+
   it('4 qadam: markaz, kurslar, xodimlar — kiritilganlar saqlanadi', async () => {
     const { user } = await openWizard()
     const name = screen.getByLabelText(/O'quv markazi nomi/)

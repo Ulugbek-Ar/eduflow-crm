@@ -32,3 +32,15 @@ describe('Huquqiy sahifalar rekvizitlari', () => {
     expect(screen.getByText('[Kompaniya nomi, STIR, manzil]')).toBeTruthy()
   })
 })
+
+describe('Tayyor saytda [qavs] ko\'rinmaydi (QA-04)', () => {
+  it('rekvizitlar berilmasa production build\'da neytral matn, [ belgisi yo\'q', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('DEV', false)
+    for (const path of ['/privacy', '/terms']) {
+      const view = await renderLegal(path)
+      expect(view.container.textContent).not.toContain('[')
+      view.unmount()
+    }
+  })
+})

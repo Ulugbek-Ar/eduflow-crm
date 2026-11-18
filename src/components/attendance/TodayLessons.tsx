@@ -4,7 +4,7 @@ import { tr } from '../../i18n'
 import { absentStreaks, attendanceRate, rateLabel, recordsFor, todayLessons } from '../../utils/attendance'
 import type { LessonSlot } from '../../utils/attendance'
 import { cx } from '../../utils/cx'
-import { addDays, minutesOf } from '../../utils/groups'
+import { addDays, enrollmentActiveOn, minutesOf } from '../../utils/groups'
 import { Badge } from '../ui/Badge'
 import './attendance.css'
 
@@ -68,7 +68,8 @@ export function TeacherToday() {
   const { groups, enrollments, attendance, ownTeacher, getCustomerName, openModal } = useDashboard()
   const today = useToday()
   const active = groups.filter((g) => g.status === 'active')
-  const students = new Set(enrollments.filter((e) => active.some((g) => g.id === e.groupId)).map((e) => e.customerId)).size
+  // Faqat bugun haqiqatan o'qiyotganlar (QA-09): tugagan, to'xtatilgan yoki hali boshlanmagan o'qishlar sanalmaydi
+  const students = new Set(enrollments.filter((e) => active.some((g) => g.id === e.groupId) && enrollmentActiveOn(e, today)).map((e) => e.customerId)).size
   const rate = attendanceRate(recordsFor(attendance, { from: addDays(today, -30), to: today }))
   const streaks = absentStreaks(enrollments, attendance, today)
   return (

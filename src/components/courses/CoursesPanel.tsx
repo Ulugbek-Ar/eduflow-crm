@@ -10,6 +10,7 @@ import { formatNumber } from '../../utils/format'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
+import { searchIncludes } from '../../utils/searchText'
 
 type StatusFilter = CourseStatus | 'all'
 
@@ -26,7 +27,7 @@ export function CoursesPanel() {
   const [filter, setFilter] = useState<StatusFilter>('active')
 
   const query = search.trim().toLowerCase()
-  const visible = courses.filter((c) => (filter === 'all' || c.status === filter) && (!query || c.name.toLowerCase().includes(query)))
+  const visible = courses.filter((c) => (filter === 'all' || c.status === filter) && searchIncludes(c.name, query))
   const active = courses.filter((c) => c.status === 'active')
   const incomplete = coursesNeedingSetup(courses)
   const totals = active.reduce(

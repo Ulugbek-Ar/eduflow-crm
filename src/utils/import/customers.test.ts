@@ -22,8 +22,10 @@ const options = (patch: Partial<ImportOptions> = {}): ImportOptions => ({
 
 describe('normallashtirish', () => {
   it('telefon: +998, 998…, 9 xonali, bo\'shliq, qavs va chiziqcha', () => {
-    for (const raw of ['+998 90 123 45 67', '998901234567', '901234567', '(90) 123-45-67', '+998-90-123-45-67', ' 90 123 45 67 ']) expect(normalizePhone(raw), raw).toBe('+998 90 123 45 67')
-    for (const raw of ['', '12345', '+7 912 345 67 89', '0901234567', '99890123456']) expect(normalizePhone(raw), raw).toBeNull()
+    for (const raw of ['+998 90 123 45 67', '998901234567', '901234567', '(90) 123-45-67', '+998-90-123-45-67', ' 90 123 45 67 ', '0901234567', '8 90 123 45 67']) {
+      expect(normalizePhone(raw), raw).toBe('+998 90 123 45 67')
+    }
+    for (const raw of ['', '12345', '+7 912 345 67 89', '99890123456', '9012345678', '090123456']) expect(normalizePhone(raw), raw).toBeNull()
   })
 
   it('holat va manba: o\'zbek, rus, ingliz sinonimlari', () => {

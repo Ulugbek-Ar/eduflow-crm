@@ -5,6 +5,7 @@ import type { Transaction, TransactionFilters, TransactionSortKey } from '../typ
 import { customPeriod, getPeriod, inPeriod } from './analytics'
 import type { Period } from './analytics'
 import { applyDirection } from './list'
+import { searchIncludes } from './searchText'
 
 export const EMPTY_TRANSACTION_FILTERS: TransactionFilters = { type: 'all', method: 'all', status: 'all', category: 'all', from: '', to: '' }
 
@@ -42,7 +43,7 @@ export function filterTransactions(
       (filters.method === 'all' || t.method === filters.method) &&
       (filters.status === 'all' || t.status === filters.status) &&
       (filters.category === 'all' || t.category === filters.category) &&
-      (!query || t.note.toLowerCase().includes(query) || getCustomerName(t.customerId).toLowerCase().includes(query)),
+      (!query || searchIncludes(t.note, query) || searchIncludes(getCustomerName(t.customerId), query)),
   )
 }
 
@@ -53,7 +54,7 @@ export function sortTransactions(transactions: readonly Transaction[], sort: Sor
   })
 }
 
-export type TransactionFormErrors = Partial<Record<'amount' | 'date', string>>
+export type TransactionFormErrors = Partial<Record<'amount' | 'date' | 'customer', string>>
 
 // Bulut: server yozgan kirimlar (Payme/Click) ro'yxatga qo'shiladi yoki yangilanadi (o'zgargani — updatedAt bo'yicha).
 // O'zgarish bo'lmasa — o'sha massiv qaytadi

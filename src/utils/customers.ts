@@ -6,6 +6,7 @@ import { FUNNEL_STAGES } from '../constants/navigation'
 import { customPeriod, inPeriod } from './analytics'
 import { applyDirection, compareText } from './list'
 import { isValidPhone, phoneDigits } from './phone'
+import { normalizeSearch, searchIncludes } from './searchText'
 
 export const EMPTY_CUSTOMER_FILTERS: CustomerFilters = { status: 'all', course: 'all', source: 'all', from: '', to: '' }
 
@@ -14,14 +15,15 @@ const STATUS_ORDER: Record<CustomerStatus, number> = { new: 0, contacted: 1, thi
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// Qidiruv: ism, kurs, email (apostrof turlaridan qat'i nazar — "G'ulom" = "Gʻulom" = "gulom") yoki telefon raqamlari
 export function matchesCustomer(customer: Customer, search: string): boolean {
-  const query = search.trim().toLowerCase()
+  const query = normalizeSearch(search)
   if (!query) return true
   const digits = query.replace(/\D/g, '')
   return (
-    customer.name.toLowerCase().includes(query) ||
-    customer.course.toLowerCase().includes(query) ||
-    (customer.email?.toLowerCase().includes(query) ?? false) ||
+    searchIncludes(customer.name, query) ||
+    searchIncludes(customer.course, query) ||
+    (customer.email ? searchIncludes(customer.email, query) : false) ||
     (digits.length > 0 && customer.phone.replace(/\D/g, '').includes(digits))
   )
 }

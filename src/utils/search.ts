@@ -2,6 +2,7 @@ import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import { matchesCustomer } from './customers'
+import { normalizeSearch, searchIncludes } from './searchText'
 
 export interface SearchResults {
   customers: Customer[]
@@ -21,12 +22,12 @@ export function globalSearch(
   transactions: readonly Transaction[],
   getCustomerName: (id?: string) => string,
 ): SearchResults {
-  const needle = query.trim().toLowerCase()
+  const needle = normalizeSearch(query)
   if (needle.length < 2) return { customers: [], courses: [], transactions: [], total: 0 }
   const foundCustomers = customers.filter((c) => matchesCustomer(c, needle))
-  const foundCourses = courses.filter((c) => c.name.toLowerCase().includes(needle))
+  const foundCourses = courses.filter((c) => searchIncludes(c.name, needle))
   const foundTransactions = transactions
-    .filter((t) => t.note.toLowerCase().includes(needle) || (t.customerId !== undefined && getCustomerName(t.customerId).toLowerCase().includes(needle)))
+    .filter((t) => searchIncludes(t.note, needle) || (t.customerId !== undefined && searchIncludes(getCustomerName(t.customerId), needle)))
     .sort((a, b) => b.date.localeCompare(a.date))
   return {
     customers: foundCustomers.slice(0, SEARCH_LIMITS.customers),
