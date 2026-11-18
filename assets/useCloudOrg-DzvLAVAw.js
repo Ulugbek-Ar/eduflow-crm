@@ -1,0 +1,1 @@
+import{r as e}from"./useAuth-DZxpz6-a.js";function t(){return e().cloud?.org?.id??null}export{t};

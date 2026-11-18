@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+# Sotuvchi paneli qidiruvda ko'rinmasin
+Disallow: /owner

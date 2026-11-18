@@ -1,0 +1,1 @@
+var e=/['‘’ʻʼʹ`´]/g;function t(t){return t.toLowerCase().replace(e,``).replace(/\s+/g,` `).trim()}function n(e,n){let r=t(n);return!r||t(e).includes(r)}function r(e){if(/[^\d\s+()-]/.test(e))return``;let t=e.replace(/\D/g,``);return t.length>=3?t:``}export{r as n,n as r,t};
