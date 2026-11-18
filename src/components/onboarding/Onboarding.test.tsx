@@ -105,6 +105,19 @@ describe('Tanishtiruv va boshlash ro\'yxati', () => {
     expect(await screen.findByText('1 / 5')).toBeTruthy()
   })
 
+  it('tanishtiruv bir marta: oxirigacha ko\'rilmasa ham qayta kirganda chiqmaydi', async () => {
+    const { unmount } = await renderSignedIn()
+    unmount()
+    localStorage.removeItem('apex:tour')
+    const first = renderApp()
+    expect(await screen.findByRole('dialog', { name: 'Bo\'limlar' })).toBeTruthy()
+    // Hech narsa bosmay chiqib ketdi (sahifa yopildi)
+    first.unmount()
+    renderApp()
+    await screen.findByRole('navigation', { name: 'Bo\'limlar' })
+    expect(screen.queryByText('1 / 5')).toBeNull()
+  })
+
   it('boshlash ro\'yxati bajarilganlarni belgilaydi va yashiriladi', async () => {
     const { user } = await renderSignedIn({ customers: [makeCustomer()], transactions: [] })
     const card = screen.getByRole('region', { name: /Boshlash uchun 5 qadam/ })

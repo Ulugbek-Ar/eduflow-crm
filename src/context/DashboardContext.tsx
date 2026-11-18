@@ -137,6 +137,10 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   // Demo markazda rol almashtirilsa ham tanishtiruv qayta chiqmaydi
   const tourKey = authMode === 'demo' ? 'demo' : (actor?.userId ?? 'local')
   const [tourOpen, setTourOpen] = useState(() => Boolean(actor) && !isTourDone(tourKey))
+  // Tanishtiruv ko'rsatildi — darhol belgilanadi (keyingi kirishlarda chiqmaydi)
+  useEffect(() => {
+    if (tourOpen) markTourDone(tourKey)
+  }, [tourOpen, tourKey])
   const [initial] = useState(() => (cloud ? { data: cloud.initial.data, dropped: 0 } : loadData()))
   const [trash, setTrash] = useState(() => (cloud ? cloud.initial.trash : loadTrash()))
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref

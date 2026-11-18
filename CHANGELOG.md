@@ -2,6 +2,14 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.2.2] — 2026-11-18 · ma'lumot sxemasi v12
+
+### Tuzatildi
+
+- **Tanishtiruv** (1/5 "Bo'limlar" ...) har odamga **bir marta** chiqadi: birinchi ko'rsatilgan zahoti belgilanadi
+  (oxirigacha ko'rilmasa yoki sahifa yopilsa ham qayta chiqmaydi). Demo markazda ham — demo'ga har kirganda emas, shu
+  brauzerda bir marta (belgi demo xotirasi bilan birga o'chmaydi). Qayta ko'rish: Yordam → "Tanishtiruvni ko'rish".
+
 ## [1.2.1] — 2026-11-18 · ma'lumot sxemasi v12
 
 Ikki parallel yo'nalish birlashtirildi: **1.2.0** (49–54-bosqichlar — Payme/Click, SMS, Telegram bot, filiallar, brending) va
