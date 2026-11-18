@@ -53,12 +53,32 @@ function readEntries(bytes: Uint8Array): Map<string, ZipEntry> {
   return entries
 }
 
-async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
+// Ochilgan hajm oqim davomida sanaladi: zip'dagi e'lon qilingan hajm yolg'on bo'lishi mumkin ("zip-bomba" —
+// 5 MB fayl gigabaytlarga ochilib, tabni qotirib qo'ymasin)
+export async function inflateRaw(data: Uint8Array, limit = MAX_ENTRY_BYTES): Promise<Uint8Array> {
   if (typeof DecompressionStream === 'undefined') throw new XlsxError('unsupported')
   const body = new Response(data.slice()).body
   if (!body) throw new XlsxError('zip')
-  const buffer = await new Response(body.pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()
-  return new Uint8Array(buffer)
+  const reader = body.pipeThrough(new DecompressionStream('deflate-raw')).getReader()
+  const parts: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > limit) {
+      await reader.cancel().catch(() => undefined)
+      throw new XlsxError('size')
+    }
+    parts.push(value)
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const part of parts) {
+    out.set(part, offset)
+    offset += part.byteLength
+  }
+  return out
 }
 
 async function readEntry(bytes: Uint8Array, entry: ZipEntry): Promise<string> {

@@ -20,7 +20,7 @@ import { LoginScreen } from './components/auth/LoginScreen'
 import { SetupWizard } from './components/onboarding/SetupWizard'
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange'
 import { SetupAdminScreen } from './components/auth/SetupAdminScreen'
-import { CloudDataGate, CloudLoading, CloudSignUpScreen } from './components/auth/CloudScreens'
+import { CloudConnectionError, CloudDataGate, CloudLoading, CloudSignUpScreen } from './components/auth/CloudScreens'
 import { DemoOnlyScreen } from './components/auth/DemoOnlyScreen'
 import { isCloudEnabled } from './data/config'
 import { ToastProvider } from './components/ui/Toast'
@@ -267,6 +267,7 @@ function AuthGate() {
   })
   useEffect(() => openDemoFromLink(), [])
   if (loading) return <CloudLoading />
+  if (!user && cloud?.connectionError) return <CloudConnectionError onRetry={cloud.retry} />
   if (!user) {
     if (DEMO_ONLY) return <DemoOnlyScreen />
     if (cloud && signUp) return <CloudSignUpScreen cloud={cloud} onBack={() => setSignUp(false)} />

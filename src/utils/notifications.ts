@@ -18,6 +18,8 @@ export interface EduNotificationData {
   attendance: readonly AttendanceRecord[]
   lessonExceptions: readonly LessonException[]
   finance?: boolean
+  // Kassa balansi haqidagi eslatma (manfiy balans) — faqat kassa balansini ko'radiganlarga
+  cashBalance?: boolean
   // Qarz hisobi: to'lov muddati va birinchi oy qoidasi
   settings?: DebtSettings
 }
@@ -118,7 +120,7 @@ export function buildNotifications(
     })
   }
 
-  if (finance && balance < 0) {
+  if (finance && (edu?.cashBalance ?? true) && balance < 0) {
     result.push({
       id: `negative-balance:${dayKey(now)}`,
       tone: 'danger',

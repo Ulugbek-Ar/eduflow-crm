@@ -1,12 +1,13 @@
 import { changeLang, getLang, LANG_LABELS, tr } from '../../i18n'
 import type { Lang } from '../../i18n'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
 import type { Permission } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
-import { useCan } from '../../hooks/useAuth'
+import { useCan, useRoleCan } from '../../hooks/useAuth'
+import { useCloudOrgId } from '../../hooks/useCloudOrg'
 import { useTheme } from '../../hooks/useTheme'
 import type { ThemePreference } from '../../hooks/useTheme'
 import type { CsvDelimiter, Currency, DateFormat, Settings } from '../../types/dashboard.types'
@@ -17,11 +18,18 @@ import { Input, Textarea } from '../ui/Input'
 import { REMINDER_VARIABLES } from '../../utils/reminders'
 import { DEFAULT_REMINDER_RU, DEFAULT_REMINDER_UZ } from '../../constants/mockData'
 import { Select } from '../ui/Select'
+import { BranchSettings } from './BranchSettings'
 import { DataSettings } from './DataSettings'
 import { LogoUpload } from './LogoUpload'
 import { PlanSettings } from './PlanSettings'
 import { ProfileSettings } from './ProfileSettings'
 import { SecuritySettings } from './SecuritySettings'
+
+// Faqat bulutli rejimda yuklanadi (Supabase mijozi lokal rejimda kerak emas)
+const IntegrationsSettings = lazy(() => import('./IntegrationsSettings').then((m) => ({ default: m.IntegrationsSettings })))
+const SmsSettings = lazy(() => import('./SmsSettings').then((m) => ({ default: m.SmsSettings })))
+const TelegramSettings = lazy(() => import('./TelegramSettings').then((m) => ({ default: m.TelegramSettings })))
+const AutoRemindSettings = lazy(() => import('./AutoRemindSettings').then((m) => ({ default: m.AutoRemindSettings })))
 
 const CURRENCIES: Record<Currency, string> = {
   UZS: tr('O\'zbek so\'mi (UZS)'),
@@ -44,14 +52,20 @@ const DATE_FORMATS: DateFormat[] = ['dd.mm.yyyy', 'dd/mm/yyyy', 'yyyy-mm-dd']
 const SAMPLE_DATE = new Date(2026, 0, 31, 12).toISOString()
 
 // permission — bo'limni ko'rish uchun kerakli ruxsat (null — hammaga)
-const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null }> = [
+// anyPlan — tarif muddati tugaganda ham ko'rinadi (tarifni ko'rish va ma'lumotni yuklab olish uchun)
+const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null; anyPlan?: true }> = [
   { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
   { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
   { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
+  { id: 'branches', label: tr('Filiallar'), icon: 'layers', permission: 'settings.manage' },
+  { id: 'integrations', label: tr('Integratsiyalar'), icon: 'card', permission: 'settings.manage' },
+  { id: 'sms', label: tr('SMS'), icon: 'mail', permission: 'settings.manage' },
+  { id: 'telegram', label: tr('Telegram bot'), icon: 'bell', permission: 'settings.manage' },
+  { id: 'auto-reminders', label: tr('Avtomatik eslatma'), icon: 'clock', permission: 'settings.manage' },
   { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
   { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
-  { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage' },
-  { id: 'data', label: tr('Ma\'lumotlar'), icon: 'database', permission: 'data.manage' },
+  { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage', anyPlan: true },
+  { id: 'data', label: tr('Ma\'lumotlar'), icon: 'database', permission: 'data.manage', anyPlan: true },
 ]
 
 type FormErrors = Partial<Record<'orgName' | 'logoText' | 'phone', string>>
@@ -71,9 +85,11 @@ function SettingsCard({ id, title, description, children }: { id: string; title:
 }
 
 export function SettingsPanel() {
-  const { settings, updateSettings, setUnsavedChanges } = useDashboard()
+  const { settings, updateSettings, setUnsavedChanges, restrictedBranch } = useDashboard()
   const can = useCan()
+  const roleCan = useRoleCan()
   const canManage = can('settings.manage')
+  const cloudOrgId = useCloudOrgId()
   const { preference, setPreference } = useTheme()
   const [form, setForm] = useState<Settings>(settings)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -129,7 +145,8 @@ export function SettingsPanel() {
   return (
     <div className="settings-layout">
       <nav className="settings-nav" aria-label={tr('Sozlamalar bo\'limlari')}>
-        {SECTIONS.filter((section) => !section.permission || can(section.permission)).map((section) => (
+        {/* Filiallarni faqat butun markazni ko'radigan administrator boshqaradi; Tarif va Ma'lumotlar — tarif muddati tugaganda ham */}
+        {SECTIONS.filter((section) => (!section.permission || (section.anyPlan ? roleCan : can)(section.permission)) && !(section.id === 'branches' && restrictedBranch)).map((section) => (
           <a key={section.id} href={`#${section.id}`}>
             <Icon name={section.icon} size={16} />
             {section.label}
@@ -256,6 +273,66 @@ export function SettingsPanel() {
         </form>
         )}
 
+        {canManage && !restrictedBranch && (
+          <SettingsCard id="branches" title={tr('Filiallar')} description={tr('Bir nechta manzil: guruh, o\'quvchi va to\'lovlar filial bo\'yicha, xodimni filialga cheklash')}>
+            <BranchSettings />
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="integrations" title={tr('Onlayn to\'lov (Payme, Click)')} description={tr('Ota-ona havola orqali to\'laydi — to\'lov kassaga avtomatik kirim bo\'lib tushadi')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <IntegrationsSettings orgId={cloudOrgId} />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('Onlayn to\'lov bulutli rejimda ishlaydi: Payme va Click to\'lovni serverga (Supabase Edge Function) yuboradi, kalitlar ham faqat serverda saqlanadi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="sms" title={tr('SMS (Eskiz)')} description={tr('Qarzdorlarga SMS eslatma — eslatma oynasidan yoki avtomatik')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <SmsSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('SMS bulutli rejimda ishlaydi: Eskiz login va paroli serverda saqlanadi, avtomatik eslatmani server har kuni yuboradi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="telegram" title={tr('Telegram bot (ota-onalar uchun)')} description={tr('Ota-ona dars qoldirilganda va to\'lov qabul qilinganda xabar oladi, qarz va jadvalni botdan so\'raydi')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <TelegramSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('Telegram bot bulutli rejimda ishlaydi: markaz o\'z botini ulaydi, bot tokeni serverda saqlanadi, xabarlarni server yuboradi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="auto-reminders" title={tr('Avtomatik eslatma')} description={tr('Har kuni ertalab qarzdorlarga — Telegram bot yoki SMS orqali')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <AutoRemindSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">{tr('Avtomatik eslatma bulutli rejimda ishlaydi: server har kuni ertalab qarzdorlarga Telegram bot yoki SMS orqali yuboradi.')}</p>
+            )}
+          </SettingsCard>
+        )}
+
         <SettingsCard id="appearance" title={tr('Ko\'rinish')} description={tr('Faqat shu qurilmada: darhol qo\'llanadi')}>
           <div className="form">
             <div className="form-row">
@@ -283,13 +360,13 @@ export function SettingsPanel() {
           <SecuritySettings />
         </SettingsCard>
 
-        {can('staff.manage') && (
+        {roleCan('staff.manage') && (
           <SettingsCard id="plan" title={tr('Tarif')} description={tr('Joriy tarif, muddat va xodimlar chegarasi')}>
             <PlanSettings />
           </SettingsCard>
         )}
 
-        {can('data.manage') && (
+        {roleCan('data.manage') && (
           <SettingsCard id="data" title={tr('Ma\'lumotlar')} description={tr('Zaxira, tiklash va demo ma\'lumotlar')}>
             <DataSettings />
           </SettingsCard>

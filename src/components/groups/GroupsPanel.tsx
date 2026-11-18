@@ -20,7 +20,9 @@ type StatusFilter = GroupStatus | 'all'
 
 // "Guruhlar": kurs, o'qituvchi, kunlar va vaqt, xona, sig'im (12/15), holat va "bugun dars bor" belgisi
 export function GroupsPanel() {
-  const { groups, courses, teachers, enrollments, search, openModal, ownTeacher } = useDashboard()
+  const { groups, courses, teachers, enrollments, search, openModal, ownTeacher, branches, branchFilter, getBranch } = useDashboard()
+  // "Barcha filiallar" ko'rinishida guruh qaysi filialda ekani kurs yonida yoziladi
+  const showBranch = !branchFilter && branches.length > 1
   const can = useCan()
   const today = useToday()
   const [course, setCourse] = useState('all')
@@ -114,7 +116,7 @@ export function GroupsPanel() {
         {visible.length === 0 ? (
           <EmptyState
             variant={groups.length === 0 ? 'empty' : 'search'}
-            title={groups.length === 0 ? (ownTeacher ? tr('Sizga hali guruh biriktirilmagan') : tr('Hali guruh yo\'q')) : tr('Hech narsa topilmadi')}
+            title={groups.length === 0 ? (ownTeacher ? tr('Sizga hali guruh biriktirilmagan') : branchFilter ? tr('Bu filialda hali guruh yo\'q') : tr('Hali guruh yo\'q')) : tr('Hech narsa topilmadi')}
             description={
               groups.length === 0
                 ? ownTeacher
@@ -183,7 +185,10 @@ export function GroupsPanel() {
                             </span>
                           )}
                         </span>
-                        <small className="cell-sub">{courseName(g.courseId)}</small>
+                        <small className="cell-sub">
+                          {courseName(g.courseId)}
+                          {showBranch && g.branchId ? ` · ${getBranch(g.branchId)?.name ?? ''}` : ''}
+                        </small>
                       </td>
                       <td data-label={tr('O\'qituvchi')}>{g.teacherId ? teacherName(g.teacherId) : <span className="muted">{tr('Biriktirilmagan')}</span>}</td>
                       <td data-label={tr('Kunlar va vaqt')} className="nowrap">

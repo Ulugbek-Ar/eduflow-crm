@@ -44,6 +44,7 @@ export function GroupDetail({ groupId, tab: initialTab = 'students' }: { groupId
     updateGroup,
     getCustomerName,
     settings,
+    getBranch,
   } = useDashboard()
   const can = useCan()
   const confirm = useConfirm()
@@ -171,6 +172,12 @@ export function GroupDetail({ groupId, tab: initialTab = 'students' }: { groupId
           <dt>{tr('Xona')}</dt>
           <dd>{group.room || '—'}</dd>
         </div>
+        {group.branchId && getBranch(group.branchId) && (
+          <div>
+            <dt>{tr('Filial')}</dt>
+            <dd>{getBranch(group.branchId)?.name}</dd>
+          </div>
+        )}
         <div>
           <dt>{tr('Sig\'im')}</dt>
           <dd>

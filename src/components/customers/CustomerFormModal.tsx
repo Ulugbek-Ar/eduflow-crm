@@ -10,6 +10,8 @@ import { courseChoices } from '../../utils/courses'
 import { validateCustomer } from '../../utils/customers'
 import type { CustomerFormErrors } from '../../utils/customers'
 import { formatPhone } from '../../utils/phone'
+import { defaultBranchId } from '../../utils/branches'
+import { BranchSelect } from '../branches/BranchSelect'
 import { Button } from '../ui/Button'
 import { DraftNotice } from '../ui/DraftNotice'
 import { Input, Textarea } from '../ui/Input'
@@ -20,7 +22,7 @@ import { Select } from '../ui/Select'
 const FIELD_ORDER = ['name', 'phone', 'email'] as const
 
 export function CustomerFormModal({ customerId }: { customerId?: string }) {
-  const { customers, courses, getCustomer, addCustomer, updateCustomer, closeModal } = useDashboard()
+  const { customers, courses, getCustomer, addCustomer, updateCustomer, closeModal, branches, branchFilter, restrictedBranch } = useDashboard()
   const editing = getCustomer(customerId)
 
   const { form, setForm, restored, discard, clear } = useFormDraft<CustomerInput>('customer', !editing, () => ({
@@ -32,6 +34,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
     status: editing?.status ?? 'new',
     source: editing?.source ?? 'telegram',
     note: editing?.note ?? '',
+    branchId: editing ? (editing.branchId ?? '') : defaultBranchId(branches, branchFilter, restrictedBranch),
   }))
   const [errors, setErrors] = useState<CustomerFormErrors>({})
   const nameRef = useRef<HTMLInputElement>(null)
@@ -53,9 +56,12 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
       fieldRefs[firstInvalid].current?.focus()
       return
     }
-    if (editing) updateCustomer(editing.id, form)
+    // Filial: filiallar bo'lmasa maydon umuman yuborilmaydi; filialsiz qilinsa — '' (bulutga null)
+    const { branchId, ...rest } = form
+    const data: CustomerInput = branches.length > 0 && (branchId || editing?.branchId) ? { ...rest, branchId: branchId ?? '' } : rest
+    if (editing) updateCustomer(editing.id, data)
     else {
-      addCustomer(form)
+      addCustomer(data)
       clear()
     }
     closeModal()
@@ -128,6 +134,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
             />
           )}
         </div>
+        <BranchSelect value={form.branchId ?? ''} noneLabel={tr('Filialsiz')} onChange={(v) => update('branchId', v)} />
         <Textarea label={tr('Izoh')} rows={3} value={form.note ?? ''} onChange={(e) => update('note', e.target.value)} />
       </form>
     </Modal>

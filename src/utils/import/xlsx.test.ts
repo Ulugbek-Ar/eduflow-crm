@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { toSpreadsheetXml } from '../../services/export.service'
 import { readSpreadsheetXml } from './read'
-import { excelSerialToDate, isDateFormat, readXlsx } from './xlsx'
+import { excelSerialToDate, inflateRaw, isDateFormat, readXlsx, XlsxError } from './xlsx'
 
 // ===== Test uchun .xlsx yasash: zip (stored yoki deflate-raw) + Office Open XML =====
 
@@ -139,5 +139,15 @@ describe('XML-.xls (SpreadsheetML 2003) — EduFlow shabloni', () => {
     expect(readSpreadsheetXml(xml)).toEqual([{ name: 'Mijozlar', rows: [['Ism', 'Telefon'], ['Aziza', '+998 90 123 45 67']] }])
     const sparse = '<Workbook><Worksheet ss:Name="A &amp; B"><Table><Row><Cell><Data ss:Type="String">Ali</Data></Cell><Cell ss:Index="3"><Data ss:Type="Number">5</Data></Cell></Row></Table></Worksheet></Workbook>'
     expect(readSpreadsheetXml(sparse)).toEqual([{ name: 'A & B', rows: [['Ali', '', '5']] }])
+  })
+})
+
+describe('zip-bomba himoyasi', () => {
+  it('ochilgan hajm chegaradan oshsa — o\'qish to\'xtatiladi (e\'lon qilingan hajmga ishonilmaydi)', async () => {
+    const big = new Uint8Array(2 * 1024 * 1024).fill(65)
+    const packed = await deflateRaw(big)
+    expect(packed.length).toBeLessThan(20_000)
+    await expect(inflateRaw(packed, 1024 * 1024)).rejects.toBeInstanceOf(XlsxError)
+    expect((await inflateRaw(packed, 4 * 1024 * 1024)).length).toBe(big.length)
   })
 })

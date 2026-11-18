@@ -3,12 +3,17 @@ import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import type { AttendanceRecord, LessonException } from '../types/attendance.types'
+import type { Branch } from '../types/branch.types'
 import type { Enrollment, Group, Weekday } from '../types/group.types'
 import type { PayRule, Teacher } from '../types/teacher.types'
 
 export type Row = Record<string, unknown>
 
 const opt = <T>(v: T | null | undefined): T | undefined => (v === null || v === undefined ? undefined : v)
+
+// v12: branch_id faqat filial berilgan (yoki aniq olib tashlangan — '') yozuvda yuboriladi: filiallar migratsiyasi
+// qo'llanmagan bazada filialsiz markaz avvalgidek ishlaydi
+const branchColumn = (branchId: string | undefined): Row => (branchId === undefined ? {} : { branch_id: branchId || null })
 
 export function customerToRow(c: Customer, org: string): Row {
   return {
@@ -24,6 +29,7 @@ export function customerToRow(c: Customer, org: string): Row {
     created_at: c.createdAt,
     updated_at: c.updatedAt ?? null,
     paid_at: c.paidAt ?? null,
+    ...branchColumn(c.branchId),
   }
 }
 
@@ -41,6 +47,7 @@ export function rowToCustomer(r: Row): Customer {
   if (opt(r.note)) c.note = String(r.note)
   if (opt(r.updated_at)) c.updatedAt = String(r.updated_at)
   if (opt(r.paid_at)) c.paidAt = String(r.paid_at)
+  if (opt(r.branch_id)) c.branchId = String(r.branch_id)
   return c
 }
 
@@ -62,6 +69,9 @@ export function transactionToRow(t: Transaction, org: string): Row {
     enrollment_id: t.enrollmentId ?? null,
     teacher_id: t.teacherId ?? null,
     period: t.period ?? null,
+    // Onlayn to'lov maydonlari faqat shunday kirimda yuboriladi (migratsiya qo'llanmagan bazada oddiy kirim ishlayveradi)
+    ...(t.provider ? { provider: t.provider, provider_ref: t.providerRef ?? null } : {}),
+    ...branchColumn(t.branchId),
   }
 }
 
@@ -83,6 +93,9 @@ export function rowToTransaction(r: Row): Transaction {
   if (opt(r.enrollment_id)) t.enrollmentId = String(r.enrollment_id)
   if (opt(r.teacher_id)) t.teacherId = String(r.teacher_id)
   if (opt(r.period)) t.period = String(r.period)
+  if (r.provider === 'payme' || r.provider === 'click') t.provider = r.provider
+  if (opt(r.provider_ref)) t.providerRef = String(r.provider_ref)
+  if (opt(r.branch_id)) t.branchId = String(r.branch_id)
   return t
 }
 
@@ -168,6 +181,7 @@ export function groupToRow(g: Group, org: string): Row {
     status: g.status,
     created_at: g.createdAt,
     updated_at: g.updatedAt ?? null,
+    ...branchColumn(g.branchId),
   }
 }
 
@@ -188,6 +202,7 @@ export function rowToGroup(r: Row): Group {
   if (opt(r.teacher_id)) g.teacherId = String(r.teacher_id)
   if (opt(r.end_date)) g.endDate = day(r.end_date)
   if (opt(r.updated_at)) g.updatedAt = String(r.updated_at)
+  if (opt(r.branch_id)) g.branchId = String(r.branch_id)
   return g
 }
 
@@ -261,4 +276,31 @@ export function exceptionToRow(e: LessonException, org: string): Row {
 
 export function rowToException(r: Row): LessonException {
   return { id: String(r.id), groupId: String(r.group_id), date: day(r.date), reason: String(r.reason ?? '') }
+}
+
+// ===== v12: filial =====
+export function branchToRow(b: Branch, org: string): Row {
+  return {
+    organization_id: org,
+    id: b.id,
+    name: b.name,
+    address: b.address,
+    phone: b.phone,
+    status: b.status,
+    created_at: b.createdAt,
+    updated_at: b.updatedAt ?? null,
+  }
+}
+
+export function rowToBranch(r: Row): Branch {
+  const b: Branch = {
+    id: String(r.id),
+    name: String(r.name),
+    address: String(r.address ?? ''),
+    phone: String(r.phone ?? ''),
+    status: r.status === 'archived' ? 'archived' : 'active',
+    createdAt: String(r.created_at),
+  }
+  if (opt(r.updated_at)) b.updatedAt = String(r.updated_at)
+  return b
 }

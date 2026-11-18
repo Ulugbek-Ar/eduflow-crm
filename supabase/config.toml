@@ -28,3 +28,18 @@ enable_confirmations = false
 
 [functions.staff]
 verify_jwt = true
+
+# Onlayn to'lov webhook'lari: Payme (Basic kalit) va Click (MD5 imzo) o'z tekshiruviga ega — Supabase JWT talab qilinmaydi
+[functions.payme]
+verify_jwt = false
+
+[functions.click]
+verify_jwt = false
+
+# Kunlik avtomatik eslatmalar: pg_cron chaqiradi, x-cron-secret sarlavhasi bilan tekshiriladi
+[functions.cron]
+verify_jwt = false
+
+# Ota-onalar boti: Telegram X-Telegram-Bot-Api-Secret-Token sarlavhasi bilan tekshiriladi
+[functions.telegram]
+verify_jwt = false

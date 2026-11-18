@@ -58,6 +58,14 @@ jobs:
           VITE_SUPPORT_TELEGRAM: ${{ vars.SUPPORT_TELEGRAM }}
           VITE_SUPPORT_PHONE: ${{ vars.SUPPORT_PHONE }}
           VITE_SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+          # Brend (sayt nomi va logosi) — mijozga qarab; berilmasa standart. README → "Brend (sayt nomi va logosi)"
+          VITE_BRAND_NAME: ${{ vars.BRAND_NAME }}
+          VITE_BRAND_SHORT_NAME: ${{ vars.BRAND_SHORT_NAME }}
+          VITE_BRAND_DESCRIPTION: ${{ vars.BRAND_DESCRIPTION }}
+          VITE_BRAND_LOGO: ${{ vars.BRAND_LOGO }}
+          VITE_BRAND_FAVICON: ${{ vars.BRAND_FAVICON }}
+          VITE_BRAND_APPLE_ICON: ${{ vars.BRAND_APPLE_ICON }}
+          VITE_BRAND_OG_IMAGE: ${{ vars.BRAND_OG_IMAGE }}
 
       - name: gh-pages branch'iga joylash
         env:

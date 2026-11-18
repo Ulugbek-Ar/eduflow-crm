@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_SETTINGS } from '../../constants/mockData'
 import { makeCustomer, makeTransaction, renderSignedIn } from '../../test/helpers'
 
 async function openSettings(data?: Parameters<typeof renderSignedIn>[0]) {
@@ -25,7 +26,7 @@ describe('Sozlamalar', () => {
     await user.click(screen.getByRole('button', { name: 'Olib tashlash' }))
     await user.click(screen.getByRole('button', { name: 'Saqlash' }))
     expect(storedSettings().logoImage).toBe('')
-    expect(within(sidebar).getByText('EA')).toBeTruthy()
+    expect(within(sidebar).getByText(DEFAULT_SETTINGS.logoText)).toBeTruthy()
   })
 
   it('200 KB dan katta yoki rasm bo\'lmagan fayl rad etiladi', async () => {
@@ -73,7 +74,7 @@ describe('Sozlamalar', () => {
     expect(localStorage.getItem('apex:customers')).toBe('[]')
     expect(localStorage.getItem('apex:transactions')).toBe('[]')
     expect(localStorage.getItem('apex:courses')).toBe('[]')
-    expect(storedSettings().orgName).toBe('EduFlow Academy')
+    expect(storedSettings().orgName).toBe(DEFAULT_SETTINGS.orgName)
     expect(within(data).getByText(/0 ta mijoz, 0 ta tranzaksiya/)).toBeTruthy()
   })
 })

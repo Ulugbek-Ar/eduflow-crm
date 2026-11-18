@@ -20,6 +20,8 @@ export interface Group {
   startDate: string
   endDate?: string
   status: GroupStatus
+  // v12: qaysi filialda o'tadi (xona ziddiyati shu filial ichida tekshiriladi)
+  branchId?: string
   createdAt: string
   updatedAt?: string
 }

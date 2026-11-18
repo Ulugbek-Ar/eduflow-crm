@@ -1,7 +1,7 @@
 import { tr } from '../../i18n'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Icon } from '../../constants/navigation'
+import { BrandMark } from '../ui/BrandMark'
 import { useAuth } from '../../hooks/useAuth'
 import { isCryptoAvailable } from '../../services/auth.service'
 import { formatLockWait, lockRemaining, MAX_ATTEMPTS, readLockState, registerFailure, registerSuccess } from '../../services/loginLock.service'
@@ -16,7 +16,7 @@ export function AuthBrand({ title, subtitle }: { title: string; subtitle: string
   return (
     <div className="login-brand">
       <span className="logo-mark">
-        <Icon name="logo" size={22} />
+        <BrandMark size={22} />
       </span>
       <div>
         <h1 id="login-title">{title}</h1>

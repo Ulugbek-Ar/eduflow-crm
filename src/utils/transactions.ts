@@ -54,3 +54,22 @@ export function sortTransactions(transactions: readonly Transaction[], sort: Sor
 }
 
 export type TransactionFormErrors = Partial<Record<'amount' | 'date', string>>
+
+// Bulut: server yozgan kirimlar (Payme/Click) ro'yxatga qo'shiladi yoki yangilanadi (o'zgargani — updatedAt bo'yicha).
+// O'zgarish bo'lmasa — o'sha massiv qaytadi
+export function mergeRemote(list: readonly Transaction[], remote: readonly Transaction[]): Transaction[] {
+  if (remote.length === 0) return list as Transaction[]
+  const incoming = new Map(remote.map((t) => [t.id, t]))
+  let changed = false
+  const updated = list.map((t) => {
+    const next = incoming.get(t.id)
+    if (!next) return t
+    incoming.delete(t.id)
+    if (next.updatedAt === t.updatedAt && next.status === t.status) return t
+    changed = true
+    return next
+  })
+  const added = [...incoming.values()]
+  if (!changed && added.length === 0) return list as Transaction[]
+  return [...added.sort((a, b) => b.date.localeCompare(a.date)), ...updated]
+}

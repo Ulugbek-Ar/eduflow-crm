@@ -19,6 +19,7 @@ import { DateInput } from '../ui/DateInput'
 import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { Select } from '../ui/Select'
+import { BranchSelect } from '../branches/BranchSelect'
 
 interface FormState {
   type: TransactionType
@@ -35,6 +36,8 @@ interface FormState {
   enrollmentId: string
   // Qaysi oy uchun ('YYYY-MM'); '' — ko'rsatilmagan
   period: string
+  // v12: mijozsiz yozuv filiali ('' — umumiy). Mijoz to'lovida filial avtomatik (o'qish guruhi yoki o'quvchi)
+  branchId: string
 }
 
 // 'YYYY-MM' -> "Noyabr 2026"
@@ -70,7 +73,7 @@ interface TransactionFormModalProps {
 }
 
 export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount, enrollmentId: presetEnrollment, period: presetPeriod }: TransactionFormModalProps) {
-  const { customers, courses, transactions, getTransaction, addTransaction, updateTransaction, closeModal, settings, debtContext } = useDashboard()
+  const { customers, courses, transactions, getTransaction, addTransaction, updateTransaction, closeModal, settings, debtContext, branches, branchFilter, restrictedBranch } = useDashboard()
   const editing = getTransaction(transactionId)
   const thisPeriod = todayInputValue().slice(0, 7)
   const enrollmentsOf = (id: string) => (id ? (debtContext.enrollments ?? []).filter((e) => e.customerId === id) : [])
@@ -111,6 +114,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
       source: editing?.source ?? '',
       enrollmentId,
       period,
+      // Butun markaz ko'rinishida xarajat — umumiy (filialni taxmin qilmaymiz)
+      branchId: editing ? (editing.branchId ?? '') : (restrictedBranch ?? branchFilter),
     }
   })
   const [errors, setErrors] = useState<TransactionFormErrors>({})
@@ -183,6 +188,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
       data.enrollmentId = undefined
       data.period = undefined
     }
+    // Mijozsiz yozuv: tanlangan filial ('' — umumiy); mijoz to'lovida filialni DashboardContext aniqlaydi
+    if (branches.length > 0 && !data.customerId) data.branchId = form.branchId
     if (editing) updateTransaction(editing.id, data)
     else {
       addTransaction(data)
@@ -234,6 +241,9 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             inputMode="numeric"
             value={form.amount}
             error={errors.amount}
+            // Payme/Click orqali kelgan kirim summasi provayderdagi bilan bir xil qolishi kerak
+            readOnly={Boolean(editing?.provider)}
+            hint={editing?.provider ? tr('{0} orqali kelgan — summani o\'zgartirib bo\'lmaydi', { 0: editing.provider === 'payme' ? 'Payme' : 'Click' }) : undefined}
             onChange={(e) => {
               setAmountTouched(true)
               update('amount', formatAmountInput(e.target.value))
@@ -320,6 +330,10 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
               options={[...periodOptions(thisPeriod, form.period).map((p) => ({ value: p, label: periodLabel(p) })), { value: '', label: tr('Ko\'rsatilmagan') }]}
             />
           </div>
+        )}
+
+        {!(form.type === 'income' && form.customerId) && (
+          <BranchSelect value={form.branchId} noneLabel={tr('Umumiy (filialsiz)')} hint={form.branchId ? undefined : tr('Faqat butun markazni ko\'radigan xodimlarga ko\'rinadi')} onChange={(v) => update('branchId', v)} />
         )}
 
         <Input

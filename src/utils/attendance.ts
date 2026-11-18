@@ -4,27 +4,33 @@ import type { AttendanceRecord, AttendanceStatus, LessonException } from '../typ
 import type { Enrollment, Group } from '../types/group.types'
 import { addDays, enrollmentActiveOn, hasLessonOn, minutesOf, parseDay, weekdayOf } from './groups'
 
-export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
-  present: tr('Keldi'),
-  late: tr('Kechikdi'),
-  absent: tr('Kelmadi'),
-  excused: tr('Sababli'),
+// Davomatda faqat ikki holat: Keldi / Kelmadi. Eski yozuvlardagi "Kechikdi" (late) — Keldi, "Sababli" (excused) —
+// Kelmadi deb ko'rsatiladi va hisoblanadi; saqlangan ma'lumot o'zgartirilmaydi (zaxiralar va bulut bilan moslik)
+export const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = ['present', 'absent']
+
+export function simpleStatus(status: AttendanceStatus): 'present' | 'absent' {
+  return status === 'present' || status === 'late' ? 'present' : 'absent'
 }
 
-// Klaviatura: P — keldi, L — kechikdi, A — kelmadi, E — sababli
-export const ATTENDANCE_KEYS: Record<string, AttendanceStatus> = { p: 'present', l: 'late', a: 'absent', e: 'excused' }
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  present: tr('Keldi'),
+  late: tr('Keldi'),
+  absent: tr('Kelmadi'),
+  excused: tr('Kelmadi'),
+}
 
-export const ATTENDANCE_SHORT: Record<AttendanceStatus, string> = { present: 'P', late: 'L', absent: 'A', excused: 'E' }
+// Klaviatura: P, K yoki 1 — keldi; A, Y yoki 0 — kelmadi
+export const ATTENDANCE_KEYS: Record<string, AttendanceStatus> = { p: 'present', k: 'present', '1': 'present', a: 'absent', y: 'absent', '0': 'absent' }
 
-// Davomat foizi = (keldi + kechikdi) / (keldi + kechikdi + kelmadi) × 100.
-// "Sababli" (kasal, oldindan ogohlantirgan) maxrajga kirmaydi; belgilanmagan dars hisoblanmaydi. Yozuv bo'lmasa — null
+export const ATTENDANCE_SHORT: Record<AttendanceStatus, string> = { present: '✓', late: '✓', absent: '✗', excused: '✗' }
+
+// Davomat foizi = keldi / (keldi + kelmadi) × 100; belgilanmagan dars hisoblanmaydi. Yozuv bo'lmasa — null
 export function attendanceRate(records: readonly Pick<AttendanceRecord, 'status'>[]): number | null {
   let came = 0
   let total = 0
   for (const r of records) {
-    if (r.status === 'excused') continue
     total++
-    if (r.status === 'present' || r.status === 'late') came++
+    if (simpleStatus(r.status) === 'present') came++
   }
   return total > 0 ? (came / total) * 100 : null
 }
@@ -131,8 +137,7 @@ export function teacherAttendanceRate(teacherId: string, groups: readonly Group[
   return attendanceRate(records.filter((r) => ids.has(r.groupId) && (!from || r.date >= from) && (!to || r.date <= to)))
 }
 
-// Katak bosilganda holat ketma-ketligi: bo'sh -> keldi -> kelmadi -> kechikdi -> sababli -> keldi
+// Katak bosilganda: bo'sh -> keldi -> kelmadi -> keldi ...
 export function nextStatus(current: AttendanceStatus | undefined): AttendanceStatus {
-  const order: AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
-  return current ? order[(order.indexOf(current) + 1) % order.length] : 'present'
+  return current && simpleStatus(current) === 'present' ? 'absent' : 'present'
 }

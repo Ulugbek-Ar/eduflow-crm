@@ -17,6 +17,7 @@ import {
   sumExpense,
   totalPerformance,
 } from '../../utils/analytics'
+import { branchStats } from '../../utils/branches'
 import { computeDebts } from '../../utils/debts'
 import { formatNumber, formatPercent } from '../../utils/format'
 import { customerColumns, debtColumns, sourceColumns, transactionColumns } from '../../utils/reports'
@@ -33,7 +34,7 @@ interface ReportDef {
 }
 
 export function AnalyticsPanel() {
-  const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings, logExport, debtContext } = useDashboard()
+  const { customers, transactions, courses, dateRange, money, formatDate, getCustomerName, settings, logExport, debtContext, branches, branchFilter, setBranchFilter, groups, enrollments } = useDashboard()
   const canExport = useCan()('reports.export')
   const period = getPeriod(dateRange)
   const periodLabel = DATE_RANGE_LABELS[dateRange]
@@ -49,6 +50,8 @@ export function AnalyticsPanel() {
   const overallConversion = conversion(leadsInPeriod)
   const funnel = funnelStats(customers, FUNNEL_STAGES, period)
   const byCourse = courseRevenue(customers, courses, transactions, period)
+  // Filiallar taqqoslanishi — "Barcha filiallar" ko'rinishida va kamida ikkita faol filial bo'lsa
+  const byBranch = !branchFilter && branches.filter((b) => b.status === 'active').length >= 2 ? branchStats(branches, { customers, groups, enrollments, transactions }, period) : []
 
   const percent = (value: number | null) => (value === null ? '—' : formatPercent(value))
   const signedPercent = (value: number | null) => (value === null ? '—' : `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatPercent(Math.abs(value))}`)
@@ -221,6 +224,71 @@ export function AnalyticsPanel() {
           )}
         </section>
       </div>
+
+      {byBranch.length > 0 && (
+        <section className="card" aria-labelledby="branches-perf-title">
+          <div className="card-head">
+            <div>
+              <h2 id="branches-perf-title">{tr('Filiallar bo\'yicha')}</h2>
+              <span className="muted">{periodLabel} {tr('· to\'langan kirim va xarajat; o\'quvchi va guruhlar — hozir')}</span>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table className="table" aria-label={tr('Filiallar bo\'yicha')}>
+              <thead>
+                <tr>
+                  <th scope="col">{tr('Filial')}</th>
+                  <th scope="col" className="align-right">
+                    {tr('O\'quvchilar')}
+                  </th>
+                  <th scope="col" className="align-right">
+                    {tr('Guruhlar')}
+                  </th>
+                  <th scope="col" className="align-right">
+                    {tr('Kirim')}
+                  </th>
+                  <th scope="col" className="align-right">
+                    {tr('Xarajat')}
+                  </th>
+                  <th scope="col" className="align-right">
+                    {tr('Foyda')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {byBranch.map((row) => (
+                  <tr key={row.branch?.id ?? 'general'}>
+                    <td data-label={tr('Filial')}>
+                      {row.branch ? (
+                        <button type="button" className="link-btn" onClick={() => row.branch && setBranchFilter(row.branch.id)}>
+                          {row.branch.name}
+                        </button>
+                      ) : (
+                        <span className="muted">{tr('Umumiy (filialsiz)')}</span>
+                      )}
+                    </td>
+                    <td data-label={tr('O\'quvchilar')} className="align-right">
+                      {row.branch ? row.students : '—'}
+                    </td>
+                    <td data-label={tr('Guruhlar')} className="align-right">
+                      {row.branch ? row.groups : '—'}
+                    </td>
+                    <td data-label={tr('Kirim')} className="align-right nowrap">
+                      {money(row.income)}
+                    </td>
+                    <td data-label={tr('Xarajat')} className="align-right nowrap">
+                      {money(row.expense)}
+                    </td>
+                    <td data-label={tr('Foyda')} className={row.profit < 0 ? 'align-right nowrap strong text-danger' : 'align-right nowrap strong'}>
+                      {money(row.profit)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="card" aria-labelledby="sources-perf-title">
         <div className="card-head">

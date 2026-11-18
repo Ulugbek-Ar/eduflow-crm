@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createMockCourses } from '../../constants/mockData'
 import { makeCustomer, renderSignedIn } from '../../test/helpers'
@@ -30,6 +30,19 @@ describe('O\'qituvchilar va maosh', () => {
     expect(stored<{ action: string }>('apex:audit').some((a) => a.action === 'teacher.create')).toBe(true)
   })
 
+  it('telefon ixtiyoriy: yozib o\'chirilsa (faqat "+998" qolsa) ham saqlanadi va bo\'sh yoziladi', async () => {
+    const { user } = await openTeachers()
+    await user.click((await screen.findAllByRole('button', { name: 'O\'qituvchi qo\'shish' }))[0])
+    const dialog = await screen.findByRole('dialog', { name: 'Yangi o\'qituvchi' })
+    await user.type(within(dialog).getByLabelText(/Ism familiya/), 'Telefonsiz Ustoz')
+    const phone = within(dialog).getByLabelText(/Telefon/)
+    await user.type(phone, '9')
+    await user.type(phone, '{backspace}{backspace}')
+    await user.click(within(dialog).getByRole('button', { name: 'Qo\'shish' }))
+    expect(await screen.findByRole('button', { name: 'Telefonsiz Ustoz' })).toBeTruthy()
+    expect(stored<Teacher>('apex:teachers')).toMatchObject([{ name: 'Telefonsiz Ustoz', phone: '' }])
+  })
+
   it('bitta tugma bilan kirish: o\'qituvchi rolidagi xodim va vaqtinchalik parol, yozuvga bog\'lanadi', async () => {
     const { user } = await openTeachers({ teachers: [teacher] })
     await user.click(await screen.findByRole('button', { name: 'Kirish yaratish' }))
@@ -42,7 +55,8 @@ describe('O\'qituvchilar va maosh', () => {
     const users = stored<{ id: string; login: string; role: string; mustChange: boolean }>('apex:users')
     const created = users.find((u) => u.login === 'nodira')
     expect(created).toMatchObject({ role: 'teacher', mustChange: true })
-    expect(stored<Teacher>('apex:teachers')[0].userId).toBe(created?.id)
+    // Yozuvga bog'lash keyingi render'da saqlanadi — yuklangan mashinada kutib tekshiriladi
+    await waitFor(() => expect(stored<Teacher>('apex:teachers')[0].userId).toBe(created?.id))
   })
 
   it('maosh: oy bo\'yicha hisob va "Maosh to\'lash" — teacherId va period bilan xarajat', async () => {

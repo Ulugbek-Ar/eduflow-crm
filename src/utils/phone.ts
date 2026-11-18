@@ -4,6 +4,9 @@ const LOCAL_LENGTH = 9
 // Mahalliy 9 xonali raqam: "+998 90 123 45 67" -> "901234567"
 export function phoneDigits(value: string): string {
   let digits = value.replace(/\D/g, '')
+  // "+998" prefiksi Backspace bilan o'chirilayotganda ("+99", "+9") — bu raqam emas, prefiks qoldig'i.
+  // Aks holda "+99" -> "+998 99" bo'lib, maydonni hech qachon tozalab bo'lmasdi
+  if (value.trim().startsWith('+') && COUNTRY_CODE.startsWith(digits)) return ''
   if (digits.startsWith(COUNTRY_CODE)) digits = digits.slice(COUNTRY_CODE.length)
   return digits.slice(0, LOCAL_LENGTH)
 }

@@ -2,7 +2,7 @@ import { tr } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { ROLE_LABELS, ROLES } from '../../auth/permissions'
-import { pageTitle } from '../../constants/app'
+import { BRAND, pageTitle } from '../../constants/app'
 import { Icon } from '../../constants/navigation'
 import { useAuth } from '../../hooks/useAuth'
 import { generateTempPassword } from '../../services/auth.service'
@@ -343,7 +343,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                   <small className="muted">
                     {backup
                       ? tr('{0}: {1} mijoz, {2} tranzaksiya, {3} kurs', { 0: backup.fileName, 1: backup.data.customers.length, 2: backup.data.transactions.length, 3: backup.data.courses.length })
-                      : tr('Oldin EduFlow\'dan olingan .json fayl')}
+                      : tr('Oldin {0}\'dan olingan .json fayl', { 0: BRAND.shortName })}
                   </small>
                 </span>
                 <input type="file" accept="application/json,.json" className="sr-only" aria-label={tr('Zaxira faylini tanlash')} onChange={handleFile} />

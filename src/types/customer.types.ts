@@ -20,6 +20,8 @@ export interface Customer {
   // v9: "To'lov qildi" bosqichiga o'tgan vaqt (faqat shu bosqichda). Faol mijozlar trendi va
   // kurs davomiyligi (qarz hisobi) shundan hisoblanadi
   paidAt?: string
+  // v12: filial ('' — filialsiz, aniq olib tashlangan; bulutga null bo'lib boradi)
+  branchId?: string
 }
 
 export type CustomerInput = Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'paidAt'>

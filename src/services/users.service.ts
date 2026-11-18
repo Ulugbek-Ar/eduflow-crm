@@ -40,7 +40,8 @@ export function isStaffUser(value: unknown): value is StaffUser {
     typeof value.mustChange === 'boolean' &&
     isIsoDate(value.createdAt) &&
     isOptionalString(value.updatedAt) &&
-    isOptionalString(value.lastLoginAt)
+    isOptionalString(value.lastLoginAt) &&
+    isOptionalString(value.branchId)
   )
 }
 
@@ -98,7 +99,7 @@ export function activeAdmins(users: readonly StaffUser[]): StaffUser[] {
   return users.filter((u) => u.role === 'admin' && u.status === 'active')
 }
 
-export type UserField = 'fullName' | 'title' | 'login' | 'password' | 'current' | 'role' | 'status'
+export type UserField = 'fullName' | 'title' | 'login' | 'password' | 'current' | 'role' | 'status' | 'branch'
 
 export type UserResult = { ok: true; user: StaffUser; users: StaffUser[] } | { ok: false; field?: UserField; error: string }
 
@@ -130,6 +131,8 @@ export interface NewUserInput {
   password: string
   // O'qituvchi kirishi: shu o'qituvchi yozuviga bog'lanadi (bulutda Edge Function teachers.user_id ni yozadi)
   teacherId?: string
+  // v12: xodim shu filialga cheklanadi (yo'q — butun markaz)
+  branchId?: string
 }
 
 function validateProfile(fullName: string, title: string): { field: UserField; error: string } | null {
@@ -159,6 +162,7 @@ async function buildUser(input: NewUserInput, mustChange: boolean): Promise<Staf
     ...(await createHash(input.password)),
     mustChange,
     createdAt: new Date().toISOString(),
+    ...(input.branchId ? { branchId: input.branchId } : {}),
   }
 }
 
@@ -190,6 +194,8 @@ export interface UserPatch {
   title?: string
   role?: Role
   status?: UserStatus
+  // v12: '' — butun markaz
+  branchId?: string
 }
 
 // Kamida bitta faol administrator doim qoladi; o'z rolini va holatini o'zgartirib bo'lmaydi (o'zini qulflab qo'ymaslik uchun)
@@ -209,11 +215,19 @@ export function updateUser(actorId: string, id: string, patch: UserPatch): UserR
     ...(patch.status !== undefined ? { status: patch.status } : {}),
     updatedAt: new Date().toISOString(),
   }
+  if (patch.branchId !== undefined) {
+    if (patch.branchId) next.branchId = patch.branchId
+    else delete next.branchId
+  }
   const invalid = validateProfile(next.fullName, next.title)
   if (invalid) return { ok: false, ...invalid }
   const list = users.map((u) => (u.id === id ? next : u))
   if (activeAdmins(list).length === 0) {
     return { ok: false, field: patch.status ? 'status' : 'role', error: tr('Kamida bitta faol administrator qolishi kerak') }
+  }
+  // Filiallarni boshqaradigan (filialsiz) faol administrator doim qoladi — serverdagi set_staff_branch bilan bir xil
+  if (!activeAdmins(list).some((u) => !u.branchId)) {
+    return { ok: false, field: 'branch', error: tr('Kamida bitta administrator butun markazni ko\'rishi kerak (filialsiz)') }
   }
   if (!saveUsers(list)) return { ok: false, error: tr('Brauzer saqlashni bloklagan — o\'zgarish saqlanmadi') }
   return { ok: true, user: next, users: list }

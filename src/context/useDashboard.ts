@@ -8,6 +8,7 @@ import type { Transaction, TransactionFilters, TransactionInput, TransactionSort
 import type { AttendanceRecord, LessonException } from '../types/attendance.types'
 import type { Enrollment, Group } from '../types/group.types'
 import type { Teacher } from '../types/teacher.types'
+import type { Branch, BranchInput } from '../types/branch.types'
 import type { EduActions } from './eduActions'
 import type { DebtContext } from '../utils/debts'
 import type { ImportPlan, ImportReceipt } from '../utils/import/customers'
@@ -26,6 +27,19 @@ export interface DashboardContextValue extends EduActions {
   lessonExceptions: LessonException[]
   // O'qituvchi sifatida kirgan bo'lsa — uning yozuvi
   ownTeacher: Teacher | undefined
+  // v12: filiallar (filialga cheklangan xodimga — faqat o'zi). Yuqoridagi ro'yxatlar tanlangan filial bo'yicha
+  branches: Branch[]
+  // Tanlangan filial id'si ('' — barcha filiallar); cheklangan xodimda — doim o'z filiali
+  branchFilter: string
+  // Xodim shu filialga cheklangan (Header'da tanlov o'rniga filial nomi)
+  restrictedBranch: string | undefined
+  setBranchFilter: (id: string) => void
+  getBranch: (id?: string) => Branch | undefined
+  // assignExisting — birinchi filial: mavjud guruh, o'quvchi va to'lovlar shu filialga biriktiriladi. Natija — yangi id
+  addBranch: (input: BranchInput, options?: { assignExisting?: boolean }) => string | null
+  updateBranch: (id: string, patch: Partial<BranchInput>) => void
+  // Ishlatilgan filial o'chirilmaydi — arxivlanadi
+  removeBranch: (id: string) => void
   getGroup: (id?: string) => Group | undefined
   getTeacher: (id?: string) => Teacher | undefined
   // To'liq ma'lumot (JSON zaxira uchun; rol bo'yicha filtrsiz)
