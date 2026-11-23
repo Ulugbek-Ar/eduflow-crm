@@ -81,6 +81,7 @@ export function Receipt({ data, settings, money }: { data: ReceiptData; settings
       </div>
       <p className="receipt-words">{amountInWords(t.amount, settings.currency)}</p>
       {t.status === 'paid' && data.remainingDebt > 0 && <p className="receipt-debt">{tr('Qolgan qarz:')} {money(data.remainingDebt)}</p>}
+      {t.status === 'paid' && t.customerId && data.remainingDebt === 0 && <p className="receipt-debt">{tr('Qarz yo\'q')}</p>}
       {t.status === 'cancelled' && <p className="receipt-stamp">{tr('BEKOR QILINGAN')}</p>}
 
       <footer className="receipt-foot">

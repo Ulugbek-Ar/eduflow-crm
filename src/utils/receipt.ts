@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { AuditEntry } from '../services/audit.service'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
@@ -30,8 +31,10 @@ export function receiptNumber(t: Pick<Transaction, 'id' | 'date'>): string {
 }
 
 // Kim qabul qilgani — jurnaldagi "To'lov yozildi" yozuvidan (tranzaksiyaning o'zida saqlanmaydi)
-export function receiptCashier(transactionId: string, audit: readonly AuditEntry[]): string {
-  return audit.find((e) => e.action === 'payment.create' && e.entityId === transactionId)?.userName ?? ''
+// QA-21: onlayn to'lovni kassir emas, provayder qabul qilgan
+export function receiptCashier(transaction: Pick<Transaction, 'id' | 'provider'>, audit: readonly AuditEntry[]): string {
+  if (transaction.provider) return tr('{0} (onlayn)', { 0: transaction.provider === 'payme' ? 'Payme' : 'Click' })
+  return audit.find((e) => e.action === 'payment.create' && e.entityId === transaction.id)?.userName ?? ''
 }
 
 export function buildReceipt(
@@ -51,7 +54,7 @@ export function buildReceipt(
     transaction,
     customer,
     customerName,
-    cashier: receiptCashier(transaction.id, audit),
+    cashier: receiptCashier(transaction, audit),
     remainingDebt: debt?.debt ?? 0,
     groupName: group?.name,
     periodLabel: transaction.period ? `${transaction.period.slice(5, 7)}.${transaction.period.slice(0, 4)}` : undefined,

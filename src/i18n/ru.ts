@@ -1696,4 +1696,5 @@ export const RU: Readonly<Record<string, string>> = {
   "Qo'shimcha (status)": "Дополнительно (статус)",
   "{0} — profil menyusi": "{0} — меню профиля",
   "Chek: {0}, {1}, {2}": "Чек: {0}, {1}, {2}",
+  "{0} (onlayn)": "{0} (онлайн)",
 }
