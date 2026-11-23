@@ -129,11 +129,15 @@ describe('Tanishtiruv va boshlash ro\'yxati', () => {
 
   it('boshlash ro\'yxati bajarilganlarni belgilaydi va yashiriladi', async () => {
     const { user } = await renderSignedIn({ customers: [makeCustomer()], transactions: [] })
-    const card = screen.getByRole('region', { name: /Boshlash uchun 5 qadam/ })
-    expect(within(card).getByText('2 / 5 bajarildi')).toBeTruthy()
-    expect(within(card).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('2')
+    // Ish tartibi (QA-08): kurs → o'qituvchi → guruh → guruhga yozish → to'lov → xodimlar → zaxira
+    const card = screen.getByRole('region', { name: /Boshlash uchun 7 qadam/ })
+    expect(within(card).getByText('1 / 7 bajarildi')).toBeTruthy()
+    expect(within(card).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('1')
+    // Guruh bo'lmaguncha "guruhga yozish" va "to'lov" tugmasi yo'q — nima qilish kerakligi yozilgan
+    expect(within(card).getByText('avval guruh oching')).toBeTruthy()
+    expect(within(card).getByText('avval o\'quvchini guruhga yozing')).toBeTruthy()
     await user.click(within(card).getAllByRole('button', { name: 'Boshlash' })[0])
-    expect(await screen.findByRole('dialog', { name: 'Yangi mijoz' }).catch(() => screen.findByRole('dialog', { name: 'To\'lov qabul qilish' }))).toBeTruthy()
+    expect(await screen.findByRole('dialog', { name: 'Yangi o\'qituvchi' })).toBeTruthy()
     await user.keyboard('{Escape}')
     await user.click(within(card).getByRole('button', { name: 'Yashirish' }))
     expect(screen.queryByRole('region', { name: /Boshlash uchun/ })).toBeNull()

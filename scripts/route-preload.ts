@@ -25,6 +25,7 @@ export const ROUTE_MODULES: Record<string, string> = {
   owner: 'src/owner/OwnerConsole.tsx',
   legal: 'src/landing/LegalPage.tsx',
   landing: 'src/landing/LandingPage.tsx',
+  notfound: 'src/landing/NotFoundPage.tsx',
 }
 const RU_MODULE = 'src/i18n/ru.ts'
 
@@ -67,7 +68,7 @@ export function preloadScript(map: Record<string, string[]>): string {
     var base = new URL('..', document.currentScript.src).pathname
     var rest = location.pathname.indexOf(base) === 0 ? location.pathname.slice(base.length) : location.pathname.replace(/^\\/+/, '')
     var first = rest.split('/')[0].toLowerCase()
-    var route = first === 'app' ? 'app' : first === 'owner' ? 'owner' : first === 'privacy' || first === 'terms' ? 'legal' : 'landing'
+    var route = first === 'app' ? 'app' : first === 'owner' ? 'owner' : first === 'privacy' || first === 'terms' ? 'legal' : first === '' || first === 'index.html' ? 'landing' : 'notfound'
     var files = (map[route] || []).slice()
     if (localStorage.getItem('apex:lang') === '"ru"') files = (map.ru || []).concat(files)
     for (var i = 0; i < files.length; i++) {

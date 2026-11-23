@@ -2455,6 +2455,14 @@ a.btn {
   margin-top: 20px;
 }
 
+/* Telefonda tablar (Boshqaruv: Xodimlar, Savatcha, Seanslar ...) ham qatorlarga bo'linadi (QA-12) */
+@media (max-width: 640px) {
+  .tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
 /* Telefonda uzun forma (to'lov qabul qilish): "Saqlash" va "Bekor qilish" aylantirmasdan doim ko'rinadi (QA-10) */
 @media (max-width: 640px) {
   .modal .modal-actions {
@@ -3750,7 +3758,7 @@ ol.steps-list {
 
 .wizard-inline {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(160px, 1.2fr) auto;
   gap: 10px;
   align-items: end;
 }
@@ -3845,15 +3853,20 @@ ol.steps-list {
 }
 
 .tour-spot {
+  /* Joylashuv transform bilan (left/top emas) — sahifa "sakramaydi", CLS hisoblanmaydi (QA-11) */
   position: absolute;
+  top: 0;
+  left: 0;
   border-radius: var(--radius-sm);
   box-shadow: 0 0 0 9999px var(--overlay);
   outline: 2px solid var(--primary);
-  transition: left 200ms var(--ease), top 200ms var(--ease), width 200ms var(--ease), height 200ms var(--ease);
+  transition: transform 200ms var(--ease), width 200ms var(--ease), height 200ms var(--ease);
 }
 
 .tour-card {
   position: absolute;
+  top: 0;
+  left: 0;
   display: grid;
   gap: 6px;
   width: min(320px, calc(100vw - 32px));
@@ -3863,7 +3876,14 @@ ol.steps-list {
   background: var(--surface);
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
-  animation: pop-in 200ms var(--ease);
+  /* Joylashuv transform'da — animatsiya faqat shaffoflik bilan (pop-in transform'ni bosib ketardi) */
+  animation: tour-fade 200ms var(--ease);
+}
+
+@keyframes tour-fade {
+  from {
+    opacity: 0;
+  }
 }
 
 .tour-card:focus {
@@ -4427,11 +4447,12 @@ ol.steps-list {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Telefon va planshetda bo'limlar yashirin aylantirilmaydi — qatorga sig'maganlari keyingi qatorga (QA-12) */
   .settings-nav {
     position: static;
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
-    overflow-x: auto;
     padding-bottom: 2px;
   }
 
@@ -4961,3 +4982,30 @@ ol.steps-list {
   }
 }
 
+
+/* Telefonda (barmoq bilan) bosish nishonlari kamida 44 px (QA-17, WCAG 2.5.5). Kichik ko'rinadigan tugmalar —
+   ko'rinishi o'zgarmaydi, bosiladigan maydon ::after bilan kengaytiriladi */
+@media (pointer: coarse) {
+  .hint-btn,
+  .sort-btn,
+  .link-btn {
+    position: relative;
+  }
+
+  .hint-btn::after,
+  .sort-btn::after,
+  .link-btn::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  .segmented button,
+  .lang-switch button,
+  .branch-switch select {
+    min-height: 44px;
+  }
+}

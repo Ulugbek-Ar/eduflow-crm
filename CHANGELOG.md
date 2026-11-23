@@ -2,6 +2,41 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/) ruhida, versiyalar — [SemVer](https://semver.org/).
 
+## [1.2.4] — 2026-11-23 · ma'lumot sxemasi v12
+
+QA audit (`qa-audit` branch, 2026-11-18) topilmalari tuzatildi.
+
+### Xavfsizlik
+
+- **B-01**: hech bir funksiya kirmagan foydalanuvchi (anon) va PUBLIC uchun ochiq emas; `write_audit` va trigger
+  funksiyalari to'g'ridan-to'g'ri chaqirilmaydi — boshqa markaz jurnaliga soxta yozuv qo'shib bo'lmaydi.
+- **B-02**: Payme/Click to'lovining summasi, sanasi, mijozi va provayderini ilova foydalanuvchisi o'zgartira olmaydi.
+- **B-03**: filialga cheklangan xodim mijozni boshqa filialga o'tkaza olmaydi.
+- Migratsiya: `supabase/migrations/20261123000000_security_hardening.sql` (`supabase db push`).
+
+### Tuzatildi
+
+- **A-01**: oy o'rtasida guruhga ko'chirilgan o'quvchida soxta qarz yo'q (shu oy kunlar ulushida, jami bir oylik);
+  "Oylik" — faqat davom etayotgan o'qishlar.
+- **A-02**: menejerda "Chiqim" yo'q; ruxsat bo'lmasa oyna va kiritilgan ma'lumot saqlanadi.
+- **A-03**: birinchi maydoni o'chirilgan oynada ham fokus oyna ichida, Escape ishlaydi.
+- **A-04**: hamma bo'lim oldindan yuklanadi — internet uzilsa ham ochiladi.
+- **A-05…A-09**: "Python 1" qidiruvi har qanday telefonni topmaydi; mijoz ismi 2–100 belgi; CSV'da telefon "+" va
+  apostrofsiz; qoralama xodimga bog'langan; joriy bo'lim manzilda (`#finance`) — sahifa yangilansa o'sha bo'lim.
+- **B-05, C-03**: eski "Sababli" ketma-ket qoldirishni uzmaydi; enrollmentId'siz onlayn/import to'lov yagona faol
+  o'qishga yoziladi (qarz kamayadi).
+- **QA-04**: tayyor saytda huquqiy sahifalarda "namuna" ogohlantirishi ko'rinmaydi. **QA-16**: sarlavha tarjimasi.
+- **QA-08**: "Boshlash" ro'yxati ish tartibida — kurs → o'qituvchi → guruh → guruhga yozish → to'lov → xodimlar → zaxira.
+- **QA-11**: tanishtiruvda sahifa sakramaydi (CLS 0.6 → 0.04), demo ilova Lighthouse 70 → 85.
+- **QA-12**: telefonda Boshqaruv tablari va Sozlamalar menyusi qatorlarga bo'linadi. **QA-17**: barmoq uchun 44 px nishonlar.
+- **QA-14**: xodimlar ro'yxatida filial ustuni. **QA-18**: sozlash ustasida rol nomi kesilmaydi.
+- **QA-20**: har bir chek tugmasi mijoz nomi bilan. **QA-21**: chekda "Qabul qildi: Payme (onlayn)", "Qarz yo'q".
+- Namunaviy markazlar ro'yxatida haqiqiy tashkilot nomi olib tashlandi.
+
+### Qo'shildi
+
+- **QA-15**: "Sahifa topilmadi" (404) sahifasi — noma'lum manzilda bosh sahifa o'rniga.
+
 ## [1.2.3] — 2026-11-18 · ma'lumot sxemasi v12
 
 QA hisobotidagi (`docs/QA-PROMPT.md`) yuqori darajadagi 5 ta va o'rta darajadagi 4 ta kamchilik tuzatildi.

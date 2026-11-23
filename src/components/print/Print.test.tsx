@@ -34,7 +34,7 @@ describe('To\'lov cheki', () => {
       courses: [course],
     })
     await user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
-    await user.click(await screen.findByRole('button', { name: 'Chek' }))
+    await user.click(await screen.findByRole('button', { name: /^Chek/ }))
     const modal = await screen.findByRole('dialog', { name: 'To\'lov cheki' })
     // Joriy oy: 650 000 kutilgan, 300 000 to'langan
     expect(plain(within(modal).getByText(/Qolgan qarz/).textContent)).toBe('Qolgan qarz: 350 000 so\'m')
