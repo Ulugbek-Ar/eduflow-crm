@@ -4985,3 +4985,28 @@ ol.steps-list {
     overflow-x: visible;
   }
 }
+
+/* QA-17: sensorli ekranda bosish nishoni kamida 24×24 (WCAG 2.5.8) — ko'rinish o'zgarmaydi, bosish maydoni kengayadi */
+@media (pointer: coarse) {
+  .hint-btn,
+  .sort-btn,
+  .link-btn {
+    position: relative;
+    min-height: 24px;
+  }
+  .hint-btn {
+    min-width: 24px;
+    min-height: 24px;
+  }
+  input[type='checkbox'] {
+    width: 24px;
+    height: 24px;
+  }
+  .hint-btn::after,
+  .sort-btn::after,
+  .link-btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
+}

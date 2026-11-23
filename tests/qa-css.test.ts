@@ -15,5 +15,12 @@ describe('QA CSS', () => {
     const mobile = css.slice(css.indexOf('/* QA-12:'))
     expect(mobile).toMatch(/\.tabs,\s*\.settings-nav \{\s*flex-wrap: wrap;/)
   })
+
+  it('QA-17: sensorli ekranda "?", saralash, havola va belgilash nishonlari ≥ 24 px', () => {
+    const touch = css.slice(css.indexOf('/* QA-17:'))
+    expect(touch).toContain('@media (pointer: coarse)')
+    expect(touch).toMatch(/\.hint-btn \{\s*min-width: 24px;\s*min-height: 24px;/)
+    expect(touch).toMatch(/input\[type='checkbox'\] \{\s*width: 24px;/)
+  })
 })
 
