@@ -127,7 +127,10 @@ export function customerReports(rows: OrgRows, customerIds: readonly string[], o
           present: records.filter((r) => simpleStatus(r.status) === 'present').length,
           absent: records.filter((r) => simpleStatus(r.status) === 'absent').length,
           rate: attendanceRate(records),
-          recent: records.slice(0, 5).map((r) => ({ date: r.date, status: simpleStatus(r.status), group: groupName(r.groupId) })),
+          // QA-13: qoldirilgan darslar birinchi (oxirgi 5 tada "kelmadi" tushib qolmasin)
+          recent: [...records.filter((r) => simpleStatus(r.status) === 'absent'), ...records.filter((r) => simpleStatus(r.status) !== 'absent')]
+            .slice(0, 5)
+            .map((r) => ({ date: r.date, status: simpleStatus(r.status), group: groupName(r.groupId) })),
         },
       },
     ]

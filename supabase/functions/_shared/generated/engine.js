@@ -713,7 +713,7 @@ function customerReports(rows, customerIds, options) {
 				present: records.filter((r) => simpleStatus(r.status) === "present").length,
 				absent: records.filter((r) => simpleStatus(r.status) === "absent").length,
 				rate: attendanceRate(records),
-				recent: records.slice(0, 5).map((r) => ({
+				recent: [...records.filter((r) => simpleStatus(r.status) === "absent"), ...records.filter((r) => simpleStatus(r.status) !== "absent")].slice(0, 5).map((r) => ({
 					date: r.date,
 					status: simpleStatus(r.status),
 					group: groupName(r.groupId)

@@ -113,7 +113,7 @@ describe('Telegram bot (ota-onalar uchun)', () => {
   it('navbat xabarlari: bugun/sana bilan qoldirilgan dars, to\'lov (Payme)', () => {
     const ctx = { name: 'Aziza', groupName: 'IELTS — kechki', currency: 'UZS', today: '2026-11-08' }
     expect(notificationText({ kind: 'absence', payload: { date: '2026-11-08' } }, ctx, 'uz')).toBe('⚠️ Aziza bugun darsga kelmadi (IELTS — kechki).')
-    expect(notificationText({ kind: 'absence', payload: { date: '2026-11-06' } }, ctx, 'ru')).toBe('⚠️ Aziza не был(а) на уроке 06.11.2026 (IELTS — kechki).')
+    expect(notificationText({ kind: 'absence', payload: { date: '2026-11-06' } }, ctx, 'ru')).toBe('⚠️ Aziza: пропуск урока 06.11.2026 (IELTS — kechki).')
     expect(notificationText({ kind: 'payment', payload: { amount: 650000, provider: 'payme' } }, ctx, 'uz')).toBe('✅ To\'lov qabul qilindi: 650 000 so\'m (Payme) — Aziza. Rahmat!')
   })
 
@@ -129,5 +129,16 @@ describe('Telegram bot (ota-onalar uchun)', () => {
     expect(sent).toMatchObject({ ok: false, status: 403, description: 'Forbidden: bot was blocked by the user' })
     expect(calls[1]).toEqual({ url: 'https://api.telegram.org/bot123:abc/sendMessage', body: { chat_id: 77, text: 'Salom', disable_web_page_preview: true, reply_markup: keyboardMarkup('contact', 'uz') } })
     expect(keyboardMarkup('remove', 'ru')).toEqual({ remove_keyboard: true })
+  })
+})
+
+describe('QA-13: bot matnlari', () => {
+  it('ruscha "kelmadi" xabari jinssiz (пришёл(ла) / был(а) yo\'q)', async () => {
+    const { notificationText: outboxText } = await import('../../supabase/functions/_shared/telegram')
+    const ctx = { name: 'Ozoda', groupName: 'IELTS', today: '2026-11-20', currency: 'UZS' }
+    const today = outboxText({ kind: 'absence', payload: { date: '2026-11-20' } }, ctx as never, 'ru')
+    const past = outboxText({ kind: 'absence', payload: { date: '2026-11-18' } }, ctx as never, 'ru')
+    expect(today + past).not.toMatch(/\(ла\)|\(а\)/)
+    expect(today).toContain('пропуск')
   })
 })

@@ -116,6 +116,13 @@ describe('N-1: onlayn to\'lovni taqsimlash', () => {
     expect(customerReports(rows, ['c1'], { now, lang: 'uz' })[0].debt).toBe(2_500_000)
   })
 
+  it('QA-13: bot davomatida qoldirilgan dars oxirgi 5 ta yozuvdan tushib qolmaydi', () => {
+    const rows = rowsWith()
+    const days = ['2026-11-02', '2026-11-04', '2026-11-06', '2026-11-09', '2026-11-11', '2026-11-13', '2026-11-16']
+    rows.attendance = days.map((date, i) => attendanceToRow({ id: `a${i}`, groupId: 'g1', customerId: 'c1', date, status: i === 0 ? 'absent' : 'present' } as never, ORG))
+    expect(customerReports(rows, ['c1'], { now, lang: 'uz' })[0].attendance.recent[0]).toMatchObject({ date: '2026-11-02', status: 'absent' })
+  })
+
   it('aka-uka bitta telefonda: qarzi bor yagona o\'quvchi tanlanadi, aks holda null', () => {
     expect(pickDebtor(rowsWith(), ['c1', 'c2'], now)).toBe('c1')
     expect(pickDebtor(rowsWith(), ['c2'], now)).toBeNull()

@@ -55,7 +55,7 @@ describe('xabarlar navbati (Telegram bot)', () => {
     ])
     expect(sent).toEqual([
       { chatId: 77, text: '⚠️ Aziza bugun darsga kelmadi (IELTS — kechki).', lang: 'uz' },
-      { chatId: 88, text: '⚠️ Aziza сегодня не пришёл(ла) на урок (IELTS — kechki).', lang: 'ru' },
+      { chatId: 88, text: '⚠️ Aziza: сегодня пропуск урока (IELTS — kechki).', lang: 'ru' },
       { chatId: 99, text: '✅ To\'lov qabul qilindi: 650 000 so\'m (Payme) — Bobur. Rahmat!', lang: 'uz' },
     ])
   })
