@@ -654,4 +654,31 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+-- B-01: write_audit — tashqaridan chaqirib bo'lmaydi (boshqa markaz jurnaliga soxta yozuv); anon ichki RPC'larni chaqira olmaydi
+select set_config('qa.org_a', :'org_a', false);
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+do $$ begin
+  begin
+    perform public.write_audit(current_setting('qa.org_a')::uuid, 'payment.delete', 'FORGED', null);
+    raise exception 'FAIL: write_audit boshqa markazga yozdi';
+  exception when insufficient_privilege then null; end;
+  perform public.log_event('auth.login', 'QA', null);
+end $$;
+reset role;
+set role anon;
+do $$ begin
+  begin
+    perform public.write_audit(gen_random_uuid(), 'x', 'FORGED anon', null);
+    raise exception 'FAIL: anon write_audit chaqirdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.trash_move('customers', array['c1']);
+    raise exception 'FAIL: anon trash_move chaqirdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ begin
+  if exists (select 1 from public.audit_log where summary like 'FORGED%') then raise exception 'FAIL: soxta jurnal yozuvi'; end if;
+  if not exists (select 1 from public.audit_log where action = 'auth.login' and summary = 'QA') then raise exception 'FAIL: log_event ishlamadi'; end if;
+end $$;
 select 'RLS_OK' as result, :'imported' as imported;
