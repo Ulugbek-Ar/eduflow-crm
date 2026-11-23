@@ -1,8 +1,8 @@
 // Oddiy marshrutlash (kutubxonasiz): / — landing, /app — boshqaruv paneli, /privacy va /terms — huquqiy sahifalar.
 // Sayt pastki papkada joylashsa (GitHub Pages: /eduflow-crm/) — BASE_URL hisobga olinadi
-export type Route = 'landing' | 'app' | 'privacy' | 'terms' | 'owner'
+export type Route = 'landing' | 'app' | 'privacy' | 'terms' | 'owner' | 'notFound'
 
-const ROUTES: Record<Exclude<Route, 'landing'>, string> = { app: 'app', privacy: 'privacy', terms: 'terms', owner: 'owner' }
+const ROUTES: Record<Exclude<Route, 'landing'>, string> = { app: 'app', privacy: 'privacy', terms: 'terms', owner: 'owner', notFound: '404' }
 
 function base(): string {
   const value = import.meta.env.BASE_URL || '/'
@@ -10,13 +10,16 @@ function base(): string {
 }
 
 export function routeFromPath(pathname: string, prefix = base()): Route {
+  if (`${pathname}/` === prefix) return 'landing'
   const path = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : pathname.replace(/^\/+/, '')
   const first = path.split('/')[0]?.toLowerCase() ?? ''
-  if (first === 'app' || first === 'index.html') return first === 'app' ? 'app' : 'landing'
+  if (first === '' || first === 'index.html') return 'landing'
+  if (first === 'app') return 'app'
   if (first === 'privacy') return 'privacy'
   if (first === 'terms') return 'terms'
   if (first === 'owner') return 'owner'
-  return 'landing'
+  // QA-15: noma'lum manzil — "Sahifa topilmadi" (landing emas)
+  return 'notFound'
 }
 
 export function currentRoute(): Route {
