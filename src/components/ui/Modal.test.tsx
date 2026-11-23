@@ -15,6 +15,25 @@ function Disappearing({ onClose }: { onClose: () => void }) {
 }
 
 describe('Modal', () => {
+  it('A-03: birinchi maydon disabled bo\'lsa ham fokus oyna ichida, Escape yopadi', () => {
+    const onClose = vi.fn()
+    const trigger = document.createElement('button')
+    document.body.append(trigger)
+    trigger.focus()
+    const { unmount } = render(
+      <Modal title="Mijoz kartasi" onClose={onClose}>
+        <select disabled aria-label="Bosqich"><option>Yangi</option></select>
+        <button>Chop etish</button>
+      </Modal>,
+    )
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    unmount()
+    trigger.remove()
+  })
+
   it('tashqariga (fonga) bosilganda yopilmaydi, faqat X bilan yopiladi', () => {
     const onClose = vi.fn()
     const { unmount } = render(<Disappearing onClose={onClose} />)
