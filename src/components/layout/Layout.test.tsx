@@ -54,7 +54,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
 
   it('profil menyusida ism, rol, "Profil" va "Chiqish"', async () => {
     const { user } = await renderSignedIn()
-    await user.click(screen.getByRole('button', { name: /^Profil:/ }))
+    await user.click(screen.getByRole('button', { name: /profil menyusi$/ }))
     const menu = screen.getByRole('menu', { name: 'Profil menyusi' })
     expect(within(menu).getByText('Dilshod Karimov')).toBeTruthy()
     expect(within(menu).getByText('Login: direktor')).toBeTruthy()
@@ -63,7 +63,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     await user.click(within(menu).getByRole('menuitem', { name: /Profil/ }))
     expect(await screen.findByRole('region', { name: 'Profil va xavfsizlik' })).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: /^Profil:/ }))
+    await user.click(screen.getByRole('button', { name: /profil menyusi$/ }))
     await user.click(screen.getByRole('menuitem', { name: 'Chiqish' }))
     expect(await screen.findByRole('button', { name: 'Kirish' })).toBeTruthy()
   })
@@ -78,7 +78,7 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     await user.type(within(profile).getByLabelText('Lavozim'), 'Direktor o\'rinbosari')
     await user.click(within(profile).getByRole('button', { name: 'Profilni saqlash' }))
     expect(await screen.findByText('Profil saqlandi')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Profil: Aziz Rahimov' }).textContent).toContain('AR')
+    expect(screen.getByRole('button', { name: /^Aziz Rahimov / }).textContent).toContain('AR')
     const users = JSON.parse(localStorage.getItem('apex:users') ?? '[]') as Array<{ fullName: string; title: string }>
     expect(users[0]).toMatchObject({ fullName: 'Aziz Rahimov', title: 'Direktor o\'rinbosari' })
   })

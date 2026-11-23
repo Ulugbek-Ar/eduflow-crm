@@ -139,14 +139,14 @@ describe('Demo rejim', () => {
     await user.click(screen.getByRole('button', { name: 'Demo\'ni ko\'rish' }))
     const bar = await screen.findByRole('region', { name: 'Demo rejim' })
     expect(getStorageNamespace()).toBe('demo')
-    expect(screen.getByRole('button', { name: 'Profil: Dilshod Rahimov' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^Dilshod Rahimov .* profil menyusi$/ })).toBeTruthy()
     expect(within(screen.getByRole('navigation', { name: 'Bo\'limlar' })).getByRole('button', { name: 'Boshqaruv' })).toBeTruthy()
     // Haqiqiy kalitlar o'zgarmagan, demo alohida
     expect(localStorage.getItem('apex:customers')).toBe(before)
     expect(JSON.parse(localStorage.getItem('eduflow-demo:customers') ?? '[]').length).toBeGreaterThan(5)
 
     await user.selectOptions(within(bar).getByRole('combobox'), 'viewer')
-    expect(await screen.findByRole('button', { name: 'Profil: Nodira Karimova' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: /^Nodira Karimova / })).toBeTruthy()
     expect(within(screen.getByRole('navigation', { name: 'Bo\'limlar' })).queryByRole('button', { name: 'Boshqaruv' })).toBeNull()
 
     await user.click(within(screen.getByRole('region', { name: 'Demo rejim' })).getByRole('button', { name: 'Demo\'dan chiqish' }))

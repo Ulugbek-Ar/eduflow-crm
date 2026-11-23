@@ -1694,4 +1694,6 @@ export const RU: Readonly<Record<string, string>> = {
   'Ism juda uzun (ko\'pi bilan {0} ta belgi)': 'Слишком длинное имя (не более {0} символов)',
   "Butun markaz": "Весь центр",
   "Qo'shimcha (status)": "Дополнительно (статус)",
+  "{0} — profil menyusi": "{0} — меню профиля",
+  "Chek: {0}, {1}, {2}": "Чек: {0}, {1}, {2}",
 }

@@ -34,7 +34,7 @@ export function ProfileMenu() {
         </div>
       }
       trigger={(props) => (
-        <button type="button" className="profile-btn" aria-label={tr('Profil: {0}', { 0: name })} {...props}>
+        <button type="button" className="profile-btn" aria-label={tr('{0} — profil menyusi', { 0: `${name} ${role}` })} {...props}>
           <span className="avatar avatar-sm" aria-hidden="true">
             {getInitials(name)}
           </span>

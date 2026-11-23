@@ -39,7 +39,7 @@ test('ro\'yxatdan o\'tish → sozlash → mijoz → to\'lov va chek → chiqish 
   await noHorizontalScroll(page)
 
   // Chiqish va qayta kirish — ma'lumot joyida
-  await page.getByRole('button', { name: /^Profil:/ }).click()
+  await page.getByRole('button', { name: /profil menyusi$/ }).click()
   await page.getByRole('menuitem', { name: 'Chiqish' }).click()
   await page.getByLabel('Login').fill('direktor')
   await page.getByLabel('Parol', { exact: true }).fill('xato-parol')
@@ -66,7 +66,7 @@ test('xodim: administrator qo\'shadi → xodim vaqtinchalik parol bilan kiradi �
   await dialog.getByRole('button', { name: "Qo'shish" }).click()
   await page.getByRole('dialog', { name: "Xodim qo'shildi" }).getByRole('button', { name: 'Tayyor' }).click()
 
-  await page.getByRole('button', { name: /^Profil:/ }).click()
+  await page.getByRole('button', { name: /profil menyusi$/ }).click()
   await page.getByRole('menuitem', { name: 'Chiqish' }).click()
   await page.getByLabel('Login').fill('malika')
   await page.getByLabel('Parol', { exact: true }).fill(password)
