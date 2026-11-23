@@ -2,6 +2,7 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { makeCustomer, makeTransaction, renderSignedIn } from '../../test/helpers'
+import { TEST_USER_ID } from '../../test/helpers'
 
 const data = { customers: [makeCustomer()], transactions: [makeTransaction()] }
 
@@ -93,7 +94,7 @@ describe('Forma qoralamasi', () => {
     await user.type(within(dialog).getByLabelText(/Telefon/), '935554433')
     await user.click(within(dialog).getByRole('button', { name: 'Qo\'shish' }))
     await screen.findByText('"Jasur Toshev" mijozlar bazasiga qo\'shildi')
-    expect(localStorage.getItem('apex:draft:customer')).toBeNull()
+    expect(localStorage.getItem(`apex:draft:${TEST_USER_ID}:customer`)).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Yangi mijoz' }))
     dialog = await screen.findByRole('dialog', { name: 'Yangi mijoz' })
@@ -101,8 +102,19 @@ describe('Forma qoralamasi', () => {
     expect((within(dialog).getByLabelText(/Ism familiya/) as HTMLInputElement).value).toBe('')
   })
 
+  it('A-08: boshqa xodimning (yoki eski umumiy) qoralamasi ochilmaydi', async () => {
+    localStorage.setItem('apex:draft:customer', JSON.stringify({ name: 'Umumiy qoralama' }))
+    localStorage.setItem('apex:draft:boshqa-xodim:customer', JSON.stringify({ name: 'Begona qoralama' }))
+    const { user } = await renderSignedIn(data)
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
+    await user.click(await screen.findByRole('button', { name: 'Yangi mijoz' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Yangi mijoz' })
+    expect(within(dialog).queryByText(/qoralama tiklandi/)).toBeNull()
+    expect((within(dialog).getByLabelText(/Ism familiya/) as HTMLInputElement).value).toBe('')
+  })
+
   it('"Tozalash" qoralamani o\'chiradi; tahrirlashda qoralama ishlatilmaydi', async () => {
-    localStorage.setItem('apex:draft:customer', JSON.stringify({ name: 'Eski qoralama', phone: 123 }))
+    localStorage.setItem(`apex:draft:${TEST_USER_ID}:customer`, JSON.stringify({ name: 'Eski qoralama', phone: 123 }))
     const { user } = await renderSignedIn(data)
     await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
     await user.click(await screen.findByRole('button', { name: 'Yangi mijoz' }))
@@ -111,7 +123,7 @@ describe('Forma qoralamasi', () => {
     expect((within(dialog).getByLabelText(/Telefon/) as HTMLInputElement).value).toBe('+998')
     await user.click(within(dialog).getByRole('button', { name: 'Tozalash' }))
     expect((within(dialog).getByLabelText(/Ism familiya/) as HTMLInputElement).value).toBe('')
-    expect(localStorage.getItem('apex:draft:customer')).toBeNull()
+    expect(localStorage.getItem(`apex:draft:${TEST_USER_ID}:customer`)).toBeNull()
     await user.click(within(dialog).getByRole('button', { name: 'Bekor qilish' }))
 
     await user.click(screen.getByRole('button', { name: 'Aziza Karimovani tahrirlash' }))
