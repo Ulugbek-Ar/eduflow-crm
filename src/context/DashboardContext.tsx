@@ -146,6 +146,8 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const [trash, setTrash] = useState(() => (cloud ? cloud.initial.trash : loadTrash()))
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref
   const unsavedRef = useRef(false)
+  // B-04: konfliktlar soni — o'zgarsa serverdagi holat olib kelinadi
+  const [conflicts, setConflicts] = useState(0)
   const startupNoticeRef = useRef(false)
   const [saveMonitor] = useState(createSaveMonitor)
   const [customers, setCustomers] = useState(initial.data.customers)
@@ -228,17 +230,13 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
           synced.current = { ...synced.current, [key]: next }
           latest.current = { ...latest.current, [key]: next }
           onSaved(key, { ok: true })
-          onConflict(error.ids.length)
+          toast.error(tr('Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi', { 0: error.ids.length }))
+          setConflicts((n) => n + 1)
           return
         }
         onSaved(key, { ok: false, reason: 'network' })
       }
     })
-  })
-
-  const onConflict = useEffectEvent((count: number) => {
-    toast.error(tr('Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi', { 0: count }))
-    refreshCloud()
   })
 
   useEffect(() => (cloud ? pushCloud('branches', branches) : onSaved(STORAGE_KEYS.branches, setItem(STORAGE_KEYS.branches, branches))), [branches, cloud])
@@ -289,6 +287,10 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       }
     })
   })
+
+  useEffect(() => {
+    if (conflicts > 0) refreshCloud()
+  }, [conflicts])
 
   useEffect(() => {
     if (!cloud) return
