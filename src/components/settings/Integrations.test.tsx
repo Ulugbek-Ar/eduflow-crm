@@ -34,6 +34,14 @@ beforeEach(() => {
 })
 
 describe('Integratsiyalar (bulutli rejim)', () => {
+  it('N-2: Payme test kaliti saqlangan bo\'lsa — "test kaliti faol" ogohlantirishi', async () => {
+    server.status = { payme: { configured: true, key: '…alit', testKey: '…test' } }
+    const { user } = await renderSignedIn()
+    await user.click(screen.getByRole('button', { name: 'Sozlamalar' }))
+    const payme = await within(await screen.findByRole('region', { name: 'Onlayn to\'lov (Payme, Click)' })).findByRole('region', { name: 'Payme' })
+    expect((await within(payme).findByText(/Test kaliti faol/)).textContent).toContain('kassaga')
+  })
+
   it('Payme: endpoint manzili, server xatosi maydon bilan, ulash — merchant id sozlamaga, kalit faqat serverga', async () => {
     const { user } = await renderSignedIn()
     await user.click(screen.getByRole('button', { name: 'Sozlamalar' }))
@@ -78,7 +86,7 @@ describe('Integratsiyalar (bulutli rejim)', () => {
     const text = () => (within(dialog).getByLabelText('Xabar matni') as HTMLTextAreaElement).value
     const link = /https:\/\/checkout\.paycom\.uz\/(\S+)/.exec(text())
     expect(link).not.toBeNull()
-    expect(atob(link?.[1] ?? '')).toBe(`m=${PAYME};ac.phone=901234567;a=50000000;l=uz`)
+    expect(atob(link?.[1] ?? '')).toBe(`m=${PAYME};ac.phone=901234567;ac.student=c1;a=50000000;l=uz`)
     expect(text()).toContain('To\'lov havolasi:')
     await user.click(within(dialog).getByRole('checkbox', { name: /To'lov havolasini qo'shish/ }))
     expect(text()).not.toContain('checkout.paycom.uz')

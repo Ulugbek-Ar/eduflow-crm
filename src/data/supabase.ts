@@ -30,6 +30,7 @@ import {
   rowToGroup,
   rowToTeacher,
   rowToTransaction,
+  isLiveTransactionRow,
   teacherToRow,
   transactionToRow,
 } from './mappers'
@@ -327,7 +328,7 @@ export async function loadSnapshot(org: CloudOrg, role: Role = 'admin'): Promise
   return {
     data: {
       customers: active(customers.data).map(rowToCustomer),
-      transactions: active(transactions.data).map(rowToTransaction),
+      transactions: active(transactions.data).filter(isLiveTransactionRow).map(rowToTransaction),
       courses: active(courses.data).map(rowToCourse),
       settings: org.settings,
       teachers: active(teachers.data).map(rowToTeacher),
@@ -426,7 +427,7 @@ export class CloudSync {
       .order('updated_at')
       .limit(500)
     fail(error)
-    return ((data ?? []) as Row[]).map(rowToTransaction)
+    return ((data ?? []) as Row[]).filter(isLiveTransactionRow).map(rowToTransaction)
   }
 
   // DashboardContext: istalgan ro'yxat o'zgarishi

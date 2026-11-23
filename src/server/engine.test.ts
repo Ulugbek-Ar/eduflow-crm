@@ -110,6 +110,12 @@ describe('N-1: onlayn to\'lovni taqsimlash', () => {
     expect(customerReports(rowsWith(paid as never), ['c1'], { now, lang: 'uz' })[0].debt).toBe(0)
   })
 
+  it('N-2: test kaliti bilan kelgan (is_test) kirim qarzni kamaytirmaydi', () => {
+    const rows = rowsWith([{ id: 'tt', type: 'income', amount: 2_500_000, method: 'card', category: 'course_fee', note: '', customerId: 'c1', status: 'paid', date: now.toISOString(), enrollmentId: 'e1' } as never])
+    rows.transactions = rows.transactions.map((r) => ({ ...r, is_test: true }))
+    expect(customerReports(rows, ['c1'], { now, lang: 'uz' })[0].debt).toBe(2_500_000)
+  })
+
   it('aka-uka bitta telefonda: qarzi bor yagona o\'quvchi tanlanadi, aks holda null', () => {
     expect(pickDebtor(rowsWith(), ['c1', 'c2'], now)).toBe('c1')
     expect(pickDebtor(rowsWith(), ['c2'], now)).toBeNull()

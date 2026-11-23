@@ -620,4 +620,15 @@ begin
   select count(*) into v_n from public.transactions where organization_id = v_org and provider_ref like 'split1%' and status = 'cancelled';
   if v_n <> 2 then raise exception 'FAIL: bekor qilishda % ta kirim bekor bo''ldi (2 kutilgan)', v_n; end if;
 end $$;
+-- N-2: Payme test kaliti — kirim is_test
+do $$
+declare v_org uuid := (select id from public.organizations where name = 'Pay QA'); v public.payment_transactions;
+begin
+  perform public.pay_tx_create(v_org, 'payme', 'sandbox1', 'pa', 100000000, 10, '{}'::jsonb, true);
+  select * into v from public.pay_tx_perform(v_org, 'payme', 'sandbox1', 11, 'Payme');
+  if not v.is_test or exists (select 1 from public.transactions where organization_id = v_org and provider_ref like 'sandbox1%' and not is_test) then
+    raise exception 'FAIL: test kaliti bilan kelgan kirim is_test emas';
+  end if;
+  if exists (select 1 from public.transactions where organization_id = v_org and provider_ref like 'bad%' and is_test) then raise exception 'FAIL: oddiy to''lov is_test'; end if;
+end $$;
 select 'RLS_OK' as result, :'imported' as imported;

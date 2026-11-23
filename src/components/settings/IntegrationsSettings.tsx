@@ -133,6 +133,11 @@ export function IntegrationsSettings({ orgId }: { orgId: string }) {
             <Input label={tr('Test kaliti (ixtiyoriy)')} type="password" autoComplete="off" value={payme.testKey} hint={keyHint(status?.payme?.testKey)} onChange={(e) => setPayme({ ...payme, testKey: e.target.value })} />
             <Input label={tr('MXIK (IKPU) kodi — fiskal chek uchun (ixtiyoriy)')} inputMode="numeric" maxLength={17} value={payme.ikpu} onChange={(e) => setPayme({ ...payme, ikpu: e.target.value.replace(/\D/g, '') })} />
           </div>
+          {Boolean(status?.payme?.testKey) && (
+            <p className="notice notice-warning" role="status">
+              {tr('Test kaliti faol: u bilan kelgan to\'lovlar kassaga, qarzga va hisobotlarga kirmaydi. Sandbox sinovidan keyin test kalitini o\'chiring.')}
+            </p>
+          )}
           <CopyField label={tr('Endpoint manzili (Payme kabinetiga kiriting)')} value={functionUrl('payme', orgId)} />
           <p className="small-note muted">{tr('Payme kabinetida hisob maydoni: phone — "Telefon raqami". Ota-ona o\'quvchi telefoni bilan to\'laydi, to\'lov kassaga avtomatik kirim bo\'ladi.')}</p>
           {error.payme && <p className="notice notice-error" role="alert">{error.payme}</p>}

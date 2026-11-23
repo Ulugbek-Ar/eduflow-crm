@@ -22,6 +22,8 @@ export interface PaymentTx {
   cancelTime: number | null
   reason: number | null
   account: Record<string, string>
+  // N-2: Payme test kaliti bilan (sandbox) — kassa, qarz va hisobotlarga kirmaydi
+  isTest?: boolean
 }
 
 export interface PaymentCustomer {
@@ -42,7 +44,7 @@ export interface PaymentStore {
   findCustomer: (ref: PaymentRef) => Promise<FoundCustomer>
   get: (providerId: string) => Promise<PaymentTx | null>
   // Takror chaqirilsa mavjudi qaytadi
-  create: (input: { providerId: string; customerId: string | null; amount: number; createTime: number; account: Record<string, string> }) => Promise<PaymentTx>
+  create: (input: { providerId: string; customerId: string | null; amount: number; createTime: number; account: Record<string, string>; isTest?: boolean }) => Promise<PaymentTx>
   // Kirim yozadi (bir marta); holat 2 bo'lsa o'zgarishsiz qaytadi
   perform: (providerId: string, now: number) => Promise<PaymentTx>
   cancel: (providerId: string, reason: number | null, now: number) => Promise<PaymentTx>

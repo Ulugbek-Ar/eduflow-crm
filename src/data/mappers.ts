@@ -304,3 +304,6 @@ export function rowToBranch(r: Row): Branch {
   if (opt(r.updated_at)) b.updatedAt = String(r.updated_at)
   return b
 }
+
+// N-2: Payme test kaliti (sandbox) bilan kelgan kirim — kassa, qarz va hisobotlarga kirmaydi
+export const isLiveTransactionRow = (r: Row): boolean => r.is_test !== true

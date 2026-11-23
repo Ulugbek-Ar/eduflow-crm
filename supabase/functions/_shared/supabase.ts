@@ -72,6 +72,7 @@ function toTx(r: Row): PaymentTx {
     cancelTime: num(r.cancel_time),
     reason: num(r.reason),
     account: (r.account ?? {}) as Record<string, string>,
+    isTest: r.is_test === true,
   }
 }
 
@@ -120,7 +121,7 @@ export function paymentStore(sb: SupabaseClient, org: string, provider: PaymentP
     },
     get: async (providerId) => (await rows('pay_tx_get', key(providerId)))[0] ?? null,
     create: (input) =>
-      first('pay_tx_create', { ...key(input.providerId), p_customer: input.customerId, p_amount: input.amount, p_create_time: input.createTime, p_account: input.account }),
+      first('pay_tx_create', { ...key(input.providerId), p_customer: input.customerId, p_amount: input.amount, p_create_time: input.createTime, p_account: input.account, p_is_test: input.isTest ?? false }),
     perform: async (providerId, now) => {
       // Bir nechta o'qish: summa qarzi eng eski o'qishdan boshlab bo'linadi (bajarilgan bo'lsa — SQL o'zgarishsiz qaytaradi)
       const [tx] = await rows('pay_tx_get', key(providerId))

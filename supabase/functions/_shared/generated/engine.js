@@ -105,6 +105,7 @@ function rowToAttendance(r) {
 	if (opt(r.marked_by)) a.markedBy = String(r.marked_by);
 	return a;
 }
+var isLiveTransactionRow = (r) => r.is_test !== true;
 // src/server/i18n-stub.ts
 function tr(text, params) {
 	if (!params) return text;
@@ -616,7 +617,7 @@ function debtorReminders(rows, options) {
 	const settings = sanitizeSettings(rows.settings);
 	const customers = alive(rows.customers).map(rowToCustomer);
 	const ids = new Set(customers.map((c) => c.id));
-	const debts = computeDebts(customers, alive(rows.courses).map(rowToCourse), alive(rows.transactions).map(rowToTransaction), options.now, {
+	const debts = computeDebts(customers, alive(rows.courses).map(rowToCourse), alive(rows.transactions).filter(isLiveTransactionRow).map(rowToTransaction), options.now, {
 		groups: alive(rows.groups).map(rowToGroup),
 		enrollments: alive(rows.enrollments).map(rowToEnrollment).filter((e) => ids.has(e.customerId)),
 		settings: {
@@ -651,7 +652,7 @@ function customerReports(rows, customerIds, options) {
 	const settings = sanitizeSettings(rows.settings);
 	const customers = alive(rows.customers).map(rowToCustomer);
 	const courses = alive(rows.courses).map(rowToCourse);
-	const transactions = alive(rows.transactions).map(rowToTransaction);
+	const transactions = alive(rows.transactions).filter(isLiveTransactionRow).map(rowToTransaction);
 	const groups = alive(rows.groups).map(rowToGroup);
 	const enrollments = alive(rows.enrollments).map(rowToEnrollment);
 	const attendance = (rows.attendance ?? []).map(rowToAttendance);
@@ -716,7 +717,7 @@ function debtRowOf(rows, customerId, now) {
 	const customer = alive(rows.customers).map(rowToCustomer).find((c) => c.id === customerId);
 	if (!customer) return null;
 	const enrollments = alive(rows.enrollments).map(rowToEnrollment).filter((e) => e.customerId === customerId);
-	return customerDebt(customer, alive(rows.courses).map(rowToCourse), alive(rows.transactions).map(rowToTransaction), now, {
+	return customerDebt(customer, alive(rows.courses).map(rowToCourse), alive(rows.transactions).filter(isLiveTransactionRow).map(rowToTransaction), now, {
 		groups: alive(rows.groups).map(rowToGroup),
 		enrollments,
 		settings: {

@@ -2,6 +2,7 @@
 // `npm run build:engine` -> supabase/functions/_shared/generated/engine.js (Deno shu yig'mani import qiladi).
 // Faqat sof funksiyalar: brauzer API'lari, React va tarjima lug'ati yig'maga kirmaydi (vite.engine.config.ts)
 import { rowToAttendance, rowToCourse, rowToCustomer, rowToEnrollment, rowToGroup, rowToTransaction } from '../data/mappers'
+import { isLiveTransactionRow } from '../data/mappers'
 import type { Row } from '../data/mappers'
 import { attendanceRate, recordsFor, simpleStatus } from '../utils/attendance'
 import { computeDebts, customerDebt } from '../utils/debts'
@@ -58,7 +59,7 @@ export function debtorReminders(rows: OrgRows, options: { now: Date; lang: 'uz' 
   const settings = sanitizeSettings(rows.settings)
   const customers = alive(rows.customers).map(rowToCustomer)
   const ids = new Set(customers.map((c) => c.id))
-  const debts = computeDebts(customers, alive(rows.courses).map(rowToCourse), alive(rows.transactions).map(rowToTransaction), options.now, {
+  const debts = computeDebts(customers, alive(rows.courses).map(rowToCourse), alive(rows.transactions).filter(isLiveTransactionRow).map(rowToTransaction), options.now, {
     groups: alive(rows.groups).map(rowToGroup),
     enrollments: alive(rows.enrollments)
       .map(rowToEnrollment)
@@ -94,7 +95,7 @@ export function customerReports(rows: OrgRows, customerIds: readonly string[], o
   const settings = sanitizeSettings(rows.settings)
   const customers = alive(rows.customers).map(rowToCustomer)
   const courses = alive(rows.courses).map(rowToCourse)
-  const transactions = alive(rows.transactions).map(rowToTransaction)
+  const transactions = alive(rows.transactions).filter(isLiveTransactionRow).map(rowToTransaction)
   const groups = alive(rows.groups).map(rowToGroup)
   const enrollments = alive(rows.enrollments).map(rowToEnrollment)
   const attendance = (rows.attendance ?? []).map(rowToAttendance)
@@ -145,7 +146,7 @@ function debtRowOf(rows: OrgRows, customerId: string, now: Date) {
   const customer = alive(rows.customers).map(rowToCustomer).find((c) => c.id === customerId)
   if (!customer) return null
   const enrollments = alive(rows.enrollments).map(rowToEnrollment).filter((e) => e.customerId === customerId)
-  return customerDebt(customer, alive(rows.courses).map(rowToCourse), alive(rows.transactions).map(rowToTransaction), now, {
+  return customerDebt(customer, alive(rows.courses).map(rowToCourse), alive(rows.transactions).filter(isLiveTransactionRow).map(rowToTransaction), now, {
     groups: alive(rows.groups).map(rowToGroup),
     enrollments,
     settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay },

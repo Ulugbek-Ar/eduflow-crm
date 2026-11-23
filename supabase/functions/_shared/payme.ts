@@ -90,6 +90,13 @@ export function paymeAuthorized(header: string | null, config: PaymeConfig | nul
   return safeEqual(password, config.key) || (Boolean(config.testKey) && safeEqual(password, config.testKey ?? ''))
 }
 
+// N-2: qaysi kalit bilan kelgan — 'test' (sandbox) tranzaksiyasi kassa, qarz va hisobotlarga kirmaydi
+export function paymeKeyKind(authorization: string | null, config: PaymeConfig | null): 'live' | 'test' | null {
+  if (!config || !paymeAuthorized(authorization, config)) return null
+  const password = atob((authorization ?? '').slice('Basic '.length).trim()).split(':').slice(1).join(':')
+  return safeEqual(password, config.key) ? 'live' : 'test'
+}
+
 const isInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value)
 
 function validAmount(amount: unknown): amount is number {
@@ -168,7 +175,7 @@ export async function handlePayme(body: unknown, ctx: PaymeContext): Promise<Pay
         const checked = await checkAccount(id, params, ctx)
         if (!checked.ok) return checked.error
         if (ctx.now - params.time > PAYME_TIMEOUT_MS) return fail(id, 'cannotPerform')
-        const tx = await ctx.store.create({ providerId: params.id, customerId: checked.customer?.id ?? null, amount: checked.amount, createTime: params.time, account: checked.account })
+        const tx = await ctx.store.create({ providerId: params.id, customerId: checked.customer?.id ?? null, amount: checked.amount, createTime: params.time, account: checked.account, isTest: paymeKeyKind(ctx.authorization, config) === 'test' })
         return ok(id, { create_time: tx.createTime, transaction: tx.id, state: tx.state })
       }
 

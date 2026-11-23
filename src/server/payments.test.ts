@@ -4,7 +4,7 @@ import type { ClickConfig } from '../../supabase/functions/_shared/click'
 import { md5, safeEqual } from '../../supabase/functions/_shared/hash'
 import { accountPhone } from '../../supabase/functions/_shared/payments'
 import type { PaymentCustomer, PaymentStore, PaymentTx } from '../../supabase/functions/_shared/payments'
-import { handlePayme, PAYME_TIMEOUT_MS, paymeAuthorized } from '../../supabase/functions/_shared/payme'
+import { handlePayme, PAYME_TIMEOUT_MS, paymeAuthorized, paymeKeyKind } from '../../supabase/functions/_shared/payme'
 import type { PaymeConfig, PaymeResponse } from '../../supabase/functions/_shared/payme'
 
 // Xotiradagi ombor: SQL funksiyalari bilan bir xil qoidalar (takror yaratish — mavjudi, bajarish — bir marta kirim)
@@ -19,7 +19,7 @@ function memoryStore(customers: Record<string, PaymentCustomer | 'ambiguous'>) {
       const known = txs.get(input.providerId)
       if (known) return known
       seq += 1
-      const tx: PaymentTx = { provider: 'payme', id: `pt${seq}`, num: seq, state: 1, performTime: null, cancelTime: null, reason: null, ...input }
+      const tx: PaymentTx = { provider: 'payme', id: `pt${seq}`, num: seq, state: 1, performTime: null, cancelTime: null, reason: null, ...input, isTest: input.isTest ?? false }
       txs.set(input.providerId, tx)
       return tx
     },
@@ -90,6 +90,17 @@ describe('Payme Merchant API', () => {
     const r = await call('CheckPerformTransaction', { amount: 65_000_000, account: { phone: '901234567' } }, { store, authorization: auth('xato') })
     expect(r).toMatchObject({ id: 7, error: { code: -32504 } })
     expect(await handlePayme('buzuq', { authorization: null, config, store, now: T0 })).toMatchObject({ error: { code: -32700 } })
+  })
+
+  it('N-2: test kaliti bilan kelgan tranzaksiya is_test (kassa, qarz va hisobotlarga kirmaydi)', async () => {
+    expect(paymeKeyKind(auth('asosiy-kalit'), config)).toBe('live')
+    expect(paymeKeyKind(auth('test-kalit'), config)).toBe('test')
+    expect(paymeKeyKind(auth('xato'), config)).toBeNull()
+    const { store, txs } = memoryStore(CUSTOMERS)
+    await call('CreateTransaction', { id: 'tst', time: T0, amount: 65_000_000, account: { phone: '901234567' } }, { store, authorization: auth('test-kalit') })
+    await call('CreateTransaction', { id: 'liv', time: T0, amount: 65_000_000, account: { phone: '901234567' } }, { store })
+    expect(txs.get('tst')?.isTest).toBe(true)
+    expect(txs.get('liv')?.isTest).toBe(false)
   })
 
   it('CheckPerformTransaction: hisob, summa chegarasi, fiskal chek (MXIK berilsa)', async () => {
