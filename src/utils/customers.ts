@@ -85,9 +85,13 @@ export function groupByStage(customers: readonly Customer[], stages: readonly Cu
 
 export type CustomerFormErrors = Partial<Record<'name' | 'phone' | 'email', string>>
 
+export const NAME_MAX = 100
+
 export function validateCustomer(input: CustomerInput, existing: readonly Customer[], editingId?: string): CustomerFormErrors {
   const errors: CustomerFormErrors = {}
   if (input.name.trim().length < 2) errors.name = tr('Ismni kiriting (kamida 2 ta belgi)')
+  // A-06: juda uzun ism jadval, chek va SMS'ni buzadi
+  else if (input.name.trim().length > NAME_MAX) errors.name = tr('Ism juda uzun (ko\'pi bilan {0} ta belgi)', { 0: NAME_MAX })
 
   if (!isValidPhone(input.phone)) {
     errors.phone = tr('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')

@@ -1,6 +1,7 @@
 // Mijozlarni import qilish: ustunlarni aniqlash (o'zbek / rus / ingliz sarlavhalari), qiymatlarni normallashtirish,
 // fayl ichidagi va bazadagi takrorlar, natija rejasi (qo'shiladi / yangilanadi / o'tkaziladi) va xatolar CSV'si
 import { tr } from '../../i18n'
+import { NAME_MAX } from '../customers'
 import type { Course } from '../../types/course.types'
 import type { Customer, CustomerSource, CustomerStatus } from '../../types/customer.types'
 import { formatPhone, isValidPhone, phoneDigits } from '../phone'
@@ -259,6 +260,7 @@ export function analyzeImport(table: readonly string[][], o: ImportOptions): Imp
       warnings,
     }
     if (name.length < 2) return { ...row, action: 'error', reason: tr('Ism yo\'q yoki juda qisqa') }
+    if (name.length > NAME_MAX) return { ...row, action: 'error', reason: tr('Ism juda uzun (ko\'pi bilan {0} ta belgi)', { 0: NAME_MAX }) }
     if (!phone) return { ...row, action: 'error', reason: rawPhone ? tr('Telefon noto\'g\'ri: {0}', { 0: rawPhone }) : tr('Telefon yo\'q') }
     const digits = phoneDigits(phone)
     const first = seen.get(digits)

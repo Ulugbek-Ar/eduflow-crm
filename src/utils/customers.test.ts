@@ -163,3 +163,11 @@ describe('A-05: harf va raqam aralash qidiruv', () => {
   })
 })
 
+describe('A-06: ism uzunligi', () => {
+  it('100 belgidan uzun ism qabul qilinmaydi', () => {
+    const base = { name: 'A'.repeat(101), phone: '+998 90 765 43 21', course: 'IELTS', status: 'new', source: 'website' } as Parameters<typeof validateCustomer>[0]
+    expect(validateCustomer(base, []).name).toMatch(/100/)
+    expect(validateCustomer({ ...base, name: 'A'.repeat(100) }, []).name).toBeUndefined()
+  })
+})
+
