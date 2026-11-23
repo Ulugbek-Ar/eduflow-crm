@@ -214,7 +214,7 @@ supabase functions deploy click --no-verify-jwt
       "Payme'ni ulash". Test (sandbox) kaliti va MXIK (IKPU) kodi — ixtiyoriy (MXIK berilsa, Payme fiskal chek uchun
       `detail` oladi).
 - [ ] Payme kabinetida kassa sozlamalari: **Endpoint** — ilova ko'rsatgan manzil
-      (`https://<loyiha>.supabase.co/functions/v1/payme?org=<markaz id>`), **hisob maydoni** — `phone`
+      (`https://<loyiha>.supabase.co/functions/v1/payme?org=<markaz id>`), **hisob maydonlari** — `phone` va (ixtiyoriy) `student` — o'quvchi id'si: to'lov havolasida ikkalasi yuboriladi, server avval `student`, keyin telefon bo'yicha qidiradi (bitta telefonda aka-uka bo'lsa ham to'lov to'g'ri o'quvchiga tushadi)
       ("Telefon raqami", 9 xona).
 - [ ] Sandbox ([test.paycom.uz](https://test.paycom.uz)): endpoint va test kaliti bilan barcha ssenariylar (CheckPerform,
       Create, Perform, Cancel, CheckTransaction, GetStatement) o'tishini tekshiring, so'ng kassani ishchi rejimga o'tkazing.

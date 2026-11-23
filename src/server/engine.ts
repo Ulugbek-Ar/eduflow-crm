@@ -67,7 +67,7 @@ export function debtorReminders(rows: OrgRows, options: { now: Date; lang: 'uz' 
   })
   const template = options.lang === 'ru' ? settings.reminderTemplateRu : settings.reminderTemplateUz
   return debts.map((row) => {
-    const link = options.withLink ? paymentLink(settings, row.customer.phone, row.debt, options.lang) : null
+    const link = options.withLink ? paymentLink(settings, row.customer.phone, row.debt, options.lang, row.customer.id) : null
     const text = fillTemplate(template, {
       ism: row.customer.name,
       summa: money(row.debt, settings.currency, options.lang),
@@ -116,7 +116,7 @@ export function customerReports(rows: OrgRows, customerIds: readonly string[], o
         debt: amount,
         advance: debt?.advance ?? 0,
         monthly: debt?.monthly ?? 0,
-        link: amount > 0 ? paymentLink(settings, customer.phone, amount, options.lang) : null,
+        link: amount > 0 ? paymentLink(settings, customer.phone, amount, options.lang, customer.id) : null,
         currency: settings.currency,
         groups: own.flatMap((e) => {
           const g = groups.find((x) => x.id === e.groupId)
@@ -131,6 +131,51 @@ export function customerReports(rows: OrgRows, customerIds: readonly string[], o
       },
     ]
   })
+}
+
+// N-1: onlayn to'lovni o'quvchining o'qishlari bo'yicha taqsimlash — avval eng eski o'qish qarzi, keyin keyingisi;
+// qoldiq (avans) — eng eski faol o'qishga. O'qish bo'lmasa — bitta bog'lanmagan qism (enrollmentId: null)
+export interface PaymentPart {
+  enrollmentId: string | null
+  amount: number
+}
+
+function debtRowOf(rows: OrgRows, customerId: string, now: Date) {
+  const settings = sanitizeSettings(rows.settings)
+  const customer = alive(rows.customers).map(rowToCustomer).find((c) => c.id === customerId)
+  if (!customer) return null
+  const enrollments = alive(rows.enrollments).map(rowToEnrollment).filter((e) => e.customerId === customerId)
+  return customerDebt(customer, alive(rows.courses).map(rowToCourse), alive(rows.transactions).map(rowToTransaction), now, {
+    groups: alive(rows.groups).map(rowToGroup),
+    enrollments,
+    settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay },
+  })
+}
+
+export function allocatePayment(rows: OrgRows, customerId: string, amountSom: number, now: Date): PaymentPart[] {
+  const ledgers = [...(debtRowOf(rows, customerId, now)?.ledgers ?? [])].sort(
+    (a, b) => a.enrollment.startDate.localeCompare(b.enrollment.startDate) || a.enrollment.id.localeCompare(b.enrollment.id),
+  )
+  if (ledgers.length === 0 || amountSom <= 0) return [{ enrollmentId: null, amount: amountSom }]
+  const parts = new Map<string, number>()
+  let left = amountSom
+  for (const l of ledgers) {
+    const take = Math.min(left, Math.max(0, -l.balance))
+    if (take <= 0) continue
+    parts.set(l.enrollment.id, take)
+    left -= take
+  }
+  if (left > 0) {
+    const target = ledgers.find((l) => l.enrollment.status === 'active') ?? ledgers.find((l) => l.enrollment.status === 'paused') ?? ledgers[ledgers.length - 1]
+    parts.set(target.enrollment.id, (parts.get(target.enrollment.id) ?? 0) + left)
+  }
+  return [...parts].map(([enrollmentId, amount]) => ({ enrollmentId, amount }))
+}
+
+// N-1: bitta telefonda bir nechta o'quvchi — qarzi bor yagona o'quvchi; 0 yoki 2+ bo'lsa null (to'lov bog'lanmagan yoziladi)
+export function pickDebtor(rows: OrgRows, customerIds: readonly string[], now: Date): string | null {
+  const debtors = customerIds.filter((id) => (debtRowOf(rows, id, now)?.debt ?? 0) > 0)
+  return debtors.length === 1 ? debtors[0] : null
 }
 
 // Server UTC'da ishlaydi: Toshkent vaqtidagi "hozir" (getDate/getMonth Toshkent sanasini beradi)

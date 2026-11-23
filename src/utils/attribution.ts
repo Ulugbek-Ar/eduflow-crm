@@ -2,7 +2,8 @@
 //   1. Tranzaksiyada enrollmentId bo'lsa (va bunday o'qish bor bo'lsa) — o'sha o'qish (guruh).
 //   2. Bo'lmasa — to'lov sanasida o'quvchining shu kurs (Customer.course) bo'yicha faol o'qishi; bir nechta bo'lsa —
 //      eng oldin boshlangani.
-//   3. Bunday o'qish ham topilmasa — kirim hech bir guruhga (va maoshga) hisoblanmaydi.
+//   3. Kurs nomi mos kelmasa (mijoz kursi o'zgargan) — shu sanadagi eng oldin boshlangan faol o'qishi (pul "yo'qolmaydi").
+//   4. Bunday o'qish ham topilmasa — kirim hech bir guruhga (va maoshga) hisoblanmaydi.
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
@@ -26,15 +27,15 @@ export function attributeIncome(t: Pick<Transaction, 'type' | 'category' | 'enro
   const customer = ctx.customers.find((c) => c.id === t.customerId)
   if (!customer) return null
   const day = dayString(new Date(t.date))
-  const candidates = ctx.enrollments
-    .filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day))
+  const active = ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day)).sort((a, b) => a.startDate.localeCompare(b.startDate))
+  const candidates = active
     .filter((e) => {
       const group = ctx.groups.find((g) => g.id === e.groupId)
       const course = ctx.courses.find((c) => c.id === group?.courseId)
       return course?.name === customer.course
     })
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
-  return candidates[0] ?? null
+  return candidates[0] ?? active[0] ?? null
 }
 
 // Kirimlarni o'qish id'si bo'yicha guruhlash (faqat "To'langan" kurs to'lovlari va boshqa kirimlar)

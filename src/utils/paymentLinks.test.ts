@@ -11,6 +11,13 @@ describe('onlayn to\'lov havolalari', () => {
     expect(atob(url.slice('https://checkout.paycom.uz/'.length))).toBe(`m=${PAYME};ac.phone=901234567;a=65000000;l=ru`)
   })
 
+  it('N-1: o\'quvchi id\'si — Payme ac.student, Click transaction_param (aka-uka bitta telefonda ajratiladi)', () => {
+    const payme = paymeCheckoutUrl(PAYME, '+998 90 123 45 67', 650_000, 'uz', 'c42')
+    expect(atob(payme.slice('https://checkout.paycom.uz/'.length))).toBe(`m=${PAYME};ac.phone=901234567;ac.student=c42;a=65000000;l=uz`)
+    expect(new URL(clickPayUrl('1', '2', '+998 90 123 45 67', 1000, 'c42')).searchParams.get('transaction_param')).toBe('c42')
+    expect(atob((paymentLink({ paymeMerchantId: PAYME, clickServiceId: '', clickMerchantId: '' }, '901234567', 1000, 'uz', 'c7') ?? '').split('/').pop() ?? '')).toContain('ac.student=c7')
+  })
+
   it('Click: service_id, merchant_id, summa so\'mda, transaction_param — telefon', () => {
     const url = new URL(clickPayUrl('12345', '678', '+998 90 123 45 67', 650_000))
     expect(url.origin + url.pathname).toBe('https://my.click.uz/services/pay')

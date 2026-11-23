@@ -4,7 +4,7 @@
 // Hisob (account) maydoni — "phone": o'quvchi (ota-ona) telefoni. Summa — tiyinda.
 // Holatlar: 1 yaratildi, 2 bajarildi, -1 bekor, -2 bajarilgach bekor. Yaratilgandan 12 soat o'tsa — bajarib bo'lmaydi.
 import { safeEqual } from './hash.ts'
-import { accountPhone, isRecord, MAX_PAYMENT_SOM, MIN_PAYMENT_SOM } from './payments.ts'
+import { accountRef, isRecord, MAX_PAYMENT_SOM, MIN_PAYMENT_SOM } from './payments.ts'
 import type { PaymentCustomer, PaymentStore, PaymentTx } from './payments.ts'
 
 export const PAYME_TIMEOUT_MS = 43_200_000
@@ -105,17 +105,18 @@ const txTimes = (tx: PaymentTx) => ({
   reason: tx.reason,
 })
 
-type Checked = { ok: false; error: PaymeResponse } | { ok: true; customer: PaymentCustomer; phone: string; amount: number }
+type Checked = { ok: false; error: PaymeResponse } | { ok: true; customer: PaymentCustomer | null; account: Record<string, string>; amount: number }
 
 // Hisob va summani tekshirish (CheckPerformTransaction va yangi CreateTransaction uchun umumiy)
 async function checkAccount(id: RpcId, params: Record<string, unknown>, ctx: PaymeContext): Promise<Checked> {
   const account = isRecord(params.account) ? params.account : null
-  const phone = accountPhone(account?.phone)
-  if (!phone) return { ok: false, error: fail(id, 'account', 'phone') }
-  const customer = await ctx.store.findCustomer(phone)
-  if (!customer) return { ok: false, error: fail(id, 'account', 'phone') }
+  const ref = accountRef(account?.student, account?.phone)
+  if (!ref) return { ok: false, error: fail(id, 'account', 'phone') }
+  const found = await ctx.store.findCustomer(ref)
+  if (!found) return { ok: false, error: fail(id, 'account', ref.customerId ? 'student' : 'phone') }
   if (!validAmount(params.amount)) return { ok: false, error: fail(id, 'amount') }
-  return { ok: true, customer, phone, amount: params.amount }
+  const saved: Record<string, string> = { ...(ref.phone ? { phone: ref.phone } : {}), ...(ref.customerId ? { student: ref.customerId } : {}) }
+  return { ok: true, customer: found === 'ambiguous' ? null : found, account: saved, amount: params.amount }
 }
 
 // Fiskal chek ma'lumoti (kassa sozlamasida MXIK berilgan bo'lsa)
@@ -149,7 +150,7 @@ export async function handlePayme(body: unknown, ctx: PaymeContext): Promise<Pay
       case 'CheckPerformTransaction': {
         const checked = await checkAccount(id, params, ctx)
         if (!checked.ok) return checked.error
-        const detail = receiptDetail(config, checked.amount, `O'quv markazi xizmati: ${checked.customer.name}`.slice(0, 128))
+        const detail = receiptDetail(config, checked.amount, `O'quv markazi xizmati${checked.customer ? `: ${checked.customer.name}` : ''}`.slice(0, 128))
         return ok(id, { allow: true, ...(detail ? { detail } : {}) })
       }
 
@@ -167,7 +168,7 @@ export async function handlePayme(body: unknown, ctx: PaymeContext): Promise<Pay
         const checked = await checkAccount(id, params, ctx)
         if (!checked.ok) return checked.error
         if (ctx.now - params.time > PAYME_TIMEOUT_MS) return fail(id, 'cannotPerform')
-        const tx = await ctx.store.create({ providerId: params.id, customerId: checked.customer.id, amount: checked.amount, createTime: params.time, account: { phone: checked.phone } })
+        const tx = await ctx.store.create({ providerId: params.id, customerId: checked.customer?.id ?? null, amount: checked.amount, createTime: params.time, account: checked.account })
         return ok(id, { create_time: tx.createTime, transaction: tx.id, state: tx.state })
       }
 

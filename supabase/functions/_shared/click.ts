@@ -1,10 +1,10 @@
 // Click SHOP API (Prepare / Complete) — sof protokol mantig'i. Edge Function (supabase/functions/click) formani
 // o'qiydi, kalit va omborni beradi. Hujjat: https://docs.click.uz/click-api-request/
 //
-// merchant_trans_id — o'quvchi (ota-ona) telefoni (to'lov havolasida transaction_param). Summa — so'mda ("650000.00").
+// merchant_trans_id — o'quvchi id'si (to'lov havolasida transaction_param) yoki telefoni (qo'lda kiritilganda). Summa — so'mda ("650000.00").
 // Imzo: md5(click_trans_id + service_id + SECRET_KEY + merchant_trans_id + [merchant_prepare_id] + amount + action + sign_time)
 import { md5, safeEqual } from './hash.ts'
-import { accountPhone, isRecord, MAX_PAYMENT_SOM, MIN_PAYMENT_SOM } from './payments.ts'
+import { accountRef, isRecord, MAX_PAYMENT_SOM, MIN_PAYMENT_SOM } from './payments.ts'
 import type { PaymentStore } from './payments.ts'
 
 export interface ClickConfig {
@@ -72,13 +72,14 @@ export async function handleClick(p: Record<string, string>, ctx: ClickContext):
 
   try {
     if (p.action === '0') {
-      const phone = accountPhone(p.merchant_trans_id)
-      const customer = phone ? await ctx.store.findCustomer(phone) : null
-      if (!phone || !customer) return reply(-5)
+      const ref = accountRef(undefined, p.merchant_trans_id)
+      const found = ref ? await ctx.store.findCustomer(ref) : null
+      if (!ref || !found) return reply(-5)
+      const customer = found === 'ambiguous' ? null : found
       const existing = await ctx.store.get(p.click_trans_id)
       if (existing?.state === 2) return reply(-4, { merchant_prepare_id: existing.num })
       if (existing && existing.state < 0) return reply(-9)
-      const tx = existing ?? (await ctx.store.create({ providerId: p.click_trans_id, customerId: customer.id, amount, createTime: ctx.now, account: { phone } }))
+      const tx = existing ?? (await ctx.store.create({ providerId: p.click_trans_id, customerId: customer?.id ?? null, amount, createTime: ctx.now, account: ref.phone ? { phone: ref.phone } : { student: ref.customerId ?? '' } }))
       return reply(0, { merchant_prepare_id: tx.num })
     }
 

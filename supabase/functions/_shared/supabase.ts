@@ -2,6 +2,7 @@
 // Vitest bu faylni import qilmaydi (npm: spetsifikatori Deno'ga xos)
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0'
+import { allocatePayment, pickDebtor, tashkentNow } from './generated/engine.js'
 import type { PaymentProvider, PaymentStore, PaymentTx } from './payments.ts'
 
 export type { SupabaseClient }
@@ -63,7 +64,7 @@ function toTx(r: Row): PaymentTx {
     providerId: String(r.provider_id),
     id: String(r.id),
     num: Number(r.num),
-    customerId: String(r.customer_id),
+    customerId: r.customer_id === null || r.customer_id === undefined ? null : String(r.customer_id),
     amount: Number(r.amount),
     state: Number(r.state) as PaymentTx['state'],
     createTime: Number(r.create_time),
@@ -74,7 +75,26 @@ function toTx(r: Row): PaymentTx {
   }
 }
 
-// To'lov ombori: supabase/migrations/20261108000000_online_payments.sql dagi pay_* funksiyalari
+async function selectRows(query: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Row[]> {
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+  return (data ?? []) as Row[]
+}
+
+// Qarz hisobi uchun o'quvchilar qatorlari (engine: pickDebtor, allocatePayment)
+async function paymentRows(sb: SupabaseClient, org: string, ids: string[]) {
+  const [orgRows, customers, courses, transactions, groups, enrollments] = await Promise.all([
+    selectRows(sb.from('organizations').select('settings').eq('id', org)),
+    selectRows(sb.from('customers').select('*').eq('organization_id', org).in('id', ids)),
+    selectRows(sb.from('courses').select('*').eq('organization_id', org)),
+    selectRows(sb.from('transactions').select('*').eq('organization_id', org).in('customer_id', ids)),
+    selectRows(sb.from('groups').select('*').eq('organization_id', org)),
+    selectRows(sb.from('enrollments').select('*').eq('organization_id', org).in('customer_id', ids)),
+  ])
+  return { settings: orgRows[0]?.settings ?? {}, customers, courses, transactions, groups, enrollments }
+}
+
+// To'lov ombori: supabase/migrations/ dagi pay_* funksiyalari (20261123000000_payments_split.sql — id, bo'lib yozish)
 export function paymentStore(sb: SupabaseClient, org: string, provider: PaymentProvider, label: string): PaymentStore {
   const rows = async (fn: string, args: Row): Promise<PaymentTx[]> => {
     const { data, error } = await sb.rpc(fn, args)
@@ -88,16 +108,29 @@ export function paymentStore(sb: SupabaseClient, org: string, provider: PaymentP
   }
   const key = (providerId: string) => ({ p_org: org, p_provider: provider, p_provider_id: providerId })
   return {
-    findCustomer: async (phone) => {
-      const { data, error } = await sb.rpc('pay_find_customer', { p_org: org, p_phone: phone })
+    findCustomer: async (ref) => {
+      const { data, error } = await sb.rpc('pay_find_customers', { p_org: org, p_customer: ref.customerId ?? null, p_phone: ref.phone ?? null })
       if (error) throw new Error(error.message)
-      const [row] = (data ?? []) as Row[]
-      return row ? { id: String(row.id), name: String(row.name) } : null
+      const list = ((data ?? []) as Row[]).map((row) => ({ id: String(row.id), name: String(row.name) }))
+      if (list.length <= 1) return list[0] ?? null
+      // Bitta telefonda bir nechta o'quvchi: qarzi bor yagona o'quvchi, aks holda bog'lanmagan
+      const ids = list.map((c) => c.id)
+      const debtor = pickDebtor(await paymentRows(sb, org, ids), ids, tashkentNow(Date.now()))
+      return list.find((c) => c.id === debtor) ?? 'ambiguous'
     },
     get: async (providerId) => (await rows('pay_tx_get', key(providerId)))[0] ?? null,
     create: (input) =>
       first('pay_tx_create', { ...key(input.providerId), p_customer: input.customerId, p_amount: input.amount, p_create_time: input.createTime, p_account: input.account }),
-    perform: (providerId, now) => first('pay_tx_perform', { ...key(providerId), p_time: now, p_label: label }),
+    perform: async (providerId, now) => {
+      // Bir nechta o'qish: summa qarzi eng eski o'qishdan boshlab bo'linadi (bajarilgan bo'lsa — SQL o'zgarishsiz qaytaradi)
+      const [tx] = await rows('pay_tx_get', key(providerId))
+      let split: Array<{ enrollment: string | null; amount: number }> | null = null
+      if (tx && tx.state === 1 && tx.customerId) {
+        const parts = allocatePayment(await paymentRows(sb, org, [tx.customerId]), tx.customerId, Math.max(1, Math.round(tx.amount / 100)), tashkentNow(Date.now()))
+        split = parts.map((p) => ({ enrollment: p.enrollmentId, amount: p.amount }))
+      }
+      return first('pay_tx_perform', { ...key(providerId), p_time: now, p_label: label, p_split: split })
+    },
     cancel: (providerId, reason, now) => first('pay_tx_cancel', { ...key(providerId), p_time: now, p_reason: reason, p_label: label }),
     statement: (from, to) => rows('pay_tx_statement', { p_org: org, p_provider: provider, p_from: from, p_to: to }),
   }

@@ -174,10 +174,11 @@ function attributeIncome(t, ctx) {
 	const customer = ctx.customers.find((c) => c.id === t.customerId);
 	if (!customer) return null;
 	const day = dayString(new Date(t.date));
-	return ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day)).filter((e) => {
+	const active = ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day)).sort((a, b) => a.startDate.localeCompare(b.startDate));
+	return active.filter((e) => {
 		const group = ctx.groups.find((g) => g.id === e.groupId);
 		return ctx.courses.find((c) => c.id === group?.courseId)?.name === customer.course;
-	}).sort((a, b) => a.startDate.localeCompare(b.startDate))[0] ?? null;
+	}).sort((a, b) => a.startDate.localeCompare(b.startDate))[0] ?? active[0] ?? null;
 }
 function incomesByEnrollment(transactions, ctx) {
 	const map = /* @__PURE__ */ new Map();
@@ -533,27 +534,28 @@ function phoneDigits(value) {
 	return digits;
 }
 // src/utils/paymentLinks.ts
-function paymeCheckoutUrl(merchantId, phone, amountSom, lang = "uz") {
+function paymeCheckoutUrl(merchantId, phone, amountSom, lang = "uz", customerId) {
 	const params = [
 		`m=${merchantId}`,
 		`ac.phone=${phoneDigits(phone)}`,
+		...customerId ? [`ac.student=${customerId}`] : [],
 		`a=${Math.round(amountSom * 100)}`,
 		`l=${lang}`
 	];
 	return `https://checkout.paycom.uz/${btoa(params.join(";"))}`;
 }
-function clickPayUrl(serviceId, merchantId, phone, amountSom) {
+function clickPayUrl(serviceId, merchantId, phone, amountSom, customerId) {
 	return `https://my.click.uz/services/pay?${new URLSearchParams({
 		service_id: serviceId,
 		merchant_id: merchantId,
 		amount: String(Math.round(amountSom)),
-		transaction_param: phoneDigits(phone)
+		transaction_param: customerId || phoneDigits(phone)
 	}).toString()}`;
 }
-function paymentLink(s, phone, amountSom, lang = "uz") {
+function paymentLink(s, phone, amountSom, lang = "uz", customerId) {
 	if (amountSom <= 0 || phoneDigits(phone).length !== 9) return null;
-	if (s.paymeMerchantId) return paymeCheckoutUrl(s.paymeMerchantId, phone, amountSom, lang);
-	if (s.clickServiceId && s.clickMerchantId) return clickPayUrl(s.clickServiceId, s.clickMerchantId, phone, amountSom);
+	if (s.paymeMerchantId) return paymeCheckoutUrl(s.paymeMerchantId, phone, amountSom, lang, customerId);
+	if (s.clickServiceId && s.clickMerchantId) return clickPayUrl(s.clickServiceId, s.clickMerchantId, phone, amountSom, customerId);
 	return null;
 }
 // src/utils/reminders.ts
@@ -624,7 +626,7 @@ function debtorReminders(rows, options) {
 	});
 	const template = options.lang === "ru" ? settings.reminderTemplateRu : settings.reminderTemplateUz;
 	return debts.map((row) => {
-		const link = options.withLink ? paymentLink(settings, row.customer.phone, row.debt, options.lang) : null;
+		const link = options.withLink ? paymentLink(settings, row.customer.phone, row.debt, options.lang, row.customer.id) : null;
 		const text = fillTemplate(template, {
 			ism: row.customer.name,
 			summa: money(row.debt, settings.currency, options.lang),
@@ -684,7 +686,7 @@ function customerReports(rows, customerIds, options) {
 			debt: amount,
 			advance: debt?.advance ?? 0,
 			monthly: debt?.monthly ?? 0,
-			link: amount > 0 ? paymentLink(settings, customer.phone, amount, options.lang) : null,
+			link: amount > 0 ? paymentLink(settings, customer.phone, amount, options.lang, customer.id) : null,
 			currency: settings.currency,
 			groups: own.flatMap((e) => {
 				const g = groups.find((x) => x.id === e.groupId);
@@ -709,7 +711,48 @@ function customerReports(rows, customerIds, options) {
 		}];
 	});
 }
+function debtRowOf(rows, customerId, now) {
+	const settings = sanitizeSettings(rows.settings);
+	const customer = alive(rows.customers).map(rowToCustomer).find((c) => c.id === customerId);
+	if (!customer) return null;
+	const enrollments = alive(rows.enrollments).map(rowToEnrollment).filter((e) => e.customerId === customerId);
+	return customerDebt(customer, alive(rows.courses).map(rowToCourse), alive(rows.transactions).map(rowToTransaction), now, {
+		groups: alive(rows.groups).map(rowToGroup),
+		enrollments,
+		settings: {
+			prorateFirstMonth: settings.prorateFirstMonth,
+			paymentDueDay: settings.paymentDueDay
+		}
+	});
+}
+function allocatePayment(rows, customerId, amountSom, now) {
+	const ledgers = [...debtRowOf(rows, customerId, now)?.ledgers ?? []].sort((a, b) => a.enrollment.startDate.localeCompare(b.enrollment.startDate) || a.enrollment.id.localeCompare(b.enrollment.id));
+	if (ledgers.length === 0 || amountSom <= 0) return [{
+		enrollmentId: null,
+		amount: amountSom
+	}];
+	const parts = /* @__PURE__ */ new Map();
+	let left = amountSom;
+	for (const l of ledgers) {
+		const take = Math.min(left, Math.max(0, -l.balance));
+		if (take <= 0) continue;
+		parts.set(l.enrollment.id, take);
+		left -= take;
+	}
+	if (left > 0) {
+		const target = ledgers.find((l) => l.enrollment.status === "active") ?? ledgers.find((l) => l.enrollment.status === "paused") ?? ledgers[ledgers.length - 1];
+		parts.set(target.enrollment.id, (parts.get(target.enrollment.id) ?? 0) + left);
+	}
+	return [...parts].map(([enrollmentId, amount]) => ({
+		enrollmentId,
+		amount
+	}));
+}
+function pickDebtor(rows, customerIds, now) {
+	const debtors = customerIds.filter((id) => (debtRowOf(rows, id, now)?.debt ?? 0) > 0);
+	return debtors.length === 1 ? debtors[0] : null;
+}
 function tashkentNow(utcMs) {
 	return new Date(utcMs + 18e6);
 }
-export { customerReports, debtorReminders, tashkentNow };
+export { allocatePayment, customerReports, debtorReminders, pickDebtor, tashkentNow };

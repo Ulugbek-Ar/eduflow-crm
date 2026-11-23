@@ -8,12 +8,12 @@ import { handlePayme, PAYME_TIMEOUT_MS, paymeAuthorized } from '../../supabase/f
 import type { PaymeConfig, PaymeResponse } from '../../supabase/functions/_shared/payme'
 
 // Xotiradagi ombor: SQL funksiyalari bilan bir xil qoidalar (takror yaratish — mavjudi, bajarish — bir marta kirim)
-function memoryStore(customers: Record<string, PaymentCustomer>) {
+function memoryStore(customers: Record<string, PaymentCustomer | 'ambiguous'>) {
   const txs = new Map<string, PaymentTx>()
-  const incomes: Array<{ providerId: string; customerId: string; som: number; status: 'paid' | 'cancelled' }> = []
+  const incomes: Array<{ providerId: string; customerId: string | null; som: number; status: 'paid' | 'cancelled' }> = []
   let seq = 0
   const store: PaymentStore = {
-    findCustomer: async (phone) => customers[phone] ?? null,
+    findCustomer: async (ref) => (ref.customerId ? customers[ref.customerId] : undefined) ?? (ref.phone ? customers[ref.phone] : undefined) ?? null,
     get: async (id) => txs.get(id) ?? null,
     create: async (input) => {
       const known = txs.get(input.providerId)
@@ -141,6 +141,17 @@ describe('Payme Merchant API', () => {
     expect(errorCode(await call('Boshqa', {}, { store }))).toBe(-32601)
   })
 
+  it('N-1: ac.student bo\'yicha aniq o\'quvchi (aka-uka bitta telefonda); noaniq telefon — bog\'lanmagan to\'lov', async () => {
+    const { store, txs } = memoryStore({ c7: { id: 'c7', name: 'Uka' }, '901234567': 'ambiguous' })
+    const byId = await call('CreateTransaction', { id: 'p1', time: T0, amount: 65_000_000, account: { phone: '901234567', student: 'c7' } }, { store })
+    expect(errorCode(byId)).toBe(0)
+    expect(txs.get('p1')).toMatchObject({ customerId: 'c7', account: { phone: '901234567', student: 'c7' } })
+    const shared = await call('CreateTransaction', { id: 'p2', time: T0, amount: 65_000_000, account: { phone: '901234567' } }, { store })
+    expect(errorCode(shared)).toBe(0)
+    expect(txs.get('p2')?.customerId).toBeNull()
+    expect(errorCode(await call('CheckPerformTransaction', { amount: 65_000_000, account: { student: 'c999' } }, { store }))).toBe(-31050)
+  })
+
   it('ChangePassword yangi kalitni saqlaydi; ombor xatosi — -32400', async () => {
     const { store } = memoryStore(CUSTOMERS)
     const saved: string[] = []
@@ -176,6 +187,13 @@ describe('Click SHOP API', () => {
     expect((await handleClick(request({ click_trans_id: '9004', action: '5' }), { config, store, now })).error).toBe(-3)
     expect((await handleClick(request({ service_id: '999' }), { config, store, now })).error).toBe(-8)
     expect((await handleClick(request({}), { config: null, store, now })).error).toBe(-8)
+  })
+
+  it('N-1: Click transaction_param — o\'quvchi id\'si', async () => {
+    const { store, txs } = memoryStore({ c7: { id: 'c7', name: 'Uka' } })
+    const r = await handleClick(request({ merchant_trans_id: 'c7' }), { config, store, now })
+    expect(r.error).toBe(0)
+    expect(txs.get('9001')?.customerId).toBe('c7')
   })
 
   it('Click xato bilan Complete yuborsa — bekor (-9); boshqa prepare id — -6; summa farqi — -2', async () => {

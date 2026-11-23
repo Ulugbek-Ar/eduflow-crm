@@ -10,7 +10,8 @@ export interface PaymentTx {
   // Bizning id (Payme javobidagi "transaction") va raqamli id (Click merchant_prepare_id / merchant_confirm_id)
   id: string
   num: number
-  customerId: string
+  // null — bog'lanmagan to'lov (bitta telefonda bir nechta o'quvchi, qaysi biriniki aniq emas)
+  customerId: string | null
   // Tiyinda
   amount: number
   // 1 — yaratildi/tayyorlandi, 2 — bajarildi, -1 — bekor, -2 — bajarilgach bekor
@@ -28,11 +29,20 @@ export interface PaymentCustomer {
   name: string
 }
 
+// Hisob: o'quvchi id'si (havoladagi ac.student / Click transaction_param) va/yoki telefon
+export interface PaymentRef {
+  customerId?: string
+  phone?: string
+}
+
+// 'ambiguous' — telefon bir nechta o'quvchiga mos, qarzi bor yagona o'quvchi yo'q: to'lov qabul qilinadi, bog'lanmagan yoziladi
+export type FoundCustomer = PaymentCustomer | 'ambiguous' | null
+
 export interface PaymentStore {
-  findCustomer: (account: string) => Promise<PaymentCustomer | null>
+  findCustomer: (ref: PaymentRef) => Promise<FoundCustomer>
   get: (providerId: string) => Promise<PaymentTx | null>
   // Takror chaqirilsa mavjudi qaytadi
-  create: (input: { providerId: string; customerId: string; amount: number; createTime: number; account: Record<string, string> }) => Promise<PaymentTx>
+  create: (input: { providerId: string; customerId: string | null; amount: number; createTime: number; account: Record<string, string> }) => Promise<PaymentTx>
   // Kirim yozadi (bir marta); holat 2 bo'lsa o'zgarishsiz qaytadi
   perform: (providerId: string, now: number) => Promise<PaymentTx>
   cancel: (providerId: string, reason: number | null, now: number) => Promise<PaymentTx>
@@ -53,3 +63,16 @@ export function accountPhone(raw: unknown): string | null {
 }
 
 export const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// O'quvchi id'si: harf bilan boshlanadi (c12, cmwm4lis…); faqat raqamlar — telefon
+const CUSTOMER_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/
+
+// Hisob maydonidan: id va/yoki telefon (Click'da bitta maydon — ikkalasidan biri)
+export function accountRef(student: unknown, phone: unknown): PaymentRef | null {
+  const ref: PaymentRef = {}
+  if (typeof student === 'string' && CUSTOMER_ID.test(student.trim())) ref.customerId = student.trim()
+  const digits = accountPhone(phone)
+  if (digits) ref.phone = digits
+  else if (!ref.customerId && typeof phone === 'string' && CUSTOMER_ID.test(phone.trim())) ref.customerId = phone.trim()
+  return ref.customerId || ref.phone ? ref : null
+}

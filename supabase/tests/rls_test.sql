@@ -580,4 +580,44 @@ do $$ begin
   end if;
 end $$;
 reset role;
+-- N-1 (QA 2026-11): onlayn to'lov — id bo'yicha o'quvchi, bitta telefonda aka-uka, bo'lib yozish, bog'lanmagan to'lov, bekor qilish
+do $$
+declare
+  v_org uuid;
+  v_n int;
+  v public.payment_transactions;
+begin
+  insert into public.organizations (name) values ('Pay QA') returning id into v_org;
+  insert into public.courses (organization_id, id, name, type, duration_months, monthly_price) values (v_org, 'pk', 'Matematika', 'course', 0, 500000);
+  insert into public.groups (organization_id, id, name, course_id, days, start_time, end_time, capacity, start_date)
+  values (v_org, 'pg1', 'M-1', 'pk', '{mon}', '09:00', '10:00', 10, '2026-01-01'), (v_org, 'pg2', 'M-2', 'pk', '{tue}', '09:00', '10:00', 10, '2026-01-01');
+  insert into public.customers (organization_id, id, name, phone, course, status, source)
+  values (v_org, 'pa', 'Aka', '+998901110000', 'Matematika', 'paid', 'website'), (v_org, 'pb', 'Uka', '+998901110000', 'Matematika', 'paid', 'website');
+  insert into public.enrollments (organization_id, id, customer_id, group_id, start_date, status)
+  values (v_org, 'pe1', 'pa', 'pg1', '2026-09-01', 'active'), (v_org, 'pe2', 'pa', 'pg2', '2026-10-01', 'active');
+  -- id bo'yicha — aniq bitta; telefon bo'yicha — ikkalasi
+  if (select count(*) from public.pay_find_customers(v_org, 'pb', '901110000')) <> 1 then raise exception 'FAIL: id bo''yicha bitta o''quvchi kutilgan'; end if;
+  if (select count(*) from public.pay_find_customers(v_org, null, '901110000')) <> 2 then raise exception 'FAIL: telefon bo''yicha ikkala o''quvchi kutilgan'; end if;
+  -- Bo'lib yozish: 2 000 000 = pe1 1 500 000 + pe2 500 000
+  perform public.pay_tx_create(v_org, 'payme', 'split1', 'pa', 200000000, 1);
+  select * into v from public.pay_tx_perform(v_org, 'payme', 'split1', 2, 'Payme',
+    '[{"enrollment": "pe1", "amount": 1500000}, {"enrollment": "pe2", "amount": 500000}]'::jsonb);
+  if v.state <> 2 or cardinality(v.transaction_ids) <> 2 then raise exception 'FAIL: to''lov 2 qismga bo''linmadi'; end if;
+  if (select sum(amount) from public.transactions where organization_id = v_org and enrollment_id = 'pe1') <> 1500000 then raise exception 'FAIL: pe1 qismi'; end if;
+  -- Noto'g'ri bo'linma (summa mos emas yoki boshqa o'quvchining o'qishi) — eskicha bitta kirim
+  perform public.pay_tx_create(v_org, 'payme', 'bad', 'pb', 100000000, 3);
+  select * into v from public.pay_tx_perform(v_org, 'payme', 'bad', 4, 'Payme', '[{"enrollment": "pe1", "amount": 1000000}]'::jsonb);
+  if cardinality(v.transaction_ids) <> 1 or (select enrollment_id from public.transactions where id = v.transaction_id) is not null then
+    raise exception 'FAIL: begona o''qishga bo''linma qabul qilindi';
+  end if;
+  -- Bog'lanmagan: customer_id null — "Boshqa kirim", jurnalda payment.unassigned
+  perform public.pay_tx_create(v_org, 'click', 'amb', null, 65000000, 5);
+  select * into v from public.pay_tx_perform(v_org, 'click', 'amb', 6, 'Click');
+  if (select customer_id is not null or category <> 'other_income' from public.transactions where id = v.transaction_id) then raise exception 'FAIL: bog''lanmagan to''lov'; end if;
+  if not exists (select 1 from public.audit_log where organization_id = v_org and action = 'payment.unassigned') then raise exception 'FAIL: bog''lanmagan to''lov jurnalga yozilmadi'; end if;
+  -- Bekor qilish: bo'lingan to'lovning barcha kirimlari
+  perform public.pay_tx_cancel(v_org, 'payme', 'split1', 7, 5::smallint, 'Payme');
+  select count(*) into v_n from public.transactions where organization_id = v_org and provider_ref like 'split1%' and status = 'cancelled';
+  if v_n <> 2 then raise exception 'FAIL: bekor qilishda % ta kirim bekor bo''ldi (2 kutilgan)', v_n; end if;
+end $$;
 select 'RLS_OK' as result, :'imported' as imported;

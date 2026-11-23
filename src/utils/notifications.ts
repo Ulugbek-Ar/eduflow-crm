@@ -80,6 +80,18 @@ export function buildNotifications(
     }
   }
 
+  // N-1: onlayn to'lov kimniki ekani aniqlanmadi (bitta telefonda bir nechta o'quvchi) — qo'lda bog'lash kerak
+  const unassigned = finance ? transactions.filter((t) => t.provider && !t.customerId && t.type === 'income' && t.status === 'paid') : []
+  if (unassigned.length > 0) {
+    result.push({
+      id: `unassigned:${unassigned.map((t) => t.id).sort().join(',')}`,
+      tone: 'danger',
+      title: tr('Bog\'lanmagan onlayn to\'lov: {0} ta', { 0: unassigned.length }),
+      description: tr('O\'quvchi aniqlanmadi (bitta telefonda bir nechta o\'quvchi). Moliyada to\'lovni tahrirlab o\'quvchini tanlang: {0}', { 0: money(unassigned.reduce((s, t) => s + t.amount, 0)) }),
+      target: 'finance',
+    })
+  }
+
   const debts = finance ? computeDebts(customers, courses, transactions, now, edu ? { groups: edu.groups, enrollments: edu.enrollments, settings: edu.settings } : {}) : []
   if (debts.length > 0) {
     result.push({

@@ -39,3 +39,9 @@ export declare function debtorReminders(rows: OrgRows, options: { now: Date; lan
 export declare function customerReports(rows: OrgRows, customerIds: readonly string[], options: { now: Date; lang: 'uz' | 'ru' }): CustomerReport[]
 
 export declare function tashkentNow(utcMs: number): Date
+export interface PaymentPart {
+  enrollmentId: string | null
+  amount: number
+}
+export declare function allocatePayment(rows: OrgRows, customerId: string, amountSom: number, now: Date): PaymentPart[]
+export declare function pickDebtor(rows: OrgRows, customerIds: readonly string[], now: Date): string | null

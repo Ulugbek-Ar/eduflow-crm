@@ -44,9 +44,9 @@ describe('kirim qaysi guruhga tegishli', () => {
     expect(attributeIncome(pay('t', 'c1', '2026-11-20', 1), ctx)?.groupId).toBe('gB')
   })
 
-  it('faol o\'qish topilmasa yoki kurs boshqa bo\'lsa — hech qayerga hisoblanmaydi', () => {
+  it('faol o\'qish topilmasa — hech qayerga; kurs boshqa bo\'lsa — faol o\'qishga (N-1: pul yo\'qolmaydi)', () => {
     expect(attributeIncome(pay('t', 'c1', '2026-08-01', 1), ctx)).toBeNull()
-    expect(attributeIncome(pay('t', 'c1', '2026-11-10', 1), { ...ctx, customers: [{ ...customer('c1'), course: 'Python' }] })).toBeNull()
+    expect(attributeIncome(pay('t', 'c1', '2026-11-10', 1), { ...ctx, customers: [{ ...customer('c1'), course: 'Python' }] })?.id).toBe('e1')
     expect(attributeIncome(pay('t', 'c9', '2026-11-10', 1), ctx)).toBeNull()
   })
 })

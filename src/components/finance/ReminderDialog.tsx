@@ -41,7 +41,7 @@ export function ReminderDialog({ rows, onClose }: { rows: DebtRow[]; onClose: ()
   const template = lang === 'ru' ? settings.reminderTemplateRu : settings.reminderTemplateUz
   const [now] = useState(() => new Date())
   const messageFor = (row: DebtRow) => {
-    const link = linksAvailable ? paymentLink(settings, row.customer.phone, row.debt, lang) : null
+    const link = linksAvailable ? paymentLink(settings, row.customer.phone, row.debt, lang, row.customer.id) : null
     const text = fillTemplate(template, {
       ism: row.customer.name,
       summa: money(row.debt),

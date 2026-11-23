@@ -3,7 +3,7 @@ import { attendanceToRow, courseToRow, customerToRow, enrollmentToRow, groupToRo
 import { generateDemo } from '../services/demo/generator'
 import { attendanceRate, recordsFor } from '../utils/attendance'
 import { computeDebts, customerDebt, DEFAULT_DEBT_SETTINGS } from '../utils/debts'
-import { customerReports, debtorReminders, tashkentNow } from './engine'
+import { allocatePayment, customerReports, debtorReminders, pickDebtor, tashkentNow } from './engine'
 import type { OrgRows } from './engine'
 
 const ORG = '11111111-2222-3333-4444-555555555555'
@@ -55,7 +55,7 @@ describe('server hisobi (engine)', () => {
 
   it('yig\'ma (generated/engine.js) manbadagi bilan bir xil ishlaydi va eksportlar .d.ts bilan mos', async () => {
     const bundle = (await import('../../supabase/functions/_shared/generated/engine.js')) as Record<string, unknown>
-    expect(Object.keys(bundle).sort()).toEqual(['customerReports', 'debtorReminders', 'tashkentNow'])
+    expect(Object.keys(bundle).sort()).toEqual(['allocatePayment', 'customerReports', 'debtorReminders', 'pickDebtor', 'tashkentNow'])
     const now = new Date('2026-11-20T09:00:00')
     const { rows } = demoRows(now)
     const fromBundle = (bundle.debtorReminders as typeof debtorReminders)(rows, { now, lang: 'uz', withLink: false })
@@ -77,5 +77,41 @@ describe('server hisobi (engine)', () => {
     expect(r.attendance.present + r.attendance.absent).toBe(month.length)
     expect(r.attendance.rate).toBe(attendanceRate(month))
     expect(r.attendance.recent.length).toBeLessThanOrEqual(5)
+  })
+})
+
+describe('N-1: onlayn to\'lovni taqsimlash', () => {
+  const now = new Date('2026-11-20T09:00:00')
+  const at = '2026-08-01T00:00:00.000Z'
+  const rowsWith = (transactions: Parameters<typeof transactionToRow>[0][] = []): OrgRows => ({
+    settings: { paymentDueDay: 10, prorateFirstMonth: false },
+    customers: [
+      customerToRow({ id: 'c1', name: 'Aka', phone: '+998 90 123 45 67', course: 'Matematika', status: 'paid', source: 'website', createdAt: at } as never, ORG),
+      customerToRow({ id: 'c2', name: 'Uka', phone: '+998 90 123 45 67', course: 'Matematika', status: 'new', source: 'website', createdAt: at } as never, ORG),
+    ],
+    courses: [courseToRow({ id: 'k1', name: 'Matematika', type: 'course', durationMonths: 0, monthlyPrice: 500_000, status: 'active', createdAt: at } as never, ORG)],
+    groups: ['g1', 'g2'].map((id) => groupToRow({ id, name: id, courseId: 'k1', room: '', days: ['mon'], startTime: '09:00', endTime: '10:00', capacity: 10, startDate: '2026-08-01', status: 'active', createdAt: at } as never, ORG)),
+    enrollments: [
+      enrollmentToRow({ id: 'e1', customerId: 'c1', groupId: 'g1', startDate: '2026-09-01', status: 'active', createdAt: at } as never, ORG),
+      enrollmentToRow({ id: 'e2', customerId: 'c1', groupId: 'g2', startDate: '2026-10-01', status: 'active', createdAt: at } as never, ORG),
+    ],
+    transactions: transactions.map((t) => transactionToRow(t, ORG)),
+  })
+
+  it('2 guruhli o\'quvchi: avval eski o\'qish qarzi (1.5 mln), keyin yangisi; qoldiq — eski faol o\'qishga', () => {
+    expect(allocatePayment(rowsWith(), 'c1', 2_000_000, now)).toEqual([{ enrollmentId: 'e1', amount: 1_500_000 }, { enrollmentId: 'e2', amount: 500_000 }])
+    expect(allocatePayment(rowsWith(), 'c1', 3_000_000, now)).toEqual([{ enrollmentId: 'e1', amount: 2_000_000 }, { enrollmentId: 'e2', amount: 1_000_000 }])
+    expect(allocatePayment(rowsWith(), 'c2', 100_000, now)).toEqual([{ enrollmentId: null, amount: 100_000 }])
+  })
+
+  it('taqsimlangan to\'lovdan keyin qarz yopiladi', () => {
+    const parts = allocatePayment(rowsWith(), 'c1', 2_500_000, now)
+    const paid = parts.map((p, i) => ({ id: `t${i}`, type: 'income', amount: p.amount, method: 'card', category: 'course_fee', note: '', customerId: 'c1', status: 'paid', date: now.toISOString(), enrollmentId: p.enrollmentId ?? undefined }))
+    expect(customerReports(rowsWith(paid as never), ['c1'], { now, lang: 'uz' })[0].debt).toBe(0)
+  })
+
+  it('aka-uka bitta telefonda: qarzi bor yagona o\'quvchi tanlanadi, aks holda null', () => {
+    expect(pickDebtor(rowsWith(), ['c1', 'c2'], now)).toBe('c1')
+    expect(pickDebtor(rowsWith(), ['c2'], now)).toBeNull()
   })
 })

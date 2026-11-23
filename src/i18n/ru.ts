@@ -1687,4 +1687,6 @@ export const RU: Readonly<Record<string, string>> = {
   "Kurs to'lovi uchun mijozni tanlang — to'lov uning qarziga yoziladi": "Для оплаты курса выберите клиента — оплата засчитается в его долг",
   "To'lov shu o'quvchining qarziga yoziladi": "Оплата засчитывается в долг этого ученика",
   "Masalan: 650 000": "Например: 650 000",
+  'Bog\'lanmagan onlayn to\'lov: {0} ta': 'Непривязанный онлайн-платёж: {0}',
+  'O\'quvchi aniqlanmadi (bitta telefonda bir nechta o\'quvchi). Moliyada to\'lovni tahrirlab o\'quvchini tanlang: {0}': 'Ученик не определён (несколько учеников на одном телефоне). Отредактируйте платёж в «Финансах» и выберите ученика: {0}',
 }
