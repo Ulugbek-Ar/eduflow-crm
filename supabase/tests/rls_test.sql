@@ -681,4 +681,23 @@ do $$ begin
   if exists (select 1 from public.audit_log where summary like 'FORGED%') then raise exception 'FAIL: soxta jurnal yozuvi'; end if;
   if not exists (select 1 from public.audit_log where action = 'auth.login' and summary = 'QA') then raise exception 'FAIL: log_event ishlamadi'; end if;
 end $$;
+-- B-03: filialga cheklangan xodim o'z filiali mijozini boshqa filialga o'tkaza olmaydi (guruhi orqali ko'rinsa ham)
+insert into public.customers (organization_id, id, name, phone, course, status, source, branch_id)
+values (current_setting('qa.org_a')::uuid, 'cbr', 'Filial o''quvchisi', '', '', 'paid', 'website', 'f2'),
+       (current_setting('qa.org_a')::uuid, 'cbr1', 'Boshqa filialdan', '', '', 'paid', 'website', 'f1');
+insert into public.enrollments (organization_id, id, customer_id, group_id, start_date, status)
+values (current_setting('qa.org_a')::uuid, 'ebr', 'cbr', 'g2', '2026-10-01', 'active'),
+       (current_setting('qa.org_a')::uuid, 'ebr1', 'cbr1', 'g2', '2026-10-01', 'active');
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e4');
+do $$ begin
+  update public.customers set note = 'o''z filialida tahrir' where id = 'cbr';
+  if (select note from public.customers where id = 'cbr') is distinct from 'o''z filialida tahrir' then raise exception 'FAIL: o''z filiali mijozini tahrirlab bo''lmadi'; end if;
+  update public.customers set note = 'guruhi orqali' where id = 'cbr1';
+  if (select note from public.customers where id = 'cbr1') is distinct from 'guruhi orqali' then raise exception 'FAIL: filial guruhidagi boshqa filial o''quvchisi tahrirlanmadi'; end if;
+  begin
+    update public.customers set branch_id = 'f1' where id = 'cbr';
+    raise exception 'FAIL: filial xodimi mijozni boshqa filialga o''tkazdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
 select 'RLS_OK' as result, :'imported' as imported;
