@@ -59,3 +59,12 @@ describe('Sotuvchi paneli', () => {
     expect(tenantDaysLeft(stored as never)).toBe(48)
   })
 })
+
+describe('QA-23: sotuvchi paneli tarjimasi', () => {
+  it('foydalanuvchiga ko\'rinadigan matnlar tr() ichida (RU tarjimasi i18n testida tekshiriladi); "IT Park Kids" yo\'q', async () => {
+    const source = (await import('./OwnerConsole.tsx?raw')).default as string
+    expect(source).not.toMatch(/label: '[A-ZÀ-ž]/)
+    expect(source).not.toMatch(/>\s*(Sotuvchi paneli|Markazlar|Markaz|Tarif|Holat|Kirish|\+30 kun)\s*</)
+    expect(sampleTenants(Date.now()).some((t) => t.name === 'IT Park Kids')).toBe(false)
+  })
+})

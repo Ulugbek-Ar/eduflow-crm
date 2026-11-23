@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { tr } from '../i18n'
 import type { FormEvent } from 'react'
 import { APP_NAME } from '../constants/app'
 import { Icon } from '../constants/navigation'
@@ -30,12 +31,12 @@ const SESSION_KEY = 'eduflow-owner:session'
 type Filter = 'all' | 'trial' | 'paid' | 'expiring' | 'expired' | 'blocked'
 
 const FILTERS: Array<{ id: Filter; label: string }> = [
-  { id: 'all', label: 'Hammasi' },
-  { id: 'trial', label: 'Sinovda' },
-  { id: 'paid', label: 'To\'lovli' },
-  { id: 'expiring', label: 'Tugayapti (≤5 kun)' },
-  { id: 'expired', label: 'Muddati o\'tgan' },
-  { id: 'blocked', label: 'Bloklangan' },
+  { id: 'all', label: tr('Hammasi') },
+  { id: 'trial', label: tr('Sinovda') },
+  { id: 'paid', label: tr('To\'lovli') },
+  { id: 'expiring', label: tr('Tugayapti (≤5 kun)') },
+  { id: 'expired', label: tr('Muddati o\'tgan') },
+  { id: 'blocked', label: tr('Bloklangan') },
 ]
 
 function matches(t: Tenant, filter: Filter, now: number): boolean {
@@ -58,10 +59,10 @@ function matches(t: Tenant, filter: Filter, now: number): boolean {
 
 function stateOf(t: Tenant, now: number): { label: string; tone: BadgeTone } {
   const left = tenantDaysLeft(t, now)
-  if (t.status === 'blocked') return { label: 'Bloklangan', tone: 'cancelled' }
-  if (left !== null && left <= 0) return { label: 'Muddati o\'tgan', tone: 'cancelled' }
-  if (left !== null && left <= 5) return { label: `${left} kun qoldi`, tone: 'warning' }
-  return t.plan === 'trial' ? { label: 'Sinov', tone: 'primary' } : { label: 'Faol', tone: 'paid' }
+  if (t.status === 'blocked') return { label: tr('Bloklangan'), tone: 'cancelled' }
+  if (left !== null && left <= 0) return { label: tr('Muddati o\'tgan'), tone: 'cancelled' }
+  if (left !== null && left <= 5) return { label: tr('{0} kun qoldi', { 0: left }), tone: 'warning' }
+  return t.plan === 'trial' ? { label: tr('Sinov'), tone: 'primary' } : { label: tr('Faol'), tone: 'paid' }
 }
 
 function OwnerLogin({ onDone, cloud }: { onDone: () => void; cloud: boolean }) {
@@ -76,7 +77,7 @@ function OwnerLogin({ onDone, cloud }: { onDone: () => void; cloud: boolean }) {
       const result = await ownerSignIn(email, password)
       setBusy(false)
       if (result === 'ok') return onDone()
-      setError(result === 'not-owner' ? 'Bu hisob sotuvchi emas (platform_admins jadvalida yo\'q)' : 'Email yoki parol noto\'g\'ri')
+      setError(result === 'not-owner' ? tr('Bu hisob sotuvchi emas (platform_admins jadvalida yo\'q)') : tr('Email yoki parol noto\'g\'ri'))
       setPassword('')
       return
     }
@@ -85,7 +86,7 @@ function OwnerLogin({ onDone, cloud }: { onDone: () => void; cloud: boolean }) {
     const ok = Boolean(salt && passwordHash) && (await checkPassword({ salt, passwordHash, algo: 'pbkdf2-sha256', iterations: PBKDF2_ITERATIONS }, password))
     setBusy(false)
     if (!ok) {
-      setError('Parol noto\'g\'ri')
+      setError(tr('Parol noto\'g\'ri'))
       setPassword('')
       return
     }
@@ -100,14 +101,14 @@ function OwnerLogin({ onDone, cloud }: { onDone: () => void; cloud: boolean }) {
             <Icon name="shield" size={22} />
           </span>
           <div>
-            <h1 id="owner-title">Sotuvchi paneli</h1>
-            <p className="muted">{APP_NAME} · markazlar va tariflar</p>
+            <h1 id="owner-title">{tr('Sotuvchi paneli')}</h1>
+            <p className="muted">{APP_NAME} · {tr('markazlar va tariflar')}</p>
           </div>
         </div>
         {cloud && <Input label="Email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />}
-        <PasswordInput label="Parol" autoComplete="current-password" value={password} error={error} onChange={(e) => setPassword(e.target.value)} autoFocus={!cloud} />
+        <PasswordInput label={tr('Parol')} autoComplete="current-password" value={password} error={error} onChange={(e) => setPassword(e.target.value)} autoFocus={!cloud} />
         <Button type="submit" className="btn-block" disabled={busy || !password}>
-          {busy ? 'Tekshirilmoqda...' : 'Kirish'}
+          {busy ? tr('Tekshirilmoqda...') : tr('Kirish')}
         </Button>
       </form>
     </main>
@@ -146,14 +147,14 @@ function Console({ repo }: { repo: TenantsRepository }) {
   const toggleBlock = async (t: Tenant) => {
     const blocking = t.status === 'active'
     const ok = await confirm({
-      title: blocking ? 'Markazni to\'xtatish' : 'Markazni faollashtirish',
+      title: blocking ? tr('Markazni to\'xtatish') : tr('Markazni faollashtirish'),
       message: blocking
-        ? `"${t.name}" xodimlari panelni faqat ko'ra oladi, o'zgartira olmaydi. Ma'lumotlari o'chmaydi.`
-        : `"${t.name}" yana to'liq ishlay oladi.`,
-      confirmLabel: blocking ? 'To\'xtatish' : 'Faollashtirish',
+        ? tr('"{0}" xodimlari panelni faqat ko\'ra oladi, o\'zgartira olmaydi. Ma\'lumotlari o\'chmaydi.', { 0: t.name })
+        : tr('"{0}" yana to\'liq ishlay oladi.', { 0: t.name }),
+      confirmLabel: blocking ? tr('To\'xtatish') : tr('Faollashtirish'),
       tone: blocking ? 'danger' : 'primary',
     })
-    if (ok) await apply(t, { status: blocking ? 'blocked' : 'active' }, blocking ? `"${t.name}" to'xtatildi` : `"${t.name}" faollashtirildi`)
+    if (ok) await apply(t, { status: blocking ? 'blocked' : 'active' }, blocking ? tr('"{0}" to\'xtatildi', { 0: t.name }) : tr('"{0}" faollashtirildi', { 0: t.name }))
   }
 
   return (
@@ -163,23 +164,22 @@ function Console({ repo }: { repo: TenantsRepository }) {
           <span className="logo-mark" aria-hidden="true">
             <Icon name="shield" size={20} />
           </span>
-          <strong>Sotuvchi paneli</strong>
+          <strong>{tr('Sotuvchi paneli')}</strong>
         </span>
-        {repo.kind === 'demo' && <Badge tone="warning">Demo: namunaviy markazlar</Badge>}
+        {repo.kind === 'demo' && <Badge tone="warning">{tr('Demo: namunaviy markazlar')}</Badge>}
       </header>
       <main className="owner-main">
         {repo.kind === 'demo' && (
           <p className="notice notice-info">
-            Lokal rejimda har markaz ma'lumoti o'z brauzerida — bu yerda namunaviy ro'yxat. Supabase ulangach (README → "Bulutli rejim") haqiqiy
-            markazlar, tarif va muddatlar shu yerdan boshqariladi va cheklovlar majburiy bo'ladi.
+            {tr('Lokal rejimda har markaz ma\'lumoti o\'z brauzerida — bu yerda namunaviy ro\'yxat. Supabase ulangach (README → "Bulutli rejim") haqiqiy markazlar, tarif va muddatlar shu yerdan boshqariladi va cheklovlar majburiy bo\'ladi.')}
           </p>
         )}
         <section className="kpi-grid" aria-label="Umumiy ko'rsatkichlar">
           {[
-            { label: 'Markazlar', value: formatNumber(tenants.length), hint: `${count('blocked')} ta bloklangan` },
-            { label: 'Sinovda', value: formatNumber(count('trial')), hint: 'bepul 14 kun' },
-            { label: 'To\'lovli', value: formatNumber(count('paid')), hint: `${count('expiring')} tasi 5 kun ichida tugaydi` },
-            { label: 'Oylik tushum', value: formatMoney(monthlyRevenue(tenants, now), 'UZS'), hint: 'faol to\'lovli tariflar' },
+            { label: tr('Markazlar'), value: formatNumber(tenants.length), hint: tr('{0} ta bloklangan', { 0: count('blocked') }) },
+            { label: tr('Sinovda'), value: formatNumber(count('trial')), hint: tr('bepul 14 kun') },
+            { label: tr('To\'lovli'), value: formatNumber(count('paid')), hint: tr('{0} tasi 5 kun ichida tugaydi', { 0: count('expiring') }) },
+            { label: tr('Oylik tushum'), value: formatMoney(monthlyRevenue(tenants, now), 'UZS'), hint: tr('faol to\'lovli tariflar') },
           ].map((k) => (
             <article key={k.label} className="card kpi">
               <div className="kpi-body">
@@ -194,14 +194,14 @@ function Console({ repo }: { repo: TenantsRepository }) {
         <section className="card" aria-labelledby="tenants-title">
           <div className="card-head">
             <div>
-              <h2 id="tenants-title">Markazlar</h2>
-              <span className="muted">{rows.length} ta ko'rsatilmoqda</span>
+              <h2 id="tenants-title">{tr('Markazlar')}</h2>
+              <span className="muted">{tr('{0} ta ko\'rsatilmoqda', { 0: rows.length })}</span>
             </div>
           </div>
           <div className="filters">
-            <Input label="Qidirish" type="search" placeholder="Nom, shahar yoki telefon" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <Input label={tr('Qidirish')} type="search" placeholder={tr('Nom, shahar yoki telefon')} value={query} onChange={(e) => setQuery(e.target.value)} />
             <Select
-              label="Holat"
+              label={tr('Holat')}
               value={filter}
               onChange={(e) => setFilter(e.target.value as Filter)}
               options={FILTERS.map((f) => ({ value: f.id, label: `${f.label} (${count(f.id)})` }))}
@@ -211,15 +211,15 @@ function Console({ repo }: { repo: TenantsRepository }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th scope="col">Markaz</th>
-                  <th scope="col">Tarif</th>
-                  <th scope="col">Holat</th>
-                  <th scope="col">Amal qiladi</th>
+                  <th scope="col">{tr('Markaz')}</th>
+                  <th scope="col">{tr('Tarif')}</th>
+                  <th scope="col">{tr('Holat')}</th>
+                  <th scope="col">{tr('Amal qiladi')}</th>
                   <th scope="col" className="align-right">
-                    Xodim / mijoz
+                    {tr('Xodim / mijoz')}
                   </th>
                   <th scope="col">
-                    <span className="sr-only">Amallar</span>
+                    <span className="sr-only">{tr('Amallar')}</span>
                   </th>
                 </tr>
               </thead>
@@ -231,15 +231,15 @@ function Console({ repo }: { repo: TenantsRepository }) {
                       <td data-label="Markaz" className="cell-wide">
                         <strong>{t.name}</strong>
                         <small className="cell-sub">
-                          {t.city} · {t.contact} · qo'shilgan {date(t.createdAt)}
+                          {t.city} · {t.contact} · {tr('qo\'shilgan {0}', { 0: date(t.createdAt) })}
                         </small>
                       </td>
                       <td data-label="Tarif">
                         <select
                           className="input input-sm"
-                          aria-label={`${t.name}: tarif`}
+                          aria-label={tr('{0}: tarif', { 0: t.name })}
                           value={t.plan}
-                          onChange={(e) => apply(t, { plan: e.target.value as PlanId }, `${t.name}: tarif o'zgartirildi`)}
+                          onChange={(e) => apply(t, { plan: e.target.value as PlanId }, tr('{0}: tarif o\'zgartirildi', { 0: t.name }))}
                         >
                           {PLANS.map((p) => (
                             <option key={p.id} value={p.id}>
@@ -259,11 +259,11 @@ function Console({ repo }: { repo: TenantsRepository }) {
                       </td>
                       <td className="cell-actions">
                         <div className="row-actions">
-                          <Button size="sm" variant="ghost" onClick={() => apply(t, extendPatch(t, 30, now), `${t.name}: +30 kun`)} aria-label={`${t.name}: 30 kunga uzaytirish`}>
-                            +30 kun
+                          <Button size="sm" variant="ghost" onClick={() => apply(t, extendPatch(t, 30, now), tr('{0}: +30 kun', { 0: t.name }))} aria-label={tr('{0}: 30 kunga uzaytirish', { 0: t.name })}>
+                            {tr('+30 kun')}
                           </Button>
                           <Button size="sm" variant={t.status === 'active' ? 'ghost' : 'primary'} onClick={() => toggleBlock(t)}>
-                            {t.status === 'active' ? 'To\'xtatish' : 'Faollashtirish'}
+                            {t.status === 'active' ? tr('To\'xtatish') : tr('Faollashtirish')}
                           </Button>
                         </div>
                       </td>
@@ -285,7 +285,7 @@ export function OwnerConsole({ repo: given }: { repo?: TenantsRepository }) {
   const [repo] = useState<TenantsRepository>(() => given ?? (cloud ? cloudTenantsRepository() : localTenantsRepository()))
   const [unlocked, setUnlocked] = useState(() => !cloud && (!OWNER_HASH || sessionStorage.getItem(SESSION_KEY) === '1'))
   useEffect(() => {
-    document.title = `Sotuvchi paneli · ${APP_NAME}`
+    document.title = `${tr('Sotuvchi paneli')} · ${APP_NAME}`
   }, [])
   return (
     <ToastProvider>
