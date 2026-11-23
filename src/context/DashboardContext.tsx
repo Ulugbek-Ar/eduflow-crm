@@ -777,16 +777,17 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
       toast.success(tr('"{0}" savatchaga o\'tkazildi', { 0: name }), undo(entry))
     },
     addTransaction: (data) => {
-      if (!allowed(data.type === 'income' ? 'payments.create' : 'payments.manage')) return
+      if (!allowed(data.type === 'income' ? 'payments.create' : 'payments.manage')) return false
       const branchId = transactionBranch(data)
       const created = { ...withCustomerName(cleanTransaction(data)), id: createId('t'), ...(branchId !== undefined ? { branchId } : {}) }
       setTransactions((list) => [created, ...list])
       audit('payment.create', txSummary(created), created.id)
       const receipt = created.type === 'income' ? { action: { label: tr('Chek'), onClick: () => setModal({ type: 'receipt', payload: { id: created.id } }) } } : undefined
       toast.success(tr('{0} qayd etildi: {1}', { 0: data.type === 'income' ? 'To\'lov' : 'Xarajat', 1: money(data.amount) }), receipt)
+      return true
     },
     updateTransaction: (id, patch) => {
-      if (!allowed('payments.manage')) return
+      if (!allowed('payments.manage')) return false
       const updatedAt = new Date().toISOString()
       const clean = withCustomerName(cleanTransaction(patch))
       setTransactions((list) =>
@@ -813,6 +814,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
         if (before) audit('payment.update', txSummary({ ...before, ...clean }), id)
         toast.success(tr('Tranzaksiya yangilandi'))
       }
+      return true
     },
     deleteTransaction: (id) => {
       if (!allowed('payments.manage')) return

@@ -81,8 +81,9 @@ export interface DashboardContextValue extends EduActions {
   updateCustomer: (id: string, patch: Partial<CustomerInput>) => void
   deleteCustomer: (id: string) => void
   getTransaction: (id?: string) => Transaction | undefined
-  addTransaction: (data: TransactionInput) => void
-  updateTransaction: (id: string, patch: Partial<TransactionInput>) => void
+  // false — ruxsat yo'q (oyna yopilmaydi, kiritilgan ma'lumot saqlanadi)
+  addTransaction: (data: TransactionInput) => boolean
+  updateTransaction: (id: string, patch: Partial<TransactionInput>) => boolean
   deleteTransaction: (id: string) => void
   addCourse: (data: CourseInput) => void
   // Nom o'zgarsa, shu kursdagi mijozlarning kurs nomi ham yangilanadi

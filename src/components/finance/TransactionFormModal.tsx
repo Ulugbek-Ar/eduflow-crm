@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, SOURCE_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuth } from '../../hooks/useAuth'
 import { useFormDraft } from '../../hooks/useFormDraft'
 import type { CustomerSource } from '../../types/customer.types'
 import type { PaymentMethod, TransactionCategory, TransactionInput, TransactionStatus, TransactionType } from '../../types/finance.types'
@@ -75,6 +76,9 @@ interface TransactionFormModalProps {
 export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount, enrollmentId: presetEnrollment, period: presetPeriod }: TransactionFormModalProps) {
   const { customers, courses, transactions, getTransaction, addTransaction, updateTransaction, closeModal, settings, debtContext, branches, branchFilter, restrictedBranch } = useDashboard()
   const editing = getTransaction(transactionId)
+  // A-02: xarajat — faqat payments.manage (menejer faqat kirim qabul qiladi)
+  const { can } = useAuth()
+  const types: readonly TransactionType[] = can('payments.manage') || editing?.type === 'expense' ? ['income', 'expense'] : ['income']
   const thisPeriod = todayInputValue().slice(0, 7)
   const enrollmentsOf = (id: string) => (id ? (debtContext.enrollments ?? []).filter((e) => e.customerId === id) : [])
   // Standart: birinchi faol o'qish, bo'lmasa — eng oxirgisi
@@ -196,11 +200,10 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     }
     // Mijozsiz yozuv: tanlangan filial ('' — umumiy); mijoz to'lovida filialni DashboardContext aniqlaydi
     if (branches.length > 0 && !data.customerId) data.branchId = form.branchId
-    if (editing) updateTransaction(editing.id, data)
-    else {
-      addTransaction(data)
-      clear()
-    }
+    // A-02: ruxsat bo'lmasa (masalan, xarajat) — oyna yopilmaydi va qoralama o'chmaydi
+    const saved = editing ? updateTransaction(editing.id, data) : addTransaction(data)
+    if (!saved) return
+    if (!editing) clear()
     closeModal()
   }
 
@@ -225,8 +228,8 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     >
       <form id="transaction-form" className="form" onSubmit={handleSubmit} noValidate>
         {restored && <DraftNotice onDiscard={discard} />}
-        <div className="segmented segmented-full" role="group" aria-label={tr('Tranzaksiya turi')}>
-          {(['income', 'expense'] as const).map((type) => (
+        <div className="segmented segmented-full" role="group" aria-label={tr('Tranzaksiya turi')} hidden={types.length < 2}>
+          {types.map((type) => (
             <button
               key={type}
               type="button"

@@ -36,4 +36,13 @@ describe('To\'lov qo\'shish', () => {
     expect(screen.getByRole('dialog', { name: 'To\'lov qabul qilish' })).toBeTruthy()
     expect(localStorage.getItem('apex:transactions')).toBe('[]')
   })
+
+  it('A-02: menejerga "Chiqim" ko\'rinmaydi (xarajat yozib, ma\'lumotni yo\'qotmaydi)', async () => {
+    const { user } = await renderSignedIn({ customers: [makeCustomer()] }, { role: 'manager' })
+    await user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
+    await user.click(await screen.findByRole('button', { name: 'To\'lov qabul qilish' }))
+    const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
+    expect(within(dialog).queryByRole('button', { name: 'Chiqim' })).toBeNull()
+  })
 })
+
