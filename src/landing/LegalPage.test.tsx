@@ -27,6 +27,13 @@ describe('Huquqiy sahifalar rekvizitlari', () => {
     expect(screen.queryByText(/\[Kompaniya nomi/)).toBeNull()
   })
 
+  it('QA-04: kompaniya va manzil berilsa — "namuna" ogohlantirishi ko\'rinmaydi; berilmasa — ko\'rinadi', async () => {
+    vi.stubEnv('VITE_LEGAL_COMPANY', '«Bilim» MChJ, STIR 123456789')
+    vi.stubEnv('VITE_LEGAL_ADDRESS', 'Toshkent, Chilonzor 9')
+    await renderLegal('/privacy')
+    expect(screen.queryByText(/Bu hujjat namuna/)).toBeNull()
+  })
+
   it('berilmasa — joy [qavs]da ko\'rinadi', async () => {
     await renderLegal('/privacy')
     expect(screen.getByText('[Kompaniya nomi, STIR, manzil]')).toBeTruthy()

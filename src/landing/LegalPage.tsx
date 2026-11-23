@@ -189,10 +189,13 @@ export function LegalPage() {
         </div>
       </header>
       <main className="lp-legal" lang="uz">
-        <p className="notice notice-warning">
-          {tr('Bu hujjat namuna. E\'lon qilishdan oldin kvadrat qavs ichidagi ma\'lumotlarni to\'ldiring va yurist bilan tekshiring.')}
-          {getLang() === 'ru' && ' Документ на узбекском языке; русская версия — по запросу.'}
-        </p>
+        {/* QA-04: rekvizitlar (kompaniya, manzil) berilgach "namuna" ogohlantirishi ko'rinmaydi */}
+        {(!LEGAL.company || !LEGAL.address) && (
+          <p className="notice notice-warning">
+            {tr('Bu hujjat namuna. E\'lon qilishdan oldin kvadrat qavs ichidagi ma\'lumotlarni to\'ldiring va yurist bilan tekshiring.')}
+          </p>
+        )}
+        {getLang() === 'ru' && <p className="notice notice-info">Документ на узбекском языке; русская версия — по запросу.</p>}
         {route === 'privacy' ? <Privacy /> : <Terms />}
         <p className="lp-legal-links">
           <a href={routeHref('landing')}>← {tr('Bosh sahifa')}</a>
