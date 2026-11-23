@@ -9,6 +9,8 @@ interface ErrorBoundaryProps {
   children: ReactNode
   // Bo'lim darajasida: butun ilova emas, faqat shu qism almashtiriladi
   compact?: boolean
+  // A-04: bo'lak internet yo'qligida yuklanmagan bo'lsa — internet qaytganda chaqiriladi (standart: sahifani qayta yuklash)
+  onRecover?: () => void
 }
 
 interface ErrorBoundaryState {
@@ -22,8 +24,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { error: error instanceof Error ? error : new Error(String(error)) }
   }
 
+  private onOnline = () => {
+    window.removeEventListener('online', this.onOnline)
+    ;(this.props.onRecover ?? (() => window.location.reload()))()
+  }
+
   componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error(`${APP_NAME} xatosi:`, error, info.componentStack)
+    // React.lazy rad etilgan bo'lakni keshlaydi — internet qaytgach qayta yuklash kerak (ma'lumot brauzerda saqlangan)
+    if (isChunkLoadError(error)) window.addEventListener('online', this.onOnline)
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('online', this.onOnline)
   }
 
   render() {

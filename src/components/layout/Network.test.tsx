@@ -43,6 +43,20 @@ describe('Xato oynasi', () => {
     expect(screen.queryByRole('button', { name: 'Qayta urinish' })).toBeNull()
   })
 
+  it('A-04: bo\'lak offline\'da yuklanmagan bo\'lsa — internet qaytgach o\'zi qayta yuklanadi', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const recover = vi.fn()
+    render(
+      <ErrorBoundary compact onRecover={recover}>
+        <Boom message="Failed to fetch dynamically imported module: /assets/TeachersPanel.js" />
+      </ErrorBoundary>,
+    )
+    act(() => {
+      window.dispatchEvent(new Event('online'))
+    })
+    expect(recover).toHaveBeenCalledTimes(1)
+  })
+
   it('boshqa xatoda — "Qayta urinish" bo\'limni qayta chizadi', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     render(

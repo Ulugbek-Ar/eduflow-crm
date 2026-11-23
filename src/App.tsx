@@ -35,6 +35,8 @@ import { pageTitle } from './constants/app'
 import { cx } from './utils/cx'
 import { loadWithRetry } from './utils/lazyRetry'
 import { canOpenSection } from './auth/permissions'
+import type { Section } from './types/dashboard.types'
+import type { Role } from './types/user.types'
 
 function ActiveSection() {
   const { activeSection } = useDashboard()
@@ -140,8 +142,24 @@ const ImportDialog = lazy(() => loadWithRetry(() => import('./components/custome
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
 // Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
-function prefetchChunks() {
-  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel, loadGroupsPanel, loadGroupDetail]) {
+// A-04: rolga ochiq barcha bo'limlar — internet uzilganda ham ochiladi
+const SECTION_LOADERS: Partial<Record<Section, Array<(opts?: { reload: boolean }) => Promise<unknown>>>> = {
+  customers: [loadCustomerForm, loadCustomerDetail],
+  finance: [loadTransactionTable, loadTransactionForm],
+  settings: [loadSettingsPanel],
+  courses: [loadCoursesPanel, loadCourseForm],
+  analytics: [loadAnalyticsPanel],
+  groups: [loadGroupsPanel, loadGroupDetail, loadGroupForm, loadTodayLessons],
+  schedule: [loadSchedulePanel],
+  attendance: [loadAttendancePanel],
+  teachers: [loadTeachersPanel, loadTeacherForm],
+  admin: [loadAdminPanel],
+  help: [loadHelpPanel],
+}
+
+function prefetchChunks(role: Role | undefined) {
+  const loads = (Object.keys(SECTION_LOADERS) as Section[]).filter((s) => canOpenSection(role, s)).flatMap((s) => SECTION_LOADERS[s] ?? [])
+  for (const load of loads) {
     load({ reload: false }).catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })
@@ -169,9 +187,9 @@ function Shell() {
   const userRole = user?.role
 
   useEffect(() => {
-    const timer = window.setTimeout(prefetchChunks, 1200)
+    const timer = window.setTimeout(() => prefetchChunks(userRole), 1200)
     return () => window.clearTimeout(timer)
-  }, [])
+  }, [userRole])
 
   useEffect(() => {
     const label = sectionLabel(activeSection, userRole)
