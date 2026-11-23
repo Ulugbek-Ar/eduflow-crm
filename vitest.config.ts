@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.ts'],
+    setupFiles: ['src/test/setup.ts'],
     restoreMocks: true,
     // PBKDF2 (210 000 iteratsiya) sekin CI mashinalarida bir necha soniya olishi mumkin
     testTimeout: 20_000,

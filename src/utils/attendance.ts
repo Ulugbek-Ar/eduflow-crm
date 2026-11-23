@@ -73,7 +73,8 @@ export function trailingAbsences(records: readonly AttendanceRecord[], customerI
   const own = records.filter((r) => r.customerId === customerId && r.groupId === groupId).sort((a, b) => b.date.localeCompare(a.date))
   let count = 0
   for (const r of own) {
-    if (r.status !== 'absent') break
+    // Eski "Sababli" ham "Kelmadi" (ko'rinish va foiz bilan bir xil, B-05)
+    if (simpleStatus(r.status) !== 'absent') break
     count++
   }
   return count

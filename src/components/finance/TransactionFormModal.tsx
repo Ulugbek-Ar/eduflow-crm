@@ -20,6 +20,7 @@ import { Input } from '../ui/Input'
 import { Modal } from '../ui/Modal'
 import { Select } from '../ui/Select'
 import { BranchSelect } from '../branches/BranchSelect'
+import { useCan } from '../../hooks/useAuth'
 
 interface FormState {
   type: TransactionType
@@ -74,6 +75,8 @@ interface TransactionFormModalProps {
 
 export function TransactionFormModal({ transactionId, kind, customerId, amount: presetAmount, enrollmentId: presetEnrollment, period: presetPeriod }: TransactionFormModalProps) {
   const { customers, courses, transactions, getTransaction, addTransaction, updateTransaction, closeModal, settings, debtContext, branches, branchFilter, restrictedBranch } = useDashboard()
+  const can = useCan()
+  const allowedTypes = (['income', 'expense'] as const).filter((type) => can(type === 'income' ? 'payments.create' : 'payments.manage'))
   const editing = getTransaction(transactionId)
   const thisPeriod = todayInputValue().slice(0, 7)
   const enrollmentsOf = (id: string) => (id ? (debtContext.enrollments ?? []).filter((e) => e.customerId === id) : [])
@@ -159,6 +162,11 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Ruxsat yo'q bo'lsa — oyna va kiritilgan ma'lumot saqlanadi (avval jim yopilib, qoralama ham o'chardi)
+    if (!allowedTypes.includes(form.type) || (editing && !can('payments.manage'))) {
+      setErrors({ amount: tr('Bu amal uchun ruxsatingiz yo\'q') })
+      return
+    }
     const amount = parseAmount(form.amount)
     const next: TransactionFormErrors = {}
     if (amount <= 0) next.amount = tr('Summa 0 dan katta bo\'lishi kerak')
@@ -225,8 +233,10 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     >
       <form id="transaction-form" className="form" onSubmit={handleSubmit} noValidate>
         {restored && <DraftNotice onDiscard={discard} />}
+        {/* "Chiqim" — faqat xarajat yozish huquqi borlarga (menejer faqat to'lov qabul qiladi; QA audit A-02) */}
+        {allowedTypes.length > 1 && (
         <div className="segmented segmented-full" role="group" aria-label={tr('Tranzaksiya turi')}>
-          {(['income', 'expense'] as const).map((type) => (
+          {allowedTypes.map((type) => (
             <button
               key={type}
               type="button"
@@ -238,6 +248,7 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
             </button>
           ))}
         </div>
+        )}
 
         <div className="form-row">
           <Input

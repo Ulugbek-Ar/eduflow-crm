@@ -68,3 +68,23 @@ describe('Modal', () => {
     expect(outer).not.toHaveBeenCalled()
   })
 })
+
+describe('Modal: disabled birinchi maydon (QA audit A-03)', () => {
+  it('fokus oyna ichida — Escape yopadi', () => {
+    const onClose = vi.fn()
+    const { unmount } = render(
+      <Modal title="Mijoz kartasi" onClose={onClose}>
+        <select disabled aria-label="Bosqich">
+          <option>Yangi</option>
+        </select>
+        <p>Faqat ko'rish</p>
+      </Modal>,
+    )
+    const dialogs = screen.getAllByRole('dialog')
+    const dialog = dialogs[dialogs.length - 1]
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    unmount()
+  })
+})

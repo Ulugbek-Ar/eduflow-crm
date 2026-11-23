@@ -53,3 +53,10 @@ describe('davomat', () => {
     expect([undefined, 'present', 'absent', 'late', 'excused'].map((s) => nextStatus(s as never))).toEqual(['present', 'absent', 'present', 'absent', 'present'])
   })
 })
+
+describe('ketma-ket kelmaganlar: eski "Sababli" ham kelmadi (QA audit B-05)', () => {
+  it('excused ketma-ketlikni uzmaydi', () => {
+    const r = (date: string, status: 'absent' | 'excused' | 'present') => ({ id: date, groupId: 'g1', customerId: 'c1', date, status, updatedAt: `${date}T10:00:00.000Z` })
+    expect(trailingAbsences([r('2026-11-02', 'present'), r('2026-11-04', 'absent'), r('2026-11-06', 'excused'), r('2026-11-09', 'absent')], 'c1', 'g1')).toBe(3)
+  })
+})

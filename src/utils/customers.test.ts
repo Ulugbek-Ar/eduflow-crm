@@ -152,3 +152,19 @@ describe('qidiruv: o\'zbekcha apostrof turlari (QA-02)', () => {
     expect(matchesCustomer(customer, '+998931112233')).toBe(true)
   })
 })
+
+describe('qidiruv: harf va raqam aralash (QA audit A-05) va ism uzunligi (A-06)', () => {
+  it('"Python 1" har qanday telefonni topmaydi', async () => {
+    const { matchesCustomer } = await import('./customers')
+    const { makeCustomer } = await import('../test/helpers')
+    const customer = makeCustomer({ name: 'Aziza Karimova', course: 'IELTS', phone: '+998 90 111 22 33' })
+    expect(matchesCustomer(customer, 'Python 1')).toBe(false)
+    expect(matchesCustomer(customer, '111 22')).toBe(true)
+  })
+
+  it('ism 100 belgidan oshmaydi', async () => {
+    const { validateCustomer } = await import('./customers')
+    const errors = validateCustomer({ name: 'A'.repeat(101), phone: '+998 90 111 22 33', source: 'website', course: '', note: '', status: 'new' }, [])
+    expect(errors.name).toMatch(/100 belgidan oshmasin/)
+  })
+})

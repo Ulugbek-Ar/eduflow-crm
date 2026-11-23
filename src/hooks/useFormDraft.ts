@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { AuthContext } from './useAuth'
 import { readJson, removeItem, setItem } from '../services/storage.service'
 import { isRecord } from '../utils/guards'
 
@@ -19,7 +20,9 @@ export function mergeDraft<T extends object>(base: T, raw: unknown): T | null {
 // Yangi yozuv formasi qoralamasi: oyna tasodifan yopilsa ham yozilgan narsa yo'qolmaydi.
 // Tahrirlashda (enabled = false) qoralama ishlatilmaydi
 export function useFormDraft<T extends object>(name: string, enabled: boolean, initial: () => T) {
-  const key = `apex:draft:${name}`
+  // Qoralama xodimga bog'lanadi (A-08): bir brauzerda boshqa xodim boshqasining yozganini ko'rmasin
+  const owner = useContext(AuthContext)?.user?.id ?? 'local'
+  const key = `apex:draft:${owner}:${name}`
   const [blank] = useState(() => JSON.stringify(initial()))
   const [restored, setRestored] = useState(() => enabled && readJson(key) !== undefined && mergeDraft(initial(), readJson(key)) !== null)
   const [form, setForm] = useState<T>(() => (enabled ? mergeDraft(initial(), readJson(key)) : null) ?? initial())

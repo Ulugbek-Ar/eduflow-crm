@@ -29,7 +29,13 @@ describe('escapeCsvCell', () => {
   it('formula bilan boshlangan matnni zararsizlantiradi (CSV injection)', () => {
     expect(escapeCsvCell('=SUM(A1:A2)')).toBe('\'=SUM(A1:A2)')
     expect(escapeCsvCell('@cmd')).toBe('\'@cmd')
-    expect(escapeCsvCell('+998 90 123 45 67')).toBe('\'+998 90 123 45 67')
+    // Haqiqiy formula + bilan ham ekranlanadi
+    expect(escapeCsvCell('+A1*2')).toBe('\'+A1*2')
+  })
+
+  it('telefon raqami apostrofsiz va "+" siz (Excel formula deb o\'qimaydi, A-07)', () => {
+    expect(escapeCsvCell('+998 90 123 45 67')).toBe('998 90 123 45 67')
+    expect(escapeCsvCell('+998 (90) 123-45-67')).toBe('998 (90) 123-45-67')
   })
 
   it('raqamlar o\'zgarishsiz (manfiy summa formula emas)', () => {

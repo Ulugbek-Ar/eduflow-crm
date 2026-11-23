@@ -123,6 +123,26 @@ describe('v11: o\'qish (enrollment) asosidagi qarz', () => {
   const debtOn = (date: string, transactions: ReturnType<typeof pay>[], enrollment: object = {}, settings?: { prorateFirstMonth: boolean; paymentDueDay: number }) =>
     customerDebt(student, [ielts], transactions, new Date(`${date}T12:00:00`), ctx(enrollment, settings))
 
+  it('oy o\'rtasida boshqa guruhga ko\'chirish — shu oy uchun bir oylik summa, soxta qarz yo\'q (QA audit A-01)', () => {
+    const group2 = { ...group, id: 'g2', name: 'IELTS — ertalabki' }
+    const old = { ...base, endDate: '2026-11-11', status: 'finished' as const }
+    const moved = { ...base, id: 'e2', groupId: 'g2', startDate: '2026-11-12' }
+    const paid = [pay('t1', '2026-09-01', 600_000, { enrollmentId: 'e1' }), pay('t2', '2026-10-03', 600_000, { enrollmentId: 'e1' }), pay('t3', '2026-11-05', 600_000, { enrollmentId: 'e1', period: '2026-11' })]
+    const settings = { prorateFirstMonth: false, paymentDueDay: 10 }
+    const row = customerDebt(student, [ielts], paid, new Date('2026-11-20T12:00:00'), { groups: [group, group2], enrollments: [old, moved], settings })
+    expect(row?.debt).toBe(0)
+    // "Oylik" — faqat hozirgi guruh (avval 1 200 000 ko'rsatilardi)
+    expect(row?.monthly).toBe(600_000)
+    // Noyabr: 11 kun eski guruhda + 19 kun yangisida = bir oylik
+    const nov = (id: string) => row?.ledgers.find((l) => l.enrollment.id === id)?.months.find((m) => m.period === '2026-11')?.expected ?? 0
+    expect(nov('e1') + nov('e2')).toBeLessThanOrEqual(600_000)
+    expect(nov('e1') + nov('e2')).toBeGreaterThanOrEqual(599_999)
+    // Noyabr to'lanmagan bo'lsa — qarz bir oylik (ikki oylik emas)
+    const unpaid = customerDebt(student, [ielts], paid.slice(0, 2), new Date('2026-11-20T12:00:00'), { groups: [group, group2], enrollments: [old, moved], settings })
+    expect(unpaid?.debt).toBeGreaterThanOrEqual(599_999)
+    expect(unpaid?.debt).toBeLessThanOrEqual(600_000)
+  })
+
   it('har oy vaqtida to\'lasa — qarz yo\'q; to\'lov muddati o\'tmagan oy hali qarz emas', () => {
     const paid = [pay('t1', '2026-09-01', 600_000), pay('t2', '2026-10-05', 600_000)]
     expect(debtOn('2026-11-07', paid)?.debt).toBe(0)

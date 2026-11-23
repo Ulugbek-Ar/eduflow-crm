@@ -6,12 +6,14 @@ import { FUNNEL_STAGES } from '../constants/navigation'
 import { customPeriod, inPeriod } from './analytics'
 import { applyDirection, compareText } from './list'
 import { isValidPhone, phoneDigits } from './phone'
-import { normalizeSearch, searchIncludes } from './searchText'
+import { normalizeSearch, phoneQuery, searchIncludes } from './searchText'
 
 export const EMPTY_CUSTOMER_FILTERS: CustomerFilters = { status: 'all', course: 'all', source: 'all', from: '', to: '' }
 
 // Holatlar voronka tartibida saralanadi, alifbo bo'yicha emas
 const STATUS_ORDER: Record<CustomerStatus, number> = { new: 0, contacted: 1, thinking: 2, paid: 3, cancelled: 4 }
+
+export const CUSTOMER_NAME_MAX = 100
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -19,7 +21,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export function matchesCustomer(customer: Customer, search: string): boolean {
   const query = normalizeSearch(search)
   if (!query) return true
-  const digits = query.replace(/\D/g, '')
+  // Telefon bo'yicha faqat so'rov raqamlardan iborat bo'lsa (kamida 3 raqam): "Python 1" har qanday telefonni topmasin (A-05)
+  const digits = phoneQuery(search)
   return (
     searchIncludes(customer.name, query) ||
     searchIncludes(customer.course, query) ||
@@ -86,7 +89,10 @@ export type CustomerFormErrors = Partial<Record<'name' | 'phone' | 'email', stri
 
 export function validateCustomer(input: CustomerInput, existing: readonly Customer[], editingId?: string): CustomerFormErrors {
   const errors: CustomerFormErrors = {}
-  if (input.name.trim().length < 2) errors.name = tr('Ismni kiriting (kamida 2 ta belgi)')
+  const nameLength = input.name.trim().length
+  if (nameLength < 2) errors.name = tr('Ismni kiriting (kamida 2 ta belgi)')
+  // Uzunlik chegarasi (A-06): ro'yxat, chek va SMS buzilmasin
+  else if (nameLength > CUSTOMER_NAME_MAX) errors.name = tr('Ism {0} belgidan oshmasin', { 0: CUSTOMER_NAME_MAX })
 
   if (!isValidPhone(input.phone)) {
     errors.phone = tr('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')

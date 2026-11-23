@@ -34,7 +34,11 @@ export function attributeIncome(t: Pick<Transaction, 'type' | 'category' | 'enro
       return course?.name === customer.course
     })
     .sort((a, b) => a.startDate.localeCompare(b.startDate))
-  return candidates[0] ?? null
+  if (candidates[0]) return candidates[0]
+  // Zaxira qoida (C-03): mijozdagi kurs nomi guruh kursiga mos kelmasa ham, shu kuni yagona faol o'qishi bo'lsa — o'shanga
+  // (Payme/Click va importdagi enrollmentId'siz to'lovlar qarzni kamaytirsin)
+  const active = ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day))
+  return active.length === 1 ? active[0] : null
 }
 
 // Kirimlarni o'qish id'si bo'yicha guruhlash (faqat "To'langan" kurs to'lovlari va boshqa kirimlar)

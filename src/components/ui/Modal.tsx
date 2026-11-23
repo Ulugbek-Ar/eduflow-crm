@@ -62,9 +62,13 @@ export function Modal({ title, description, onClose, children, footer, size = 'm
     document.body.classList.add('scroll-locked')
 
     const dialog = dialogRef.current
-    const preferred = dialog?.querySelector<HTMLElement>('[data-autofocus]')
-    const firstField = dialog?.querySelector<HTMLElement>('.modal-body input, .modal-body select, .modal-body textarea')
+    // O'chirilgan (disabled) maydonga fokus tushmaydi — keyingisiga yoki oynaning o'ziga (QA audit A-03:
+    // kuzatuvchida birinchi maydon disabled edi, fokus fon sahifasida qolib, Escape ishlamasdi)
+    const enabled = ':not([disabled]):not([type="hidden"])'
+    const preferred = dialog?.querySelector<HTMLElement>(`[data-autofocus]${enabled}`)
+    const firstField = dialog?.querySelector<HTMLElement>(`.modal-body input${enabled}, .modal-body select${enabled}, .modal-body textarea${enabled}`)
     ;(preferred ?? firstField ?? dialog)?.focus()
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus()
 
     return () => {
       openModals -= 1
