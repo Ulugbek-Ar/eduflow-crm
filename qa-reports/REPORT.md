@@ -133,12 +133,46 @@ QA-01, QA-02, QA-03, QA-05, QA-06, QA-07, QA-08, QA-09, QA-10, QA-11 (CLS), QA-1
 
 ---
 
+---
+
+## Qayta sinov — 2026-11-23 (`main` = `003b61f`, v1.2.3)
+
+Tekshiruvlar: typecheck ✅, lint ✅, unit testlar **614/614** ✅, build ✅. Jonli sayt `gh-pages` = "deploy: …@003b61f".
+O'zgargan fayllar faqat QA-01…07, 09, 10 va qidiruvga tegishli. `debts.ts`, `Modal.tsx`, `App.tsx`, `useFormDraft.ts`,
+`export.service.ts`, `eduActions.ts` va `supabase/migrations/` **o'zgarmagan**, shuning uchun B-01…B-06 kod bo'yicha o'zgarishsiz qoldi.
+Skriptlar: `tests/retest2.mjs`, `tests/live2.mjs` va avvalgi skriptlar.
+
+| ID | Yangi holat | Dalil |
+|---|---|---|
+| QA-01 | ✅ **Tuzatilgan** | `8 93 111 22 33`, `0931112233` → `+998 93 111 22 33`; `8-90-123-45-67` → `+998 90 123 45 67`. Ortiqcha uzun kiritish rad etiladi, lekin maska `+998 99 893 11 12233123` ko'rsatadi (Low, kosmetik) |
+| QA-02 | ✅ **Tuzatilgan** | `G'ulom`, `G‘ulom`, `qo'chqorov`, `gulom` → `Gʻulom Qoʻchqorov` topiladi |
+| QA-03 | ✅ **Tuzatilgan** | Mijozsiz kurs to'lovi saqlanmaydi: "Kurs to'lovi uchun mijozni tanlang…" |
+| QA-04 | **Qisman** | Jonli `/privacy`, `/terms`: `[...]` yo'q, lekin rekvizitlar berilmagan va "namuna" ogohlantirishi ko'rinadi (egasidan ma'lumot kerak) |
+| QA-05 | ✅ **Tuzatilgan** | Usta: telefon/manzil bo'sh, namunalar faqat placeholder'da; settings `phone: ""` |
+| QA-06 | ✅ **Tuzatilgan** | Combobox: `947508294`, `+998947508294`, `94 750` → topiladi |
+| QA-07 | ✅ **Tuzatilgan** | Bo'sh forma — 5 xato bir yo'la; qisqa parol + mos kelmagan takror → ikkala xato |
+| QA-09 | **Qisman** | O'quvchilar soni to'g'ri (19 = 10 + 9); o'qituvchi sahifasida "Davr" tanlovi hali ko'rinadi |
+| QA-10 | ✅ **Tuzatilgan** | 390×844: "Saqlash" y = 778 px, ekranda (`screenshots/re2-qa10.png`) |
+| QA-18 | Hali mavjud | Rol tanlovi kengligi o'zgarmagan (99 px) |
+| QA-22 | Hali mavjud | To'lov oynasida "Status" bor |
+| **A-01** | **Hali mavjud (High)** | Doniyor Valiyev (noyabr to'langan) 6 kun oldingi sana bilan "Matematika — DTM kunduzgi" → "ertalabki" ko'chirildi: qarzdorlar 6 / 6 670 000 → **7 / 7 170 000** |
+| A-02 | Hali mavjud | Menejer "Chiqim" → rad, oyna yopiladi (1306 → 1306) |
+| A-03 | Hali mavjud | Kuzatuvchi: fokus oynadan tashqarida, Escape yopmaydi |
+| A-05 | Hali mavjud | "Python 1" → 264 natija |
+| A-06, A-07 | Hali mavjud | 300 belgilik ism saqlanadi; CSV telefon `'+998…` |
+| A-04, A-08, A-09, B-01…B-06 | Hali mavjud (kod o'zgarmagan) | Brauzerda qayta ishga tushirilmadi |
+| QA-08, 11–17, 19–21, 23 | Tegishli kod o'zgarmagan — oldingi holat | Qayta o'lchanmadi (Lighthouse, 390 px tablar va h.k.) |
+
+**Eng muhim ochiq muammolar:** B-01 (`write_audit` orqali boshqa markaz jurnaliga yozish), A-01 (ko'chirishda soxta qarz), B-02 (Payme summasini API orqali o'zgartirish), A-02/A-03/A-04.
+
+---
+
 ## 7. Tuzatish prompti (nusxalab Claude Code'ga bering)
 
 ```text
 Sen EduFlow CRM (React 19 + TypeScript + Vite; Supabase: PostgreSQL migratsiyalari + Edge Functions/Deno) loyihasida ishlayapsan.
 Vazifa: qa-reports/REPORT.md (qa-audit branch) dagi A va B guruhidagi barcha muammolarni hamda "Hali mavjud"/"Qisman"
-QA-01…QA-23 topilmalarini tuzatish. Avval REPORT.md ni va docs/QA-PROMPT.md ni to'liq o'qi.
+QA-01…QA-23 topilmalarini tuzatish. 2026-11-23 qayta sinovida tuzatilgan deb belgilanganlarni (QA-01, 02, 03, 05, 06, 07, 10) o'tkazib yubor. Avval REPORT.md ni va docs/QA-PROMPT.md ni to'liq o'qi.
 
 UMUMIY QOIDALAR
 - main'dan yangi branch och (masalan fix/qa-audit-2026-11-18). main'ga to'g'ridan-to'g'ri push, force-push, merge, branch o'chirish,

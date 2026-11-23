@@ -101,3 +101,6 @@ Offline (lokal/demo): ma'lumot yozish ishlaydi ✅; lekin 4 bo'lim (O'qituvchila
 ## Yakuniy holat
 - REPORT.md (A/B/C, QA jadvali, xulosa, tuzatish prompti) va REMAINING.md (bajarilmaganlar + davom ettirish prompti) yozildi.
 - Audit klonida `git status` toza (0 o'zgarish), HEAD = d62889e.
+
+## 8. Qayta sinov 2026-11-23 (003b61f) — BAJARILDI
+7 ta QA tuzatilgan (01, 02, 03, 05, 06, 07, 10), 2 tasi qisman (04, 09); A-01…A-07 va B-01…B-06 hali mavjud. Batafsil: REPORT.md → "Qayta sinov".
