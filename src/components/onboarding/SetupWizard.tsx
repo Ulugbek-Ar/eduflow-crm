@@ -234,7 +234,8 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                 onChange={(e) => setCourseForm((prev) => ({ ...prev, price: formatAmountInput(e.target.value) }))}
               />
               <Input
-                label={tr('Necha oy (0 — muddatsiz)')}
+                label={tr('Muddat, oy')}
+                placeholder={tr('0 — muddatsiz')}
                 inputMode="numeric"
                 value={courseForm.months}
                 onChange={(e) => setCourseForm((prev) => ({ ...prev, months: e.target.value.replace(/\D/g, '').slice(0, 2) }))}

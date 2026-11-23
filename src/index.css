@@ -3750,7 +3750,8 @@ ol.steps-list {
 
 .wizard-inline {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  /* QA-18: rol tanlovi ("Menejer", "Kassir / Buxgalter") kesilmasin */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr) minmax(10rem, 1fr) auto;
   gap: 10px;
   align-items: end;
 }

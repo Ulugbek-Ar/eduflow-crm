@@ -1697,4 +1697,6 @@ export const RU: Readonly<Record<string, string>> = {
   "{0} — profil menyusi": "{0} — меню профиля",
   "Chek: {0}, {1}, {2}": "Чек: {0}, {1}, {2}",
   "{0} (onlayn)": "{0} (онлайн)",
+  "Muddat, oy": "Срок, мес.",
+  "0 — muddatsiz": "0 — бессрочно",
 }
