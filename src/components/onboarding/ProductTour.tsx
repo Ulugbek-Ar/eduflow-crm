@@ -68,7 +68,8 @@ export function ProductTour({ onClose }: { onClose: () => void }) {
         <div
           className="tour-spot"
           aria-hidden="true"
-          style={{ left: rect.left - PAD, top: rect.top - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
+          // QA-11: joy transform bilan — layout siljishi (CLS) bo'lmaydi
+          style={{ transform: `translate(${rect.left - PAD}px, ${rect.top - PAD}px)`, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
         />
       ) : (
         <div className="tour-dim" aria-hidden="true" />

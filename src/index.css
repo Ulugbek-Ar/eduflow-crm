@@ -3850,7 +3850,9 @@ ol.steps-list {
   border-radius: var(--radius-sm);
   box-shadow: 0 0 0 9999px var(--overlay);
   outline: 2px solid var(--primary);
-  transition: left 200ms var(--ease), top 200ms var(--ease), width 200ms var(--ease), height 200ms var(--ease);
+  left: 0;
+  top: 0;
+  transition: transform 200ms var(--ease), width 200ms var(--ease), height 200ms var(--ease);
 }
 
 .tour-card {
