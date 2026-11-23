@@ -320,7 +320,7 @@ function studyMonthNumber(customer, now = /* @__PURE__ */ new Date()) {
 	const start = new Date(customer.paidAt);
 	return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
 }
-function legacyDebt(customer, courses, transactions, now) {
+function legacyDebt(customer, courses, transactions, now, settings = DEFAULT_DEBT_SETTINGS) {
 	if (customer.status !== "paid") return null;
 	const course = courses.find((c) => c.name === customer.course);
 	if (!course || course.monthlyPrice <= 0) return null;
@@ -331,7 +331,8 @@ function legacyDebt(customer, courses, transactions, now) {
 	const paid = sumBy(own, (t) => t.status === "paid" && inPeriod(t.date, month));
 	const pending = sumBy(own, (t) => t.status === "pending");
 	const expected = course.monthlyPrice;
-	const debt = Math.max(0, expected - paid);
+	const dueDay = Math.min(28, Math.max(1, settings.paymentDueDay));
+	const debt = (customer.paidAt ? new Date(customer.paidAt) >= month.start : false) || now.getDate() > dueDay ? Math.max(0, expected - paid) : 0;
 	return {
 		customer,
 		course,
@@ -364,7 +365,7 @@ function prepare(customers, courses, transactions, ctx) {
 }
 function rowFor(customer, courses, transactions, p, now) {
 	const own = p.enrollments.filter((e) => e.customerId === customer.id);
-	if (own.length === 0) return legacyDebt(customer, courses, transactions, now);
+	if (own.length === 0) return legacyDebt(customer, courses, transactions, now, p.settings);
 	const today = dayString(now);
 	const ledgers = own.map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], {
 		groups: p.groups,

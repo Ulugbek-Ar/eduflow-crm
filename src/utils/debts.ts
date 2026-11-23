@@ -252,7 +252,7 @@ export function studyMonthNumber(customer: Customer, now = new Date()): number |
   return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1
 }
 
-function legacyDebt(customer: Customer, courses: readonly Course[], transactions: readonly Transaction[], now: Date): DebtRow | null {
+function legacyDebt(customer: Customer, courses: readonly Course[], transactions: readonly Transaction[], now: Date, settings: DebtSettings = DEFAULT_DEBT_SETTINGS): DebtRow | null {
   if (customer.status !== 'paid') return null
   const course = courses.find((c) => c.name === customer.course)
   if (!course || course.monthlyPrice <= 0) return null
@@ -263,7 +263,11 @@ function legacyDebt(customer: Customer, courses: readonly Course[], transactions
   const paid = sumBy(own, (t) => t.status === 'paid' && inPeriod(t.date, month))
   const pending = sumBy(own, (t) => t.status === 'pending')
   const expected = course.monthlyPrice
-  const debt = Math.max(0, expected - paid)
+  // B-06: to'lov muddati (oyning N-sanasi) o'tmaguncha joriy oy hali qarz emas; birinchi oy — to'lov qildi sanasi
+  const dueDay = Math.min(28, Math.max(1, settings.paymentDueDay))
+  const startedThisMonth = customer.paidAt ? new Date(customer.paidAt) >= month.start : false
+  const due = startedThisMonth || now.getDate() > dueDay
+  const debt = due ? Math.max(0, expected - paid) : 0
   return {
     customer,
     course,
@@ -302,7 +306,7 @@ function prepare(customers: readonly Customer[], courses: readonly Course[], tra
 
 function rowFor(customer: Customer, courses: readonly Course[], transactions: readonly Transaction[], p: Prepared, now: Date): DebtRow | null {
   const own = p.enrollments.filter((e) => e.customerId === customer.id)
-  if (own.length === 0) return legacyDebt(customer, courses, transactions, now)
+  if (own.length === 0) return legacyDebt(customer, courses, transactions, now, p.settings)
   const today = dayString(now)
   const ledgers = own
     .map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], { groups: p.groups, courses, settings: p.settings, edges: transferEdges(e, own) }, today))

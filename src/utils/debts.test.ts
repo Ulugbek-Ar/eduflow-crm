@@ -221,3 +221,12 @@ describe('A-01: guruhdan ko\'chirish oyi', () => {
     expect(monthExpected(enrollments[0], '2026-11', 650_000, DEFAULT_DEBT_SETTINGS)).toBe(650_000)
   })
 })
+
+describe('B-06: guruhsiz (eskicha) mijoz qarzi to\'lov muddatiga bog\'liq', () => {
+  it('oyning to\'lov kunidan oldin — qarz emas, keyin — qarz', () => {
+    const settings = { prorateFirstMonth: false, paymentDueDay: 10 }
+    const c = customer('c9', { paidAt: at(9, 1) })
+    expect(computeDebts([c], courses, [], new Date(2026, 10, 5, 12), { settings })).toEqual([])
+    expect(computeDebts([c], courses, [], new Date(2026, 10, 11, 12), { settings })[0]?.debt).toBe(650_000)
+  })
+})
