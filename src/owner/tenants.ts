@@ -57,7 +57,7 @@ export function sampleTenants(now = Date.now()): Tenant[] {
     ['Bilim Plus', 'Toshkent', '+998 90 111 22 33', 'pro', 'active', 41, 9, 412, 210],
     ['Zukko Akademiya', 'Samarqand', '+998 91 222 33 44', 'standard', 'active', 18, 4, 186, 120],
     ['English Hub', 'Toshkent', '+998 93 333 44 55', 'standard', 'active', 3, 5, 240, 95],
-    ['IT Park Kids', 'Namangan', '+998 94 444 55 66', 'trial', 'active', 9, 2, 37, 5],
+    ['Kod Bolalari', 'Namangan', '+998 94 444 55 66', 'trial', 'active', 9, 2, 37, 5],
     ['Matematika markazi', 'Buxoro', '+998 95 555 66 77', 'trial', 'active', 2, 3, 58, 12],
     ['Lingvo Star', 'Andijon', '+998 97 666 77 88', 'standard', 'active', -4, 3, 133, 160],
     ['Abituriyent 2027', 'Farg\'ona', '+998 99 777 88 99', 'trial', 'active', -6, 1, 21, 20],

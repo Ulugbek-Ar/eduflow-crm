@@ -174,10 +174,13 @@ function attributeIncome(t, ctx) {
 	const customer = ctx.customers.find((c) => c.id === t.customerId);
 	if (!customer) return null;
 	const day = dayString(new Date(t.date));
-	return ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day)).filter((e) => {
+	const candidates = ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day)).filter((e) => {
 		const group = ctx.groups.find((g) => g.id === e.groupId);
 		return ctx.courses.find((c) => c.id === group?.courseId)?.name === customer.course;
-	}).sort((a, b) => a.startDate.localeCompare(b.startDate))[0] ?? null;
+	}).sort((a, b) => a.startDate.localeCompare(b.startDate));
+	if (candidates[0]) return candidates[0];
+	const active = ctx.enrollments.filter((e) => e.customerId === customer.id && enrollmentActiveOn(e, day));
+	return active.length === 1 ? active[0] : null;
 }
 function incomesByEnrollment(transactions, ctx) {
 	const map = /* @__PURE__ */ new Map();
@@ -225,7 +228,7 @@ function effectiveEnd(e) {
 	if (e.endDate) return e.endDate;
 	if (e.status === "left" || e.status === "finished") return (e.updatedAt ?? e.createdAt).slice(0, 10);
 }
-function monthExpected(e, period, fee, settings) {
+function monthExpected(e, period, fee, settings, transfer = {}) {
 	const from = monthStartDay(period);
 	const to = monthEndDay(period);
 	const end = effectiveEnd(e);
@@ -246,9 +249,30 @@ function monthExpected(e, period, fee, settings) {
 		}
 	}
 	if (activeDays <= 0) return 0;
+	if (transfer.last === period) return Math.floor(fee * activeDays / monthDays);
 	const firstMonth = period === monthOf(e.startDate);
-	if (paused || firstMonth && settings.prorateFirstMonth) return Math.round(fee * activeDays / monthDays);
+	if (paused || transfer.first === period || firstMonth && settings.prorateFirstMonth) return Math.round(fee * activeDays / monthDays);
 	return fee;
+}
+function transferMonths(enrollments) {
+	const result = /* @__PURE__ */ new Map();
+	for (const a of enrollments) {
+		const end = effectiveEnd(a);
+		if (!end) continue;
+		const next = addDays(end, 1);
+		if (monthOf(next) !== monthOf(end)) continue;
+		const b = enrollments.find((x) => x.id !== a.id && x.customerId === a.customerId && x.startDate === next);
+		if (!b) continue;
+		result.set(a.id, {
+			...result.get(a.id),
+			last: monthOf(end)
+		});
+		result.set(b.id, {
+			...result.get(b.id),
+			first: monthOf(next)
+		});
+	}
+	return result;
 }
 function dueDate(e, period, settings) {
 	if (period === monthOf(e.startDate)) return e.startDate;
@@ -275,7 +299,7 @@ function enrollmentLedger(e, payments, ctx, today) {
 	let running = 0;
 	const paid = payments.reduce((sum, t) => sum + t.amount, 0);
 	for (let period = firstPeriod; period <= lastPeriod; period = nextPeriod(period)) {
-		const expected = monthExpected(e, period, fee, ctx.settings);
+		const expected = monthExpected(e, period, fee, ctx.settings, ctx.transfer);
 		const monthPaid = paidBy.get(period) ?? 0;
 		const due = today > dueDate(e, period, ctx.settings);
 		expectedAll += expected;
@@ -356,18 +380,19 @@ function rowFor(customer, courses, transactions, p, now) {
 	const own = p.enrollments.filter((e) => e.customerId === customer.id);
 	if (own.length === 0) return legacyDebt(customer, courses, transactions, now);
 	const today = dayString(now);
+	const transfers = transferMonths(own);
 	const ledgers = own.map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], {
 		groups: p.groups,
 		courses,
-		settings: p.settings
+		settings: p.settings,
+		transfer: transfers.get(e.id)
 	}, today)).filter((l) => l.months.length > 0 || l.paid > 0);
 	if (ledgers.length === 0) return null;
 	const expected = ledgers.reduce((s, l) => s + l.expectedDue, 0);
 	const paid = ledgers.reduce((s, l) => s + l.paid, 0);
 	const all = ledgers.reduce((s, l) => s + l.expectedAll, 0);
 	const balance = paid - expected;
-	const active = ledgers.filter((l) => !effectiveEnd(l.enrollment) || (effectiveEnd(l.enrollment) ?? "") >= addDays(today, -31));
-	const main = active[0] ?? ledgers[0];
+	const main = ledgers.filter((l) => !effectiveEnd(l.enrollment) || (effectiveEnd(l.enrollment) ?? "") >= addDays(today, -31))[0] ?? ledgers[0];
 	const course = main.course ?? courses.find((c) => c.name === customer.course) ?? {
 		id: "",
 		name: customer.course,
@@ -384,7 +409,10 @@ function rowFor(customer, courses, transactions, p, now) {
 		course,
 		group: ledgers.length === 1 ? main.group : void 0,
 		label: names.join(", "),
-		monthly: active.reduce((s, l) => s + l.fee, 0),
+		monthly: (() => {
+			const current = ledgers.filter((l) => !effectiveEnd(l.enrollment) || (effectiveEnd(l.enrollment) ?? "") >= today);
+			return (current.length ? current : [main]).reduce((s, l) => s + l.fee, 0);
+		})(),
 		expected,
 		paid,
 		debt: Math.max(0, -balance),

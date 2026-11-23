@@ -547,6 +547,56 @@ do $$ begin
 end $$;
 reset role;
 
+-- 7f) Xavfsizlik (QA audit B-01 … B-03)
+-- B-01: boshqa markaz jurnaliga soxta yozuv — B administratori ham, kirmagan (anon) ham chaqira olmaydi
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000d');
+do $$ begin
+  begin
+    perform public.write_audit(current_setting('test.org_a')::uuid, 'payment.delete', 'FORGED by B admin', null);
+    raise exception 'FAIL: B administratori A jurnaliga yozdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+set role anon;
+do $$ begin
+  begin
+    perform public.write_audit(current_setting('test.org_a')::uuid, 'payment.delete', 'FORGED by anon', null);
+    raise exception 'FAIL: anon jurnalga yozdi';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.has_permission('customers.view');
+    raise exception 'FAIL: anon ichki funksiyani chaqirdi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+do $$ begin
+  if exists (select 1 from public.audit_log where summary like 'FORGED%') then raise exception 'FAIL: soxta jurnal yozuvi bor'; end if;
+end $$;
+-- B-02: kassir Payme orqali kelgan to'lov summasini o'zgartira olmaydi; izohni — oladi
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e3');
+do $$ begin
+  begin
+    update public.transactions set amount = 1, provider = null where provider_ref = 'pm-1';
+    raise exception 'FAIL: kassir onlayn to''lov summasini o''zgartirdi';
+  exception when insufficient_privilege then null; end;
+  update public.transactions set note = 'Kassir izohi' where provider_ref = 'pm-1';
+  if (select note from public.transactions where provider_ref = 'pm-1') <> 'Kassir izohi' then raise exception 'FAIL: onlayn to''lov izohi saqlanmadi'; end if;
+  if (select amount from public.transactions where provider_ref = 'pm-1') <> 650000 then raise exception 'FAIL: summa o''zgargan'; end if;
+end $$;
+reset role;
+-- B-03: Yunusobod (f2) menejeri mijozni Chilonzorga (f1) o'tkaza olmaydi; ismini o'zgartira oladi
+select pg_temp.as_user('00000000-0000-0000-0000-0000000000e4');
+do $$ begin
+  begin
+    update public.customers set branch_id = 'f1' where id = 'c5';
+    raise exception 'FAIL: filial menejeri mijozni boshqa filialga o''tkazdi';
+  exception when insufficient_privilege then null; end;
+  update public.customers set name = 'Yunusobod lidi (tahrir)' where id = 'c5';
+  if (select name from public.customers where id = 'c5') <> 'Yunusobod lidi (tahrir)' then raise exception 'FAIL: filial menejeri o''z mijozini tahrirlay olmadi'; end if;
+end $$;
+reset role;
+
 -- Filiallar sinovi tugadi: A markazi yana sinov tarifida (8-bo'lim sinov muddati tugashini tekshiradi)
 update public.organizations set plan = 'trial' where id = current_setting('test.org_a')::uuid;
 

@@ -8,12 +8,14 @@ describe('marshrutlar', () => {
     expect(routeFromPath('/app/', '/')).toBe('app')
     expect(routeFromPath('/privacy', '/')).toBe('privacy')
     expect(routeFromPath('/terms', '/')).toBe('terms')
-    expect(routeFromPath('/nomalum', '/')).toBe('landing')
+    expect(routeFromPath('/nomalum', '/')).toBe('notfound')
+    expect(routeFromPath('/index.html', '/')).toBe('landing')
   })
 
   it('pastki papkada (GitHub Pages)', () => {
     expect(routeFromPath('/eduflow-crm/', '/eduflow-crm/')).toBe('landing')
     expect(routeFromPath('/eduflow-crm/app', '/eduflow-crm/')).toBe('app')
     expect(routeFromPath('/eduflow-crm/terms', '/eduflow-crm/')).toBe('terms')
+    expect(routeFromPath('/eduflow-crm/yoq-sahifa', '/eduflow-crm/')).toBe('notfound')
   })
 })

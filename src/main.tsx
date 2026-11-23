@@ -24,6 +24,8 @@ async function pageModule(): Promise<ComponentType> {
     case 'privacy':
     case 'terms':
       return (await import('./landing/LegalPage.tsx')).LegalPage
+    case 'notfound':
+      return (await import('./landing/NotFoundPage.tsx')).NotFoundPage
     default:
       return (await import('./landing/LandingPage.tsx')).LandingPage
   }

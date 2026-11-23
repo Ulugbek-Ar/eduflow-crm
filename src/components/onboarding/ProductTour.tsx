@@ -53,13 +53,16 @@ export function ProductTour({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Karta va ramka transform bilan joylashadi (left/top emas): qadamlar almashganda layout shift yo'q (QA-11)
   const cardStyle = (): CSSProperties => {
-    if (!rect) return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+    if (!rect) return { transform: 'translate(calc(50vw - 50%), calc(50vh - 50%))' }
     const width = Math.min(320, window.innerWidth - 32)
     const left = Math.min(Math.max(16, rect.left), window.innerWidth - width - 16)
     // Pastda joy bo'lsa — ostida, bo'lmasa — ustida
     const below = rect.bottom + 180 < window.innerHeight
-    return below ? { left, top: rect.bottom + PAD + 8, width } : { left, bottom: window.innerHeight - rect.top + PAD + 8, width }
+    return below
+      ? { transform: `translate(${left}px, ${rect.bottom + PAD + 8}px)`, width }
+      : { transform: `translate(${left}px, ${rect.top - PAD - 8}px) translateY(-100%)`, width }
   }
 
   return createPortal(
@@ -68,7 +71,7 @@ export function ProductTour({ onClose }: { onClose: () => void }) {
         <div
           className="tour-spot"
           aria-hidden="true"
-          style={{ left: rect.left - PAD, top: rect.top - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
+          style={{ transform: `translate(${rect.left - PAD}px, ${rect.top - PAD}px)`, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
         />
       ) : (
         <div className="tour-dim" aria-hidden="true" />

@@ -126,8 +126,17 @@ function effectiveEnd(e: Enrollment): string | undefined {
   return undefined
 }
 
-// Shu oy uchun kutilgan summa (pauza, tugash va birinchi oy ulushi bilan)
-export function monthExpected(e: Enrollment, period: string, fee: number, settings: DebtSettings): number {
+// Boshqa guruhga ko'chirish oyi (QA audit A-01): eski o'qishning oxirgi va yangisining birinchi qisman oyi kunlar ulushida —
+// shu oy uchun jami bir oylik summa (avval ikkalasi ham to'liq narxda edi va to'lagan o'quvchida soxta qarz chiqardi)
+export interface TransferMonths {
+  // Eski o'qish shu oyda tugadi (ulush — pastga yaxlitlanadi, ortiqcha so'ralmasin)
+  last?: string
+  // Yangi o'qish shu oyda boshlandi
+  first?: string
+}
+
+// Shu oy uchun kutilgan summa (pauza, tugash, birinchi oy ulushi va ko'chirish bilan)
+export function monthExpected(e: Enrollment, period: string, fee: number, settings: DebtSettings, transfer: TransferMonths = {}): number {
   const from = monthStartDay(period)
   const to = monthEndDay(period)
   const end = effectiveEnd(e)
@@ -148,9 +157,26 @@ export function monthExpected(e: Enrollment, period: string, fee: number, settin
     }
   }
   if (activeDays <= 0) return 0
+  if (transfer.last === period) return Math.floor((fee * activeDays) / monthDays)
   const firstMonth = period === monthOf(e.startDate)
-  if (paused || (firstMonth && settings.prorateFirstMonth)) return Math.round((fee * activeDays) / monthDays)
+  if (paused || transfer.first === period || (firstMonth && settings.prorateFirstMonth)) return Math.round((fee * activeDays) / monthDays)
   return fee
+}
+
+// Mijozning o'qishlari orasidagi ko'chirishlar: biri D kuni tugab, boshqasi D+1 kuni (shu oyning ichida) boshlangan
+export function transferMonths(enrollments: readonly Enrollment[]): Map<string, TransferMonths> {
+  const result = new Map<string, TransferMonths>()
+  for (const a of enrollments) {
+    const end = effectiveEnd(a)
+    if (!end) continue
+    const next = addDays(end, 1)
+    if (monthOf(next) !== monthOf(end)) continue
+    const b = enrollments.find((x) => x.id !== a.id && x.customerId === a.customerId && x.startDate === next)
+    if (!b) continue
+    result.set(a.id, { ...result.get(a.id), last: monthOf(end) })
+    result.set(b.id, { ...result.get(b.id), first: monthOf(next) })
+  }
+  return result
 }
 
 // Oyning to'lov muddati: birinchi oy — o'qish boshlangan kun, keyingilari — oyning N-sanasi
@@ -163,7 +189,7 @@ export function dueDate(e: Enrollment, period: string, settings: DebtSettings): 
 export function enrollmentLedger(
   e: Enrollment,
   payments: readonly Transaction[],
-  ctx: { groups: readonly Group[]; courses: readonly Course[]; settings: DebtSettings },
+  ctx: { groups: readonly Group[]; courses: readonly Course[]; settings: DebtSettings; transfer?: TransferMonths },
   today: string,
 ): EnrollmentLedger {
   const group = ctx.groups.find((g) => g.id === e.groupId)
@@ -187,7 +213,7 @@ export function enrollmentLedger(
   // Kelajakdagi oyga oldindan to'langanlar ham balansga kiradi (avans)
   const paid = payments.reduce((sum, t) => sum + t.amount, 0)
   for (let period = firstPeriod; period <= lastPeriod; period = nextPeriod(period)) {
-    const expected = monthExpected(e, period, fee, ctx.settings)
+    const expected = monthExpected(e, period, fee, ctx.settings, ctx.transfer)
     const monthPaid = paidBy.get(period) ?? 0
     const due = today > dueDate(e, period, ctx.settings)
     expectedAll += expected
@@ -286,8 +312,9 @@ function rowFor(customer: Customer, courses: readonly Course[], transactions: re
   const own = p.enrollments.filter((e) => e.customerId === customer.id)
   if (own.length === 0) return legacyDebt(customer, courses, transactions, now)
   const today = dayString(now)
+  const transfers = transferMonths(own)
   const ledgers = own
-    .map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], { groups: p.groups, courses, settings: p.settings }, today))
+    .map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], { groups: p.groups, courses, settings: p.settings, transfer: transfers.get(e.id) }, today))
     .filter((l) => l.months.length > 0 || l.paid > 0)
   if (ledgers.length === 0) return null
   const expected = ledgers.reduce((s, l) => s + l.expectedDue, 0)
@@ -304,7 +331,11 @@ function rowFor(customer: Customer, courses: readonly Course[], transactions: re
     course,
     group: ledgers.length === 1 ? main.group : undefined,
     label: names.join(', '),
-    monthly: active.reduce((s, l) => s + l.fee, 0),
+    // "Oylik" — faqat hozir davom etayotgan o'qishlar (ko'chirilgan yoki tugagan o'qish qo'shilmaydi, A-01)
+    monthly: (() => {
+      const current = ledgers.filter((l) => !effectiveEnd(l.enrollment) || (effectiveEnd(l.enrollment) ?? '') >= today)
+      return (current.length ? current : [main]).reduce((s, l) => s + l.fee, 0)
+    })(),
     expected,
     paid,
     debt: Math.max(0, -balance),

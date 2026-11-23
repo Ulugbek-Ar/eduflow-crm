@@ -281,7 +281,7 @@ export function TransactionTable() {
                       <td className="cell-actions">
                         <div className="row-actions">
                           {t.type === 'income' && (
-                            <IconButton icon="receipt" label={tr('Chek')} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+                            <IconButton icon="receipt" label={t.customerId ? tr('Chek: {0}', { 0: getCustomerName(t.customerId) }) : tr('Chek')} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
                           )}
                         {canManage && (
                         <>

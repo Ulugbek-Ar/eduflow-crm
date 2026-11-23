@@ -1,3 +1,4 @@
+import { tr } from '../i18n'
 import type { AuditEntry } from '../services/audit.service'
 import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
@@ -51,7 +52,8 @@ export function buildReceipt(
     transaction,
     customer,
     customerName,
-    cashier: receiptCashier(transaction.id, audit),
+    // Onlayn to'lovda kassir yo'q — "Qabul qildi: Payme/Click (onlayn)"; jurnalda topilmasa — bo'sh (QA-21)
+    cashier: transaction.provider ? `${transaction.provider === 'click' ? 'Click' : 'Payme'} (${tr('onlayn')})` : receiptCashier(transaction.id, audit),
     remainingDebt: debt?.debt ?? 0,
     groupName: group?.name,
     periodLabel: transaction.period ? `${transaction.period.slice(5, 7)}.${transaction.period.slice(0, 4)}` : undefined,

@@ -1,7 +1,7 @@
 import { tr } from '../i18n'
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { sectionAllowed, sectionPermissions } from '../auth/permissions'
+import { SECTION_PERMISSION, sectionAllowed, sectionPermissions } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import { CATEGORY_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
 import { AuthContext, useAuditActor, useCan } from '../hooks/useAuth'
@@ -122,6 +122,12 @@ function stableJson(value: unknown): string {
   )
 }
 
+function sectionFromHash(role: Parameters<typeof sectionAllowed>[0]): Section {
+  if (typeof window === 'undefined') return 'overview'
+  const raw = window.location.hash.replace(/^#/, '')
+  return raw && raw in SECTION_PERMISSION && sectionAllowed(role, raw as Section) ? (raw as Section) : 'overview'
+}
+
 export function DashboardProvider({ children, cloud }: { children: ReactNode; cloud?: CloudBinding }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -161,7 +167,17 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const [isDemo, setIsDemo] = useState(() => !cloud && isDemoMode())
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
-  const [activeSection, setSection] = useState<Section>('overview')
+  // Joriy bo'lim manzilda (#finance): sahifa yangilanganda o'sha bo'lim ochiladi (A-09). Ruxsat bo'lmasa — Umumiy ko'rinish
+  const [activeSection, setSection] = useState<Section>(() => sectionFromHash(role))
+  useEffect(() => {
+    try {
+      const { pathname, search } = window.location
+      const hash = activeSection === 'overview' ? '' : `#${activeSection}`
+      if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', `${pathname}${search}${hash}`)
+    } catch {
+      // Manzilni o'zgartirib bo'lmasa (sandbox) — bo'lim baribir ishlaydi
+    }
+  }, [activeSection])
   const [modal, setModal] = useState<ModalState>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistentState(SIDEBAR_COLLAPSED_KEY, false, isBoolean)

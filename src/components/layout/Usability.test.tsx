@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { makeCustomer, makeTransaction, renderSignedIn } from '../../test/helpers'
+import { makeCustomer, makeTransaction, renderSignedIn, TEST_USER_ID } from '../../test/helpers'
 
 const data = { customers: [makeCustomer()], transactions: [makeTransaction()] }
 
@@ -102,7 +102,8 @@ describe('Forma qoralamasi', () => {
   })
 
   it('"Tozalash" qoralamani o\'chiradi; tahrirlashda qoralama ishlatilmaydi', async () => {
-    localStorage.setItem('apex:draft:customer', JSON.stringify({ name: 'Eski qoralama', phone: 123 }))
+    // Qoralama xodimga bog'langan (A-08): kalit — apex:draft:<xodim id>:<forma>
+    localStorage.setItem(`apex:draft:${TEST_USER_ID}:customer`, JSON.stringify({ name: 'Eski qoralama', phone: 123 }))
     const { user } = await renderSignedIn(data)
     await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
     await user.click(await screen.findByRole('button', { name: 'Yangi mijoz' }))
@@ -111,11 +112,31 @@ describe('Forma qoralamasi', () => {
     expect((within(dialog).getByLabelText(/Telefon/) as HTMLInputElement).value).toBe('+998')
     await user.click(within(dialog).getByRole('button', { name: 'Tozalash' }))
     expect((within(dialog).getByLabelText(/Ism familiya/) as HTMLInputElement).value).toBe('')
-    expect(localStorage.getItem('apex:draft:customer')).toBeNull()
+    expect(localStorage.getItem(`apex:draft:${TEST_USER_ID}:customer`)).toBeNull()
     await user.click(within(dialog).getByRole('button', { name: 'Bekor qilish' }))
 
     await user.click(screen.getByRole('button', { name: 'Aziza Karimovani tahrirlash' }))
     const edit = await screen.findByRole('dialog', { name: 'Mijozni tahrirlash' })
     expect(within(edit).queryByText(/qoralama/)).toBeNull()
+  })
+})
+
+describe('Qoralama va bo\'lim manzili (QA audit A-08, A-09)', () => {
+  it('qoralama boshqa xodimga ko\'rinmaydi', async () => {
+    localStorage.setItem('apex:draft:boshqa-xodim:customer', JSON.stringify({ name: 'Begona qoralama' }))
+    const { user } = await renderSignedIn()
+    await user.click(screen.getByRole('button', { name: 'Mijozlar va lidlar' }))
+    await user.click(await screen.findByRole('button', { name: 'Yangi mijoz' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Yangi mijoz' })
+    expect((within(dialog).getByLabelText(/Ism familiya/) as HTMLInputElement).value).toBe('')
+  })
+
+  it('joriy bo\'lim manzilda saqlanadi — sahifa yangilansa o\'sha bo\'lim ochiladi', async () => {
+    const first = await renderSignedIn()
+    await first.user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
+    expect(window.location.hash).toBe('#finance')
+    first.unmount()
+    renderSignedIn()
+    expect(await screen.findByRole('heading', { level: 1, name: /Moliya va kassa/ })).toBeTruthy()
   })
 })

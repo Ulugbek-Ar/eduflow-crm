@@ -169,7 +169,7 @@ function Terms() {
 export function LegalPage() {
   const route = currentRoute()
   useEffect(() => {
-    document.title = `${route === 'privacy' ? 'Maxfiylik siyosati' : 'Foydalanish shartlari'} · ${APP_NAME}`
+    document.title = `${route === 'privacy' ? tr('Maxfiylik siyosati') : tr('Foydalanish shartlari')} · ${APP_NAME}`
   }, [route])
 
   return (
@@ -189,10 +189,13 @@ export function LegalPage() {
         </div>
       </header>
       <main className="lp-legal" lang="uz">
-        <p className="notice notice-warning">
-          {tr('Bu hujjat namuna. E\'lon qilishdan oldin kvadrat qavs ichidagi ma\'lumotlarni to\'ldiring va yurist bilan tekshiring.')}
-          {getLang() === 'ru' && ' Документ на узбекском языке; русская версия — по запросу.'}
-        </p>
+        {/* "Namuna" eslatmasi — faqat ishlab chiqishda; tayyor saytda mijozga ko'rinmaydi (QA-04) */}
+        {!import.meta.env.PROD && (
+          <p className="notice notice-warning">
+            {tr('Bu hujjat namuna. E\'lon qilishdan oldin kvadrat qavs ichidagi ma\'lumotlarni to\'ldiring va yurist bilan tekshiring.')}
+          </p>
+        )}
+        {getLang() === 'ru' && <p className="notice notice-info">Документ на узбекском языке; русская версия — по запросу.</p>}
         {route === 'privacy' ? <Privacy /> : <Terms />}
         <p className="lp-legal-links">
           <a href={routeHref('landing')}>← {tr('Bosh sahifa')}</a>

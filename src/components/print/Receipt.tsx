@@ -80,12 +80,15 @@ export function Receipt({ data, settings, money }: { data: ReceiptData; settings
         <strong>{money(t.amount)}</strong>
       </div>
       <p className="receipt-words">{amountInWords(t.amount, settings.currency)}</p>
-      {t.status === 'paid' && data.remainingDebt > 0 && <p className="receipt-debt">{tr('Qolgan qarz:')} {money(data.remainingDebt)}</p>}
+      {t.status === 'paid' && data.customer && (
+        <p className="receipt-debt">{data.remainingDebt > 0 ? `${tr('Qolgan qarz:')} ${money(data.remainingDebt)}` : tr('Qarz yo\'q')}</p>
+      )}
       {t.status === 'cancelled' && <p className="receipt-stamp">{tr('BEKOR QILINGAN')}</p>}
 
       <footer className="receipt-foot">
         <div className="receipt-sign">
-          <span>{tr('Qabul qildi:')} {data.cashier || '—'}</span>
+          {/* Kassir noma'lum bo'lsa (eski import) — imzo uchun bo'sh joy, "—" emas */}
+          <span>{data.cashier ? `${tr('Qabul qildi:')} ${data.cashier}` : tr('Qabul qildi:')}</span>
           <span className="receipt-line" aria-hidden="true" />
         </div>
         <div className="receipt-sign">

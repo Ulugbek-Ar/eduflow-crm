@@ -13,20 +13,31 @@ export const CHECKLIST_HIDDEN_KEY = 'apex:checklist-hidden'
 
 // Yangi markaz uchun "nimadan boshlash" ro'yxati: bajarilgani belgilanadi, hammasi tayyor bo'lsa yo'qoladi
 export function GettingStarted() {
-  const { courses, customers, transactions, openModal, setActiveSection } = useDashboard()
+  const { courses, teachers, groups, enrollments, transactions, openModal, setActiveSection } = useDashboard()
   const { users, can, mode } = useAuth()
   const audit = useSyncExternalStore(subscribeAudit, getAuditSnapshot)
   const [hidden, setHidden] = usePersistentState(CHECKLIST_HIDDEN_KEY, false, isBoolean)
   if (hidden || mode === 'demo' || !can('staff.manage')) return null
 
-  const steps = [
+  // Ish tartibi bo'yicha (QA-08): qarz guruhga yozilishdan hisoblanadi — to'lov qadami o'quvchi guruhga yozilgach
+  const enrolled = enrollments.length > 0
+  const steps: Array<{ id: string; label: string; done: boolean; action: () => void; blocked?: string }> = [
     { id: 'course', label: tr('Kurs va narxlarni kiriting'), done: courses.length > 0, action: () => openModal({ type: 'course' }) },
-    { id: 'customer', label: tr('Birinchi mijozni qo\'shing'), done: customers.length > 0, action: () => openModal({ type: 'customer' }) },
+    { id: 'teacher', label: tr('O\'qituvchilarni qo\'shing'), done: teachers.length > 0, action: () => openModal({ type: 'teacher' }) },
+    { id: 'group', label: tr('Guruh oching (kurs, kunlar, vaqt)'), done: groups.length > 0, action: () => openModal({ type: 'group' }) },
+    {
+      id: 'enroll',
+      label: tr('O\'quvchini guruhga yozing'),
+      done: enrolled,
+      action: () => setActiveSection('groups'),
+      blocked: groups.length === 0 ? tr('avval guruh oching') : undefined,
+    },
     {
       id: 'payment',
       label: tr('Birinchi to\'lovni qabul qiling'),
       done: transactions.some((t) => t.type === 'income'),
       action: () => openModal({ type: 'transaction', payload: { kind: 'income' } }),
+      blocked: enrolled ? undefined : tr('avval o\'quvchini guruhga yozing'),
     },
     { id: 'staff', label: tr('Xodimlarni qo\'shing'), done: users.length > 1, action: () => setActiveSection('admin') },
     {
@@ -68,11 +79,14 @@ export function GettingStarted() {
               {step.label}
               {step.done && <span className="sr-only"> {tr('(bajarildi)')}</span>}
             </span>
-            {!step.done && (
-              <Button size="sm" variant="ghost" onClick={step.action}>
-                {tr('Boshlash')}
-              </Button>
-            )}
+            {!step.done &&
+              (step.blocked ? (
+                <small className="muted">{step.blocked}</small>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={step.action}>
+                  {tr('Boshlash')}
+                </Button>
+              ))}
           </li>
         ))}
       </ol>

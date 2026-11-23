@@ -139,9 +139,31 @@ const TeacherFormModal = lazy(() => loadTeacherForm().then((m) => ({ default: m.
 const ImportDialog = lazy(() => loadWithRetry(() => import('./components/customers/import/ImportDialog')).then((m) => ({ default: m.ImportDialog })))
 const ProductTour = lazy(() => loadWithRetry(() => import('./components/onboarding/ProductTour')).then((m) => ({ default: m.ProductTour })))
 
-// Asosiy sahifa chizilgandan keyin bo'sh vaqtda oldindan yuklab qo'yiladi — birinchi ochilishda kechikish bo'lmaydi
+// Asosiy sahifa chizilgandan keyin bo'sh vaqtda HAMMA bo'lim oldindan yuklab qo'yiladi — birinchi ochilishda kechikish
+// bo'lmaydi va internet uzilsa ham har bir bo'lim ochiladi (QA audit A-04: O'qituvchilar, Jadval, Boshqaruv, Yordam
+// ro'yxatda yo'q edi — internetsiz "Bo'lim yuklanmadi")
 function prefetchChunks() {
-  for (const load of [loadCustomerForm, loadTransactionForm, loadCustomerDetail, loadTransactionTable, loadSettingsPanel, loadCoursesPanel, loadCourseForm, loadAnalyticsPanel, loadGroupsPanel, loadGroupDetail]) {
+  for (const load of [
+    loadCustomerForm,
+    loadTransactionForm,
+    loadCustomerDetail,
+    loadTransactionTable,
+    loadSettingsPanel,
+    loadCoursesPanel,
+    loadCourseForm,
+    loadAnalyticsPanel,
+    loadGroupsPanel,
+    loadGroupDetail,
+    loadGroupForm,
+    loadTeachersPanel,
+    loadTeacherForm,
+    loadTodayLessons,
+    loadAttendancePanel,
+    loadSchedulePanel,
+    loadAdminPanel,
+    loadHelpPanel,
+    loadReceipt,
+  ]) {
     load({ reload: false }).catch(() => {
       // Tarmoq xatosi bo'lsa, bo'lim ochilganda qayta urinib ko'riladi
     })

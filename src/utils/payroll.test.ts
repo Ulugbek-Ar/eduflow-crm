@@ -3,6 +3,7 @@ import type { Course } from '../types/course.types'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import type { Enrollment, Group } from '../types/group.types'
+import { enrollmentActiveOn } from './groups'
 import type { Teacher } from '../types/teacher.types'
 import { attributeIncome } from './attribution'
 import { activeInMonth, monthBounds, payrollReport, payrollRow, payrollTotals, salaryFor, shiftPeriod } from './payroll'
@@ -44,10 +45,13 @@ describe('kirim qaysi guruhga tegishli', () => {
     expect(attributeIncome(pay('t', 'c1', '2026-11-20', 1), ctx)?.groupId).toBe('gB')
   })
 
-  it('faol o\'qish topilmasa yoki kurs boshqa bo\'lsa — hech qayerga hisoblanmaydi', () => {
+  it('faol o\'qish topilmasa — hech qayerga hisoblanmaydi; kurs nomi mos kelmasa ham yagona faol o\'qishga (C-03)', () => {
     expect(attributeIncome(pay('t', 'c1', '2026-08-01', 1), ctx)).toBeNull()
-    expect(attributeIncome(pay('t', 'c1', '2026-11-10', 1), { ...ctx, customers: [{ ...customer('c1'), course: 'Python' }] })).toBeNull()
     expect(attributeIncome(pay('t', 'c9', '2026-11-10', 1), ctx)).toBeNull()
+    // Payme/Click yoki importdagi enrollmentId'siz to'lov: mijoz kartasidagi kurs nomi eskirgan bo'lsa ham qarz kamayadi
+    const stale = { ...ctx, customers: [{ ...customer('c1'), course: 'Python' }] }
+    const active = ctx.enrollments.filter((e) => e.customerId === 'c1' && enrollmentActiveOn(e, '2026-11-10'))
+    expect(attributeIncome(pay('t', 'c1', '2026-11-10', 1), stale)?.id ?? null).toBe(active.length === 1 ? active[0].id : null)
   })
 })
 
