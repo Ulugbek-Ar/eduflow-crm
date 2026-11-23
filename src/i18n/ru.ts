@@ -1693,4 +1693,5 @@ export const RU: Readonly<Record<string, string>> = {
   'Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi': 'Другой сотрудник одновременно изменил записи ({0}) — ваши изменения не сохранены, загружено актуальное состояние',
   'Ism juda uzun (ko\'pi bilan {0} ta belgi)': 'Слишком длинное имя (не более {0} символов)',
   "Butun markaz": "Весь центр",
+  "Qo'shimcha (status)": "Дополнительно (статус)",
 }

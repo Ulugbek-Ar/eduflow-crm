@@ -44,5 +44,13 @@ describe('To\'lov qo\'shish', () => {
     const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
     expect(within(dialog).queryByRole('button', { name: 'Chiqim' })).toBeNull()
   })
+
+  it('QA-22: to\'lov qabul qilishda "Status" yashirin ("Qo\'shimcha" ichida), standart — To\'langan', async () => {
+    const { user } = await renderSignedIn({ customers: [makeCustomer()] })
+    await user.click(screen.getByRole('button', { name: 'Moliya va kassa' }))
+    await user.click(await screen.findByRole('button', { name: 'To\'lov qabul qilish' }))
+    const dialog = await screen.findByRole('dialog', { name: 'To\'lov qabul qilish' })
+    expect(within(dialog).getByLabelText('Status').closest('details')?.open).toBe(false)
+  })
 })
 

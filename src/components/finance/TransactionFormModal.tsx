@@ -1,6 +1,6 @@
 import { getLang, tr } from '../../i18n'
 import { useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, SOURCE_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useAuth } from '../../hooks/useAuth'
@@ -207,6 +207,17 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
     closeModal()
   }
 
+  // QA-22: pul qabul qilinayotganda status — "To'langan"; boshqa holat kerak bo'lsa "Qo'shimcha" ichida
+  const statusField = (field: ReactNode) =>
+    !editing && form.type === 'income' && form.status === 'paid' ? (
+      <details className="form-more">
+        <summary>{tr('Qo\'shimcha (status)')}</summary>
+        {field}
+      </details>
+    ) : (
+      field
+    )
+
   const customerOptions = customers.map((c) => ({ value: c.id, label: c.name, description: `${c.phone} · ${c.course}` }))
   const ownEnrollments = form.type === 'income' ? enrollmentsOf(form.customerId) : []
   const groupName = (groupId: string) => (debtContext.groups ?? []).find((g) => g.id === groupId)?.name ?? '—'
@@ -289,13 +300,15 @@ export function TransactionFormModal({ transactionId, kind, customerId, amount: 
         </div>
 
         <div className="form-row">
-          <Select
-            label={tr('Status')}
-            value={form.status}
-            hint={form.status === 'paid' ? undefined : tr('Balans va hisobotlarga faqat "To\'langan" kiradi')}
-            onChange={(e) => update('status', e.target.value as TransactionStatus)}
-            options={toOptions(TX_STATUS_LABELS)}
-          />
+          {statusField(
+            <Select
+              label={tr('Status')}
+              value={form.status}
+              hint={form.status === 'paid' ? undefined : tr('Balans va hisobotlarga faqat "To\'langan" kiradi')}
+              onChange={(e) => update('status', e.target.value as TransactionStatus)}
+              options={toOptions(TX_STATUS_LABELS)}
+            />,
+          )}
           {form.type === 'expense' && form.category === 'marketing' && (
             <Select
               label={tr('Manba')}

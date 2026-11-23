@@ -4961,3 +4961,15 @@ ol.steps-list {
   }
 }
 
+
+/* QA-22: kam ishlatiladigan maydonlar (to'lov statusi) — "Qo'shimcha" ichida */
+.form-more > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 6px 0;
+  min-height: 32px;
+}
+.form-more[open] > summary {
+  margin-bottom: 8px;
+}
