@@ -227,7 +227,14 @@ function effectiveEnd(e) {
 	if (e.endDate) return e.endDate;
 	if (e.status === "left" || e.status === "finished") return (e.updatedAt ?? e.createdAt).slice(0, 10);
 }
-function monthExpected(e, period, fee, settings) {
+function transferEdges(e, own) {
+	const end = effectiveEnd(e);
+	return {
+		prorateStart: own.some((o) => o.id !== e.id && effectiveEnd(o) !== void 0 && addDays(effectiveEnd(o) ?? "", 1) === e.startDate),
+		prorateEnd: end !== void 0 && own.some((o) => o.id !== e.id && o.startDate === addDays(end, 1))
+	};
+}
+function monthExpected(e, period, fee, settings, edges = {}) {
 	const from = monthStartDay(period);
 	const to = monthEndDay(period);
 	const end = effectiveEnd(e);
@@ -249,7 +256,8 @@ function monthExpected(e, period, fee, settings) {
 	}
 	if (activeDays <= 0) return 0;
 	const firstMonth = period === monthOf(e.startDate);
-	if (paused || firstMonth && settings.prorateFirstMonth) return Math.round(fee * activeDays / monthDays);
+	const transferEnd = Boolean(edges.prorateEnd && end && end < to && monthOf(end) === period);
+	if (paused || transferEnd || firstMonth && (settings.prorateFirstMonth || edges.prorateStart)) return Math.round(fee * activeDays / monthDays);
 	return fee;
 }
 function dueDate(e, period, settings) {
@@ -277,7 +285,7 @@ function enrollmentLedger(e, payments, ctx, today) {
 	let running = 0;
 	const paid = payments.reduce((sum, t) => sum + t.amount, 0);
 	for (let period = firstPeriod; period <= lastPeriod; period = nextPeriod(period)) {
-		const expected = monthExpected(e, period, fee, ctx.settings);
+		const expected = monthExpected(e, period, fee, ctx.settings, ctx.edges);
 		const monthPaid = paidBy.get(period) ?? 0;
 		const due = today > dueDate(e, period, ctx.settings);
 		expectedAll += expected;
@@ -361,7 +369,8 @@ function rowFor(customer, courses, transactions, p, now) {
 	const ledgers = own.map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], {
 		groups: p.groups,
 		courses,
-		settings: p.settings
+		settings: p.settings,
+		edges: transferEdges(e, own)
 	}, today)).filter((l) => l.months.length > 0 || l.paid > 0);
 	if (ledgers.length === 0) return null;
 	const expected = ledgers.reduce((s, l) => s + l.expectedDue, 0);
@@ -386,7 +395,7 @@ function rowFor(customer, courses, transactions, p, now) {
 		course,
 		group: ledgers.length === 1 ? main.group : void 0,
 		label: names.join(", "),
-		monthly: active.reduce((s, l) => s + l.fee, 0),
+		monthly: ledgers.filter((l) => !effectiveEnd(l.enrollment) || (effectiveEnd(l.enrollment) ?? "") >= today).reduce((s, l) => s + l.fee, 0) || active.reduce((s, l) => s + l.fee, 0),
 		expected,
 		paid,
 		debt: Math.max(0, -balance),

@@ -126,8 +126,25 @@ function effectiveEnd(e: Enrollment): string | undefined {
   return undefined
 }
 
-// Shu oy uchun kutilgan summa (pauza, tugash va birinchi oy ulushi bilan)
-export function monthExpected(e: Enrollment, period: string, fee: number, settings: DebtSettings): number {
+// Boshqa guruhga ko'chirish (A-01): eski o'qish tugagan kunning ertasi yangisi boshlanadi. Shu oyda ikkala o'qish
+// kunlar ulushida hisoblanadi — o'quvchidan bir oylik summa olinadi (oddiy tugatish va yangi o'qish avvalgidek)
+export interface TransferEdges {
+  // Bu o'qish ko'chirish bilan boshlangan — birinchi oy ulushda
+  prorateStart?: boolean
+  // Bu o'qishdan ko'chirilgan — oxirgi (qisman) oy ulushda
+  prorateEnd?: boolean
+}
+
+export function transferEdges(e: Enrollment, own: readonly Enrollment[]): TransferEdges {
+  const end = effectiveEnd(e)
+  return {
+    prorateStart: own.some((o) => o.id !== e.id && effectiveEnd(o) !== undefined && addDays(effectiveEnd(o) ?? '', 1) === e.startDate),
+    prorateEnd: end !== undefined && own.some((o) => o.id !== e.id && o.startDate === addDays(end, 1)),
+  }
+}
+
+// Shu oy uchun kutilgan summa (pauza, tugash, ko'chirish va birinchi oy ulushi bilan)
+export function monthExpected(e: Enrollment, period: string, fee: number, settings: DebtSettings, edges: TransferEdges = {}): number {
   const from = monthStartDay(period)
   const to = monthEndDay(period)
   const end = effectiveEnd(e)
@@ -149,7 +166,8 @@ export function monthExpected(e: Enrollment, period: string, fee: number, settin
   }
   if (activeDays <= 0) return 0
   const firstMonth = period === monthOf(e.startDate)
-  if (paused || (firstMonth && settings.prorateFirstMonth)) return Math.round((fee * activeDays) / monthDays)
+  const transferEnd = Boolean(edges.prorateEnd && end && end < to && monthOf(end) === period)
+  if (paused || transferEnd || (firstMonth && (settings.prorateFirstMonth || edges.prorateStart))) return Math.round((fee * activeDays) / monthDays)
   return fee
 }
 
@@ -163,7 +181,7 @@ export function dueDate(e: Enrollment, period: string, settings: DebtSettings): 
 export function enrollmentLedger(
   e: Enrollment,
   payments: readonly Transaction[],
-  ctx: { groups: readonly Group[]; courses: readonly Course[]; settings: DebtSettings },
+  ctx: { groups: readonly Group[]; courses: readonly Course[]; settings: DebtSettings; edges?: TransferEdges },
   today: string,
 ): EnrollmentLedger {
   const group = ctx.groups.find((g) => g.id === e.groupId)
@@ -187,7 +205,7 @@ export function enrollmentLedger(
   // Kelajakdagi oyga oldindan to'langanlar ham balansga kiradi (avans)
   const paid = payments.reduce((sum, t) => sum + t.amount, 0)
   for (let period = firstPeriod; period <= lastPeriod; period = nextPeriod(period)) {
-    const expected = monthExpected(e, period, fee, ctx.settings)
+    const expected = monthExpected(e, period, fee, ctx.settings, ctx.edges)
     const monthPaid = paidBy.get(period) ?? 0
     const due = today > dueDate(e, period, ctx.settings)
     expectedAll += expected
@@ -287,7 +305,7 @@ function rowFor(customer: Customer, courses: readonly Course[], transactions: re
   if (own.length === 0) return legacyDebt(customer, courses, transactions, now)
   const today = dayString(now)
   const ledgers = own
-    .map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], { groups: p.groups, courses, settings: p.settings }, today))
+    .map((e) => enrollmentLedger(e, p.byEnrollment.get(e.id) ?? [], { groups: p.groups, courses, settings: p.settings, edges: transferEdges(e, own) }, today))
     .filter((l) => l.months.length > 0 || l.paid > 0)
   if (ledgers.length === 0) return null
   const expected = ledgers.reduce((s, l) => s + l.expectedDue, 0)
@@ -304,7 +322,8 @@ function rowFor(customer: Customer, courses: readonly Course[], transactions: re
     course,
     group: ledgers.length === 1 ? main.group : undefined,
     label: names.join(', '),
-    monthly: active.reduce((s, l) => s + l.fee, 0),
+    // Oylik — hozir o'qiyotgan guruhlar bo'yicha (tugagan/ko'chirilgan o'qish qo'shilmaydi); hech biri bo'lmasa — yaqinda tugagani
+    monthly: (ledgers.filter((l) => !effectiveEnd(l.enrollment) || (effectiveEnd(l.enrollment) ?? '') >= today).reduce((s, l) => s + l.fee, 0)) || active.reduce((s, l) => s + l.fee, 0),
     expected,
     paid,
     debt: Math.max(0, -balance),

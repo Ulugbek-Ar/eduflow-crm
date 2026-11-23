@@ -195,3 +195,29 @@ describe('v11: o\'qish (enrollment) asosidagi qarz', () => {
     expect(monthExpected({ ...base, status: 'paused' }, '2026-11', 600_000, DEFAULT_DEBT_SETTINGS)).toBe(0)
   })
 })
+
+describe('A-01: guruhdan ko\'chirish oyi', () => {
+  const groups = ['g1', 'g2'].map((id) => ({ id, name: id, courseId: 'k1', room: '', days: ['mon' as const], startTime: '09:00', endTime: '10:00', capacity: 10, startDate: '2026-01-01', status: 'active' as const, createdAt: at(0, 1) }))
+  const paid = ['2026-09', '2026-10', '2026-11'].map((period, i) => pay('c1', 650_000, at(8 + i, 3), { enrollmentId: 'e1', period }))
+  const enrollments = [
+    { id: 'e1', customerId: 'c1', groupId: 'g1', startDate: '2026-09-01', endDate: '2026-11-11', status: 'finished' as const, createdAt: at(8, 1) },
+    { id: 'e2', customerId: 'c1', groupId: 'g2', startDate: '2026-11-12', status: 'active' as const, createdAt: at(10, 12) },
+  ]
+
+  it('to\'liq to\'lagan o\'quvchi oy o\'rtasida ko\'chirilsa — qarz 0, oylik bir guruhniki', () => {
+    const row = customerDebt(customer('c1'), courses, paid, NOW, { groups, enrollments, settings: DEFAULT_DEBT_SETTINGS })
+    expect(row?.debt).toBe(0)
+    expect(row?.monthly).toBe(650_000)
+    expect(computeDebts([customer('c1')], courses, paid, NOW, { groups, enrollments, settings: DEFAULT_DEBT_SETTINGS })).toEqual([])
+  })
+
+  it('ko\'chirish oyida jami kutilgan summa bir oylik narxga teng (kunlar ulushida)', () => {
+    const row = customerDebt(customer('c1'), courses, paid, new Date(2026, 11, 15, 12), { groups, enrollments, settings: DEFAULT_DEBT_SETTINGS })
+    const november = (row?.ledgers ?? []).reduce((s, l) => s + (l.months.find((m) => m.period === '2026-11')?.expected ?? 0), 0)
+    expect(november).toBe(650_000)
+  })
+
+  it('oddiy tugatish (ko\'chirishsiz) oyi avvalgidek to\'liq hisoblanadi', () => {
+    expect(monthExpected(enrollments[0], '2026-11', 650_000, DEFAULT_DEBT_SETTINGS)).toBe(650_000)
+  })
+})
