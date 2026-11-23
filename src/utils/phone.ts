@@ -16,7 +16,10 @@ export function phoneDigits(value: string): string {
 }
 
 // Kiritish paytida avtomatik maska: +998 XX XXX XX XX (ortiqcha raqamlar oxirida ko'rinib turadi — xato yashirilmaydi)
-export function formatPhone(value: string): string {
+// previous — maydonning oldingi qiymati: 9 raqam to'lgach yozish to'xtaydi (QA-01b). Qo'yilgan (paste) uzun raqam esa
+// kesilmaydi — noto'g'ri deb ko'rsatiladi (QA-01)
+export function formatPhone(value: string, previous?: string): string {
+  if (previous !== undefined && phoneDigits(previous).length === LOCAL_LENGTH && phoneDigits(value).length > LOCAL_LENGTH) return formatPhone(previous)
   const d = phoneDigits(value)
   let result = `+${COUNTRY_CODE}`
   if (d.length > 0) result += ` ${d.slice(0, 2)}`

@@ -196,7 +196,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                 error={orgErrors.phone}
                 placeholder="+998 71 200 00 00"
                 onChange={(e) => {
-                  setOrg((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))
+                  setOrg((prev) => ({ ...prev, phone: formatPhone(e.target.value, prev.phone) }))
                   setOrgErrors((prev) => ({ ...prev, phone: undefined }))
                 }}
               />

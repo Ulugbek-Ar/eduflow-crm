@@ -127,7 +127,7 @@ export function BranchSettings() {
               setError('')
             }}
           />
-          <Input label={tr('Telefon')} inputMode="tel" value={form.phone} placeholder="+998 71 200 00 00" onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} />
+          <Input label={tr('Telefon')} inputMode="tel" value={form.phone} placeholder="+998 71 200 00 00" onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value, form.phone) })} />
         </div>
         <Input label={tr('Manzil')} maxLength={120} value={form.address} placeholder={tr('Masalan: Toshkent, Chilonzor 9-kvartal')} onChange={(e) => setForm({ ...form, address: e.target.value })} />
         {!editingId && branches.length === 0 && hasData && (

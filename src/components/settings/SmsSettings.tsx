@@ -141,7 +141,7 @@ export function SmsSettings() {
             <h3>{tr('Sinov SMS')}</h3>
             <form className="form" onSubmit={sendTest} noValidate>
               <div className="form-row">
-                <Input label={tr('Telefon')} inputMode="tel" value={test.phone} placeholder="+998 90 123 45 67" onChange={(e) => setTest({ ...test, phone: formatPhone(e.target.value) })} />
+                <Input label={tr('Telefon')} inputMode="tel" value={test.phone} placeholder="+998 90 123 45 67" onChange={(e) => setTest({ ...test, phone: formatPhone(e.target.value, test.phone) })} />
                 <Input label={tr('Matn')} value={test.text} maxLength={300} onChange={(e) => setTest({ ...test, text: e.target.value })} />
               </div>
               <div className="toolbar">

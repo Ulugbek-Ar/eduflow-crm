@@ -19,10 +19,10 @@ describe('Mijoz qo\'shish', () => {
     await user.clear(phone)
     await user.type(phone, '8931112233')
     expect(phone.value).toBe('+998 93 111 22 33')
-    // Ortiqcha raqam jim kesilmaydi — ko'rinib turadi va forma xato beradi
+    // QA-01b: 9 raqam to'lgach yozish to'xtaydi
     await user.clear(phone)
     await user.type(phone, '901234567999')
-    expect(phone.value).toBe('+998 90 123 45 67999')
+    expect(phone.value).toBe('+998 90 123 45 67')
   })
 
   it('yangi mijoz qo\'shiladi va ro\'yxatda ko\'rinadi', async () => {

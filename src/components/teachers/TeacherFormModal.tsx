@@ -94,7 +94,7 @@ export function TeacherFormModal({ teacherId }: { teacherId?: string }) {
             placeholder="+998 90 123 45 67"
             value={phone}
             error={errors.phone}
-            onChange={(e) => setPhone(e.target.value.trim() ? formatPhone(e.target.value) : '')}
+            onChange={(e) => setPhone(e.target.value.trim() ? formatPhone(e.target.value, phone) : '')}
           />
         </div>
         <Input label={tr('Fanlar')} value={subjects} onChange={(e) => setSubjects(e.target.value)} placeholder={tr('Masalan: Ingliz tili, IELTS')} hint={tr('Vergul bilan ajrating')} />

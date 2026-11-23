@@ -107,7 +107,7 @@ export function CustomerFormModal({ customerId }: { customerId?: string }) {
             inputMode="tel"
             value={form.phone}
             error={errors.phone}
-            onChange={(e) => update('phone', formatPhone(e.target.value))}
+            onChange={(e) => update('phone', formatPhone(e.target.value, form.phone))}
             placeholder="+998 90 123 45 67"
           />
           <Select

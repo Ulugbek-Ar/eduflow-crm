@@ -186,7 +186,7 @@ export function SettingsPanel() {
                   type="tel"
                   value={form.phone}
                   error={errors.phone}
-                  onChange={(e) => update('phone', formatPhone(e.target.value))}
+                  onChange={(e) => update('phone', formatPhone(e.target.value, form.phone))}
                   placeholder="+998 71 200 00 00"
                 />
                 <Input label={tr('Manzil')} value={form.address} onChange={(e) => update('address', e.target.value)} />

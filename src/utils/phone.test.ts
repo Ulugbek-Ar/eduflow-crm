@@ -32,6 +32,14 @@ describe('telefon: eski uslub (8 / 0) va noto\'g\'ri uzun raqam (QA-01)', () => 
     expect(isValidPhone(input)).toBe(true)
   })
 
+  it('QA-01b: 9 raqam to\'lgach yozish to\'xtaydi (8/0 prefiksli 10 raqam esa normallashadi)', () => {
+    expect(formatPhone('+998 93 111 22 334', '+998 93 111 22 33')).toBe('+998 93 111 22 33')
+    expect(formatPhone('+998 89 311 12 233', '+998 89 311 12 23')).toBe('+998 93 111 22 33')
+    let value = ''
+    for (const ch of '9311122334455') value = formatPhone(value + ch, value)
+    expect(value).toBe('+998 93 111 22 33')
+  })
+
   it('9 dan uzun tushunarsiz raqam kesilmaydi va noto\'g\'ri hisoblanadi', () => {
     expect(isValidPhone('93111223344')).toBe(false)
     expect(formatPhone('93111223344')).toBe('+998 93 111 22 3344')
