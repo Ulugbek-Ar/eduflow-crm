@@ -13,10 +13,12 @@ const BOM = '﻿'
 
 // =, +, -, @ bilan boshlangan matnni Excel formula deb bajarmasligi uchun (CSV injection)
 const FORMULA_START = /^[=+\-@\t\r]/
+// A-07: telefon (+998 33 526 01 42) — faqat raqam, bo'shliq, qavs va chiziqcha: formula emas, apostrofsiz yoziladi
+const PHONE_LIKE = /^\+[\d\s()-]+$/
 
 export function escapeCsvCell(value: string | number, delimiter: CsvDelimiter = ';'): string {
   if (typeof value === 'number') return String(value)
-  const text = FORMULA_START.test(value) ? `'${value}` : value
+  const text = FORMULA_START.test(value) && !PHONE_LIKE.test(value) ? `'${value}` : value
   const needsQuotes = text.includes(delimiter) || /["\n\r]/.test(text)
   return needsQuotes ? `"${text.replace(/"/g, '""')}"` : text
 }
