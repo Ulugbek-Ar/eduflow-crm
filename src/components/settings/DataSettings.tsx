@@ -1,11 +1,18 @@
+import { tr } from '../../i18n'
 import { useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useDashboard } from '../../context/useDashboard'
 import { useConfirm } from '../../hooks/useConfirm'
+import { useStorageUsage } from '../../hooks/useStorageUsage'
 import { dateStamp, downloadJson } from '../../services/export.service'
-import { createBackup, parseBackup } from '../../services/storage.service'
+import { useCan } from '../../hooks/useAuth'
+import { createBackup, parseBackup, readPreMigrationBackup, removePreMigrationBackup, STORAGE_LIMIT_BYTES } from '../../services/storage.service'
 import type { StoredData } from '../../services/storage.service'
+import { cx } from '../../utils/cx'
+import { formatKilobytes, formatPercent } from '../../utils/format'
+import { CloudMigration } from './CloudMigration'
 import { Button } from '../ui/Button'
+import { BACKUP_FILE_PREFIX } from '../../constants/app'
 
 interface ImportPreview {
   fileName: string
@@ -15,16 +22,25 @@ interface ImportPreview {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+// Shu foizdan oshsa ogohlantirish ko'rsatiladi
+const USAGE_WARNING_PERCENT = 80
+const LIMIT_MB = STORAGE_LIMIT_BYTES / 1024 / 1024
 
 export function DataSettings() {
-  const { customers, transactions, settings, resetData, replaceData, formatDate } = useDashboard()
+  const { customers, transactions, courses, resetData, clearAllData, replaceData, formatDate, logExport, exportData } = useDashboard()
+  const storageUsage = useStorageUsage()
+  // Bulutli rejimda lokal zaxira yo'q (null)
+  const [preMigration, setPreMigration] = useState(readPreMigrationBackup)
+  // Tarif muddati tugagan bo'lsa (faqat o'qish) — yuklab olish ishlaydi, tiklash/tozalash yopiq
+  const writable = useCan()('data.manage')
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [error, setError] = useState('')
 
   const handleBackup = () => {
-    downloadJson(`apex-zaxira-${dateStamp()}.json`, createBackup({ customers, transactions, settings }))
+    downloadJson(`${BACKUP_FILE_PREFIX}-${dateStamp()}.json`, createBackup(exportData()))
+    logExport('To\'liq zaxira (JSON)', 'backup')
   }
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -34,7 +50,7 @@ export function DataSettings() {
     setPreview(null)
     if (!file) return
     if (file.size > MAX_FILE_SIZE) {
-      setError('Fayl hajmi 10 MB dan oshmasligi kerak')
+      setError(tr('Fayl hajmi 10 MB dan oshmasligi kerak'))
       return
     }
     const result = parseBackup(await file.text())
@@ -48,20 +64,31 @@ export function DataSettings() {
   const applyImport = async () => {
     if (!preview) return
     const ok = await confirm({
-      title: 'Zaxirani tiklash',
-      message: `Joriy ma'lumotlar (${customers.length} mijoz, ${transactions.length} tranzaksiya) zaxiradagilar bilan almashtiriladi. Davom etasizmi?`,
-      confirmLabel: 'Almashtirish',
+      title: tr('Zaxirani tiklash'),
+      message: tr('Joriy ma\'lumotlar ({0} mijoz, {1} tranzaksiya) zaxiradagilar bilan almashtiriladi. Davom etasizmi?', { 0: customers.length, 1: transactions.length }),
+      confirmLabel: tr('Almashtirish'),
     })
     if (!ok) return
     replaceData(preview.data)
     setPreview(null)
   }
 
+  const handleClearAll = async () => {
+    const ok = await confirm({
+      title: tr('Barcha ma\'lumotni tozalash'),
+      message: tr('{0} ta mijoz, {1} ta tranzaksiya va {2} ta kurs/xizmat butunlay o\'chiriladi. Sozlamalar, login va parol saqlanib qoladi. Avval JSON zaxira olishni tavsiya qilamiz. Bu amalni ortga qaytarib bo\'lmaydi.', { 0: customers.length, 1: transactions.length, 2: courses.length }),
+      confirmLabel: tr('Hammasini o\'chirish'),
+    })
+    if (!ok) return
+    clearAllData()
+    setPreview(null)
+  }
+
   const handleReset = async () => {
     const ok = await confirm({
-      title: 'Demo ma\'lumotlarga qaytarish',
-      message: 'Barcha mijozlar, tranzaksiyalar va sozlamalar o\'chib, demo ma\'lumotlar qaytadi. Bu amalni ortga qaytarib bo\'lmaydi.',
-      confirmLabel: 'Tiklash',
+      title: tr('Demo ma\'lumotlarga qaytarish'),
+      message: tr('Barcha mijozlar, tranzaksiyalar va sozlamalar o\'chib, demo ma\'lumotlar qaytadi. Bu amalni ortga qaytarib bo\'lmaydi.'),
+      confirmLabel: tr('Tiklash'),
     })
     if (!ok) return
     resetData()
@@ -70,73 +97,162 @@ export function DataSettings() {
 
   return (
     <div className="settings-rows">
-      <p className="muted">
-        Brauzerda saqlangan: {customers.length} ta mijoz, {transactions.length} ta tranzaksiya.
-      </p>
-
-      <div className="setting-row">
-        <div>
-          <strong>JSON zaxira</strong>
-          <p className="muted">Barcha ma'lumot va sozlamalarni bitta faylga yuklab olish</p>
-        </div>
-        <Button variant="ghost" icon="download" onClick={handleBackup}>
-          Yuklab olish
-        </Button>
-      </div>
-
-      <div className="setting-row">
-        <div>
-          <strong>Zaxiradan tiklash</strong>
-          <p className="muted">Avval yuklab olingan .json faylni tanlang — oldindan ko'rib, keyin tasdiqlaysiz</p>
-        </div>
-        <Button variant="ghost" icon="upload" onClick={() => fileRef.current?.click()}>
-          Faylni tanlash
-        </Button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json,.json"
-          className="sr-only"
-          tabIndex={-1}
-          aria-label="Zaxira faylini tanlash"
-          onChange={handleFile}
-        />
-      </div>
-
-      {error && (
-        <p className="notice notice-error" role="alert">
-          {error}
+      {!writable && (
+        <p className="notice notice-warning">
+          {tr('Tarif muddati tugagan: ma\'lumotni yuklab olishingiz mumkin, o\'zgartirish va tiklash tarif yangilangach ochiladi.')}
         </p>
       )}
+      {writable && <CloudMigration />}
+      <p className="muted">
+        {tr('Brauzerda saqlangan:')} {customers.length} {tr('ta mijoz,')} {transactions.length} {tr('ta tranzaksiya.')}
+      </p>
 
-      {preview && (
-        <div className="import-preview" role="region" aria-label="Import oldindan ko'rish">
-          <strong>{preview.fileName}</strong>
-          <p>
-            {preview.data.customers.length} mijoz, {preview.data.transactions.length} tranzaksiya, {preview.data.settings.courses.length} kurs
-            {preview.exportedAt && ` · ${formatDate(preview.exportedAt)} da yaratilgan`}
-          </p>
-          {preview.dropped > 0 && <p className="text-danger">{preview.dropped} ta buzuq yozuv tashlab yuboriladi</p>}
+      <div className="storage-usage">
+        <div className="progress-meta">
+          <span id="storage-usage-label">{tr('Band joy (taxminiy)')}</span>
+          <span>
+            {formatKilobytes(storageUsage.bytes)} / ~{LIMIT_MB} {tr('MB ·')} {formatPercent(storageUsage.percent)}
+          </span>
+        </div>
+        <div
+          className="progress"
+          role="meter"
+          aria-labelledby="storage-usage-label"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(storageUsage.percent)}
+        >
+          <div
+            className={cx('progress-fill', storageUsage.percent >= USAGE_WARNING_PERCENT && 'fill-danger')}
+            style={{ width: `${Math.max(storageUsage.percent, 1)}%` }}
+          />
+        </div>
+        {storageUsage.percent >= USAGE_WARNING_PERCENT && (
+          <p className="notice notice-warning">{tr('Brauzer xotirasi deyarli to\'lgan — JSON zaxira oling va keraksiz yozuvlarni o\'chiring.')}</p>
+        )}
+      </div>
+
+      <div className="setting-row">
+        <div>
+          <strong>{tr('JSON zaxira')}</strong>
+          <p className="muted">{tr('Barcha ma\'lumot va sozlamalarni bitta faylga yuklab olish')}</p>
+        </div>
+        <Button variant="ghost" icon="download" onClick={handleBackup}>
+          {tr('Yuklab olish')}
+        </Button>
+      </div>
+
+      {preMigration && (
+        <div className="setting-row">
+          <div>
+            <strong>{tr('Migratsiyadan oldingi zaxira')}</strong>
+            <p className="muted">
+              {tr('v{0} dan v11 ga (guruhlar va davomat) o\'tishdan oldin avtomatik olingan nusxa. Kerak bo\'lsa, "Zaxiradan tiklash" bilan qaytariladi.', {
+                0: typeof preMigration.version === 'number' ? preMigration.version : '?',
+              })}
+            </p>
+          </div>
           <div className="import-actions">
-            <Button variant="ghost" onClick={() => setPreview(null)}>
-              Bekor qilish
+            <Button
+              variant="ghost"
+              icon="download"
+              onClick={() => {
+                downloadJson(`${BACKUP_FILE_PREFIX}-migratsiyadan-oldin-${dateStamp()}.json`, preMigration)
+                logExport(tr('Migratsiyadan oldingi zaxira (JSON)'), 'backup')
+              }}
+            >
+              {tr('Yuklab olish')}
             </Button>
-            <Button icon="check" onClick={applyImport}>
-              Almashtirish
-            </Button>
+            {writable && (
+              <Button
+                variant="ghost"
+                icon="trash"
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: tr('Eski nusxani o\'chirish'),
+                    message: tr('Bu nusxa brauzer xotirasida joy egallaydi. Kerak bo\'lsa, avval "Yuklab olish" bilan kompyuterga saqlang. O\'chirilsinmi?'),
+                    confirmLabel: tr('O\'chirish'),
+                    tone: 'danger',
+                  })
+                  if (!ok) return
+                  removePreMigrationBackup()
+                  setPreMigration(null)
+                }}
+              >
+                {tr('O\'chirish')}
+              </Button>
+            )}
           </div>
         </div>
       )}
 
-      <div className="setting-row">
-        <div>
-          <strong>Demo ma'lumotlarga qaytarish</strong>
-          <p className="muted">Barcha o'zgarishlar o'chadi va demo ma'lumotlar qaytadi</p>
-        </div>
-        <Button variant="danger" icon="refresh" onClick={handleReset}>
-          Tiklash
-        </Button>
-      </div>
+      {writable && (
+        <>
+          <div className="setting-row">
+            <div>
+              <strong>{tr('Zaxiradan tiklash')}</strong>
+              <p className="muted">{tr('Avval yuklab olingan .json faylni tanlang — oldindan ko\'rib, keyin tasdiqlaysiz')}</p>
+            </div>
+            <Button variant="ghost" icon="upload" onClick={() => fileRef.current?.click()}>
+              {tr('Faylni tanlash')}
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              tabIndex={-1}
+              aria-label={tr('Zaxira faylini tanlash')}
+              onChange={handleFile}
+            />
+          </div>
+
+          {error && (
+            <p className="notice notice-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          {preview && (
+            <div className="import-preview" role="region" aria-label={tr('Import oldindan ko\'rish')}>
+              <strong>{preview.fileName}</strong>
+              <p>
+                {preview.data.customers.length} {tr('mijoz,')} {preview.data.transactions.length} {tr('tranzaksiya,')} {preview.data.courses.length} kurs/xizmat
+                {preview.exportedAt && tr(' · {0} da yaratilgan', { 0: formatDate(preview.exportedAt) })}
+              </p>
+              {preview.dropped > 0 && <p className="text-danger">{preview.dropped} {tr('ta buzuq yozuv tashlab yuboriladi')}</p>}
+              <div className="import-actions">
+                <Button variant="ghost" onClick={() => setPreview(null)}>
+                  {tr('Bekor qilish')}
+                </Button>
+                <Button icon="check" onClick={applyImport}>
+                  {tr('Almashtirish')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="setting-row">
+            <div>
+              <strong>{tr('Demo ma\'lumotlarga qaytarish')}</strong>
+              <p className="muted">{tr('Barcha o\'zgarishlar o\'chadi va demo ma\'lumotlar qaytadi')}</p>
+            </div>
+            <Button variant="danger" icon="refresh" onClick={handleReset}>
+              {tr('Tiklash')}
+            </Button>
+          </div>
+
+          <div className="setting-row">
+            <div>
+              <strong>{tr('Barcha ma\'lumotni tozalash (Reset)')}</strong>
+              <p className="muted">{tr('Mijozlar, tranzaksiyalar va kurslar o\'chadi; sozlamalar va login qoladi')}</p>
+            </div>
+            <Button variant="danger" icon="trash" onClick={handleClearAll}>
+              {tr('Tozalash')}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

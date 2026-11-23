@@ -1,25 +1,36 @@
 {
-  "name": "apex-dashboard",
+  "name": "eduflow-crm",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.2.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/spa-routes.mjs",
+    "build:pages": "vite build --base /eduflow-crm/ --outDir site && node scripts/spa-routes.mjs --out site --base /eduflow-crm/ --pages",
     "preview": "vite preview",
     "lint": "oxlint --deny-warnings",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run check:engine",
+    "owner:password": "node scripts/owner-password.mjs",
+    "e2e": "playwright test",
+    "screenshots": "node scripts/screenshots.mjs",
+    "build:engine": "vite build --config vite.engine.config.ts",
+    "check:engine": "node scripts/check-engine.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@playwright/test": "^1.63.0",
     "@rolldown/plugin-babel": "^0.2.4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
@@ -32,7 +43,7 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
-  "description": "Apex Dashboard — ta'lim markazlari va kichik biznes uchun CRM boshqaruv paneli",
+  "description": "EduFlow CRM — ta'lim markazlari va kichik biznes uchun CRM boshqaruv paneli",
   "engines": {
     "node": ">=20.19"
   }

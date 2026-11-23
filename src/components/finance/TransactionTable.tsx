@@ -1,12 +1,14 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
-import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, TYPE_LABELS } from '../../constants/navigation'
+import { CATEGORY_LABELS, categoriesFor, METHOD_LABELS, methodLabel, TX_STATUS_LABELS, TYPE_LABELS } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan } from '../../hooks/useAuth'
 import { useConfirm } from '../../hooks/useConfirm'
 import type { SortDirection } from '../../types/dashboard.types'
-import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey } from '../../types/finance.types'
+import type { Transaction, TransactionCategory, TransactionFilters, TransactionSortKey, TransactionStatus } from '../../types/finance.types'
 import { filterByPeriod } from '../../utils/analytics'
 import { toOptions } from '../../utils/cx'
-import { paginate } from '../../utils/list'
+import { countActive, paginate } from '../../utils/list'
 import {
   EMPTY_TRANSACTION_FILTERS,
   filterTransactions,
@@ -15,21 +17,27 @@ import {
   transactionPeriod,
 } from '../../utils/transactions'
 import { Badge } from '../ui/Badge'
+import { FilterPanel } from '../ui/FilterPanel'
+import type { BadgeTone } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
-import { Input } from '../ui/Input'
+import { DateInput } from '../ui/DateInput'
 import { Pagination } from '../ui/Pagination'
 import { Select } from '../ui/Select'
 import { SortHeader } from '../ui/SortHeader'
-import { FinanceSummary } from './FinanceSummary'
+import { DebtsCard } from './DebtsCard'
+import { FinanceBreakdowns, FinanceSummary } from './FinanceSummary'
+
+// Status select rangi: badge klasslari bilan bir xil tokenlar
+const STATUS_TONE: Record<TransactionStatus, string> = { paid: 'paid', pending: 'warning', cancelled: 'neutral' }
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as TransactionCategory[]
 
 const MOBILE_SORTS = [
-  { value: 'date:desc', label: 'Eng yangi' },
-  { value: 'date:asc', label: 'Eng eski' },
-  { value: 'amount:desc', label: 'Summa: kattadan' },
-  { value: 'amount:asc', label: 'Summa: kichikdan' },
+  { value: 'date:desc', label: tr('Eng yangi') },
+  { value: 'date:asc', label: tr('Eng eski') },
+  { value: 'amount:desc', label: tr('Summa: kattadan') },
+  { value: 'amount:asc', label: tr('Summa: kichikdan') },
 ]
 
 export function TransactionTable() {
@@ -39,17 +47,24 @@ export function TransactionTable() {
     setSearch,
     dateRange,
     money,
+    getCustomer,
     getCustomerName,
     deleteTransaction,
+    updateTransaction,
     openModal,
     transactionFilters: filters,
     setTransactionFilters,
     transactionSort: sort,
     setTransactionSort,
     formatDate,
+    settings,
   } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  const canCreate = can('payments.create')
+  const canManage = can('payments.manage')
   const [page, setPage] = useState(1)
+  const [dateResetKey, setDateResetKey] = useState(0)
   const [pageSize, setPageSize] = useState(10)
 
   const viewKey = JSON.stringify([search, filters, sort, dateRange])
@@ -81,15 +96,17 @@ export function TransactionTable() {
   }
 
   const clearFilters = () => {
+    // Chala yozilgan sana matni ham tozalansin — sana maydonlari qayta yaratiladi
+    setDateResetKey((k) => k + 1)
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
     setSearch('')
   }
 
   const handleDelete = async (t: Transaction) => {
     const ok = await confirm({
-      title: 'Tranzaksiyani o\'chirish',
-      message: `${TYPE_LABELS[t.type]}: ${money(t.amount)} (${formatDate(t.date)}) jurnaldan butunlay o'chiriladi. Davom etasizmi?`,
-      confirmLabel: 'O\'chirish',
+      title: tr('Tranzaksiyani o\'chirish'),
+      message: tr('{0}: {1} ({2}) savatchaga o\'tkaziladi — 30 kun ichida tiklash mumkin. Davom etasizmi?', { 0: TYPE_LABELS[t.type], 1: money(t.amount), 2: formatDate(t.date) }),
+      confirmLabel: tr('O\'chirish'),
     })
     if (ok) deleteTransaction(t.id)
   }
@@ -101,55 +118,60 @@ export function TransactionTable() {
       <section className="card" aria-labelledby="journal-title">
         <div className="card-head">
           <div>
-            <h2 id="journal-title">Tranzaksiyalar jurnali</h2>
+            <h2 id="journal-title">{tr('Tranzaksiyalar jurnali')}</h2>
             <span className="muted">
-              {rows.length} ta yozuv · {periodLabel}
+              {rows.length} {tr('ta yozuv ·')} {periodLabel}
             </span>
           </div>
           <div className="toolbar">
-            <Button variant="ghost" icon="minus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'expense' } })}>
-              Xarajat
-            </Button>
-            <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
-              To'lov qabul qilish
-            </Button>
+            {canManage && (
+              <Button variant="ghost" icon="minus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'expense' } })}>
+                {tr('Xarajat')}
+              </Button>
+            )}
+            {canCreate && (
+              <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
+                {tr('To\'lov qabul qilish')}
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="filters">
+        <FilterPanel activeCount={countActive(filters, EMPTY_TRANSACTION_FILTERS)}>
           <Select
-            label="Turi"
+            label={tr('Turi')}
             hideLabel
             value={filters.type}
             onChange={(e) => setFilter('type', e.target.value as TransactionFilters['type'])}
-            options={[{ value: 'all', label: 'Barcha turlar' }, ...toOptions(TYPE_LABELS)]}
+            options={[{ value: 'all', label: tr('Barcha turlar') }, ...toOptions(TYPE_LABELS)]}
           />
           <Select
-            label="To'lov usuli"
+            label={tr('To\'lov turi')}
             hideLabel
             value={filters.method}
             onChange={(e) => setFilter('method', e.target.value as TransactionFilters['method'])}
-            options={[{ value: 'all', label: 'Barcha usullar' }, ...toOptions(METHOD_LABELS)]}
+            options={[{ value: 'all', label: tr('Barcha to\'lov turlari') }, ...toOptions(METHOD_LABELS)]}
           />
           <Select
-            label="Kategoriya"
+            label={tr('Status')}
+            hideLabel
+            value={filters.status}
+            onChange={(e) => setFilter('status', e.target.value as TransactionFilters['status'])}
+            options={[{ value: 'all', label: tr('Barcha statuslar') }, ...toOptions(TX_STATUS_LABELS)]}
+          />
+          <Select
+            label={tr('Kategoriya')}
             hideLabel
             value={filters.category}
             onChange={(e) => setFilter('category', e.target.value as TransactionFilters['category'])}
-            options={[{ value: 'all', label: 'Barcha kategoriyalar' }, ...categoryOptions]}
+            options={[{ value: 'all', label: tr('Barcha kategoriyalar') }, ...categoryOptions]}
           />
           <div className="date-range">
-            <Input
-              label="Dan"
-              type="date"
-              value={filters.from}
-              max={filters.to || undefined}
-              onChange={(e) => setFilter('from', e.target.value)}
-            />
-            <Input label="Gacha" type="date" value={filters.to} min={filters.from || undefined} onChange={(e) => setFilter('to', e.target.value)} />
+            <DateInput key={`from-${dateResetKey}`} label={tr('Dan')} format={settings.dateFormat} value={filters.from} max={filters.to || undefined} onChange={(value) => setFilter('from', value)} />
+            <DateInput key={`to-${dateResetKey}`} label={tr('Gacha')} format={settings.dateFormat} value={filters.to} min={filters.from || undefined} onChange={(value) => setFilter('to', value)} />
           </div>
           <Select
-            label="Saralash"
+            label={tr('Saralash')}
             hideLabel
             className="mobile-only"
             value={`${sort.key}:${sort.direction}`}
@@ -161,29 +183,31 @@ export function TransactionTable() {
           />
           {filtersActive && (
             <Button variant="subtle" icon="close" onClick={clearFilters}>
-              Filtrlarni tozalash
+              {tr('Filtrlarni tozalash')}
             </Button>
           )}
-        </div>
+        </FilterPanel>
 
         {current.total === 0 ? (
           <EmptyState
             variant={transactions.length === 0 ? 'empty' : 'search'}
-            title={transactions.length === 0 ? 'Hali tranzaksiya yo\'q' : 'Tranzaksiya topilmadi'}
+            title={transactions.length === 0 ? tr('Hali tranzaksiya yo\'q') : tr('Tranzaksiya topilmadi')}
             description={
               transactions.length === 0
-                ? 'Birinchi to\'lovni qayd eting — kassa balansi avtomatik hisoblanadi.'
-                : 'Davr yoki filtrlarni o\'zgartirib ko\'ring.'
+                ? tr('Birinchi to\'lovni qayd eting — kassa balansi avtomatik hisoblanadi.')
+                : tr('Davr yoki filtrlarni o\'zgartirib ko\'ring.')
             }
             action={
               transactions.length === 0 ? (
+                canCreate && (
                 <Button icon="plus" onClick={() => openModal({ type: 'transaction', payload: { kind: 'income' } })}>
-                  To'lov qo'shish
+                  {tr('To\'lov qo\'shish')}
                 </Button>
+                )
               ) : (
                 filtersActive && (
                   <Button variant="ghost" icon="close" onClick={clearFilters}>
-                    Filtrlarni tozalash
+                    {tr('Filtrlarni tozalash')}
                   </Button>
                 )
               )
@@ -195,31 +219,26 @@ export function TransactionTable() {
               <table className="table">
                 <thead>
                   <tr>
-                    <SortHeader label="Sana" sortKey="date" sort={sort} onSort={setTransactionSort} />
-                    <th scope="col">Turi</th>
-                    <th scope="col">Kategoriya</th>
-                    <th scope="col">Izoh</th>
-                    <th scope="col">Mijoz</th>
-                    <th scope="col">Usul</th>
-                    <SortHeader label="Summa" sortKey="amount" sort={sort} onSort={setTransactionSort} align="right" />
+                    <SortHeader label={tr('Sana')} sortKey="date" sort={sort} onSort={setTransactionSort} />
+                    <th scope="col">{tr('Mijoz')}</th>
+                    <SortHeader label={tr('Summa')} sortKey="amount" sort={sort} onSort={setTransactionSort} align="right" />
+                    <th scope="col">{tr('To\'lov turi')}</th>
+                    <th scope="col">{tr('Status')}</th>
                     <th scope="col">
-                      <span className="sr-only">Amallar</span>
+                      <span className="sr-only">{tr('Amallar')}</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {current.items.map((t) => (
                     <tr key={t.id}>
-                      <td data-label="Sana" className="nowrap">
+                      <td data-label={tr('Sana')} className="nowrap">
                         {formatDate(t.date)}
                       </td>
-                      <td data-label="Turi">
-                        <Badge tone={t.type}>{TYPE_LABELS[t.type]}</Badge>
-                      </td>
-                      <td data-label="Kategoriya">{CATEGORY_LABELS[t.category]}</td>
-                      <td data-label="Izoh">{t.note || '—'}</td>
-                      <td data-label="Mijoz">
-                        {t.customerId ? (
+                      <td data-label={tr('Mijoz')} className="cell-wide">
+                        {t.customerId && !getCustomer(t.customerId) ? (
+                          <span className="muted">{getCustomerName(t.customerId)}</span>
+                        ) : t.customerId ? (
                           <button
                             type="button"
                             className="link-btn"
@@ -228,22 +247,52 @@ export function TransactionTable() {
                             {getCustomerName(t.customerId)}
                           </button>
                         ) : (
-                          '—'
+                          <span>{CATEGORY_LABELS[t.category]}</span>
                         )}
+                        <small className="cell-sub">
+                          {TYPE_LABELS[t.type]} · {t.customerId ? CATEGORY_LABELS[t.category] : t.note || '—'}
+                          {t.customerId && t.note ? ` · ${t.note}` : ''}
+                        </small>
                       </td>
-                      <td data-label="Usul">{METHOD_LABELS[t.method]}</td>
-                      <td data-label="Summa" className={`align-right nowrap strong ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
+                      <td data-label={tr('Summa')} className={`align-right nowrap strong ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
+                        <span className="sr-only">{TYPE_LABELS[t.type]}: </span>
                         {t.type === 'income' ? '+' : '−'}
                         {money(t.amount)}
                       </td>
+                      <td data-label={tr('To\'lov turi')}>{methodLabel(t)}</td>
+                      <td data-label={tr('Status')}>
+                        {canManage ? (
+                        <select
+                          className={`status-select badge-${STATUS_TONE[t.status]}`}
+                          value={t.status}
+                          aria-label={tr('Status: {0} {1}, {2}', { 0: TYPE_LABELS[t.type], 1: money(t.amount), 2: formatDate(t.date) })}
+                          onChange={(e) => updateTransaction(t.id, { status: e.target.value as TransactionStatus })}
+                        >
+                          {(Object.keys(TX_STATUS_LABELS) as TransactionStatus[]).map((status) => (
+                            <option key={status} value={status}>
+                              {TX_STATUS_LABELS[status]}
+                            </option>
+                          ))}
+                        </select>
+                        ) : (
+                          <Badge tone={STATUS_TONE[t.status] as BadgeTone}>{TX_STATUS_LABELS[t.status]}</Badge>
+                        )}
+                      </td>
                       <td className="cell-actions">
                         <div className="row-actions">
+                          {t.type === 'income' && (
+                            <IconButton icon="receipt" label={tr('Chek: {0}, {1}, {2}', { 0: t.customerName ?? CATEGORY_LABELS[t.category], 1: money(t.amount), 2: formatDate(t.date) })} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+                          )}
+                        {canManage && (
+                        <>
                           <IconButton
                             icon="edit"
-                            label="Tranzaksiyani tahrirlash"
+                            label={tr('Tranzaksiyani tahrirlash')}
                             onClick={() => openModal({ type: 'transaction', payload: { id: t.id } })}
                           />
-                          <IconButton icon="trash" tone="danger" label="Tranzaksiyani o'chirish" onClick={() => handleDelete(t)} />
+                          <IconButton icon="trash" tone="danger" label={tr('Tranzaksiyani o\'chirish')} onClick={() => handleDelete(t)} />
+                        </>
+                        )}
                         </div>
                       </td>
                     </tr>
@@ -263,6 +312,9 @@ export function TransactionTable() {
           </>
         )}
       </section>
+
+      <DebtsCard />
+      <FinanceBreakdowns transactions={inPeriod} />
     </>
   )
 }

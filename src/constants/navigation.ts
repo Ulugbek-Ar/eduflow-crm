@@ -1,11 +1,13 @@
+import { tr } from '../i18n'
 import { createElement } from 'react'
 import type { CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange, Section } from '../types/dashboard.types'
-import type { ExpenseCategory, IncomeCategory, PaymentMethod, TransactionCategory, TransactionType } from '../types/finance.types'
+import type { ExpenseCategory, IncomeCategory, PaymentMethod, Transaction, TransactionCategory, TransactionStatus, TransactionType } from '../types/finance.types'
 
 // Ikonlar: 24x24 viewBox, stroke uslubida chiziladigan path'lar
 export const ICONS = {
-  logo: ['M3 20 12 4l9 16', 'M7.5 14h9'],
+  // Bitiruvchi qalpoqchasi — ta'lim belgisi
+  logo: ['M2 9.5 12 5l10 4.5-10 4.5z', 'M6 11.3V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.7', 'M22 9.5V15'],
   overview: ['M3 3h7v9H3z', 'M14 3h7v5h-7z', 'M14 12h7v9h-7z', 'M3 16h7v5H3z'],
   customers: [
     'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2',
@@ -82,6 +84,31 @@ export const ICONS = {
   book: ['M4 19.5A2.5 2.5 0 0 1 6.5 17H20', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'],
   clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
   activity: ['M22 12h-4l-3 9L9 3l-3 9H2'],
+  // Lucide uslubidagi qo'shimcha ikonlar (24x24, stroke 2)
+  dollar: ['M12 2v20', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
+  filter: ['M22 3H2l8 9.46V19l4 2v-8.54L22 3z'],
+  bookOpen: ['M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z', 'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'],
+  barChart: ['M3 3v18h18', 'M18 17V9', 'M13 17V5', 'M8 17v-3'],
+  kanban: ['M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M8 7v7', 'M12 7v4', 'M16 7v9'],
+  list: ['M8 6h13', 'M8 12h13', 'M8 18h13', 'M3 6h.01', 'M3 12h.01', 'M3 18h.01'],
+  panelLeft: ['M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z', 'M9 3v18'],
+  user: ['M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  calendar: ['M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+  archive: ['M21 8v13H3V8', 'M1 3h22v5H1z', 'M10 12h4'],
+  image: [
+    'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+    'M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+    'm21 15-5-5L5 21',
+  ],
+  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+  key: ['M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4'],
+  ban: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'm4.93 4.93 14.14 14.14'],
+  copy: ['M20 9h-9a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2z', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],
+  play: ['m5 3 14 9-14 9V3z'],
+  move: ['M5 9l-3 3 3 3', 'M9 5l3-3 3 3', 'M15 19l-3 3-3-3', 'M19 9l3 3-3 3', 'M2 12h20', 'M12 2v20'],
+  layers: ['m12 2 10 5-10 5L2 7z', 'm2 17 10 5 10-5', 'm2 12 10 5 10-5'],
+  briefcase: ['M4 7h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z', 'M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2'],
+  checkSquare: ['m9 11 3 3L22 4', 'M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
 } as const
 
 export type IconName = keyof typeof ICONS
@@ -118,55 +145,87 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'overview', label: 'Umumiy ko\'rinish', icon: 'overview' },
-  { id: 'customers', label: 'Mijozlar', icon: 'customers' },
-  { id: 'finance', label: 'Moliya', icon: 'finance' },
-  { id: 'settings', label: 'Sozlamalar', icon: 'settings' },
+  { id: 'overview', label: tr('Umumiy ko\'rinish'), icon: 'overview' },
+  { id: 'customers', label: tr('Mijozlar va lidlar'), icon: 'customers' },
+  { id: 'groups', label: tr('Guruhlar'), icon: 'layers' },
+  { id: 'schedule', label: tr('Dars jadvali'), icon: 'calendar' },
+  // Faqat o'qituvchi menyusida (permissions.ts: canOpenSection)
+  { id: 'attendance', label: tr('Davomat'), icon: 'checkSquare' },
+  { id: 'finance', label: tr('Moliya va kassa'), icon: 'dollar' },
+  { id: 'courses', label: tr('Kurslar va xizmatlar'), icon: 'bookOpen' },
+  { id: 'teachers', label: tr('O\'qituvchilar'), icon: 'briefcase' },
+  { id: 'analytics', label: tr('Tahlil va hisobotlar'), icon: 'barChart' },
+  { id: 'admin', label: tr('Boshqaruv'), icon: 'shield' },
+  { id: 'settings', label: tr('Sozlamalar'), icon: 'settings' },
+  { id: 'help', label: tr('Yordam'), icon: 'info' },
 ]
+
+// O'qituvchi menyusida ba'zi bo'limlar o'z nomi bilan
+const TEACHER_LABELS: Partial<Record<Section, string>> = { overview: tr('Bugun'), groups: tr('Guruhlarim'), schedule: tr('Mening jadvalim') }
+
+export function sectionLabel(section: Section, role?: string): string {
+  if (role === 'teacher' && TEACHER_LABELS[section]) return TEACHER_LABELS[section]
+  return NAV_ITEMS.find((item) => item.id === section)?.label ?? ''
+}
 
 // Interfeys yorliqlari
 export const DATE_RANGE_LABELS: Record<DateRange, string> = {
-  today: 'Bugun',
-  '7d': '7 kun',
-  month: 'Shu oy',
-  year: 'Shu yil',
+  today: tr('Bugun'),
+  '7d': tr('7 kun'),
+  month: tr('Shu oy'),
+  year: tr('Shu yil'),
 }
 
 export const STATUS_LABELS: Record<CustomerStatus, string> = {
-  lead: 'Lead',
-  active: 'Faol',
-  paused: 'To\'xtatilgan',
-  left: 'Ketgan',
+  new: tr('Yangi'),
+  contacted: tr('Bog\'lanildi'),
+  thinking: tr('O\'ylayapti'),
+  paid: tr('To\'lov qildi'),
+  cancelled: tr('Bekor qilindi'),
 }
 
+// Voronka tartibi: Kanban ustunlari, saralash va filtrlar shu tartibda
+export const FUNNEL_STAGES: readonly CustomerStatus[] = ['new', 'contacted', 'thinking', 'paid', 'cancelled']
+
 export const SOURCE_LABELS: Record<CustomerSource, string> = {
-  telegram: 'Telegram',
-  instagram: 'Instagram',
-  website: 'Veb-sayt',
-  referral: 'Tavsiya',
+  telegram: tr('Telegram'),
+  instagram: tr('Instagram'),
+  website: tr('Sayt'),
+  referral: tr('Tavsiya'),
 }
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
-  payme: 'Payme',
-  click: 'Click',
-  cash: 'Naqd',
-  bank: 'Bank o\'tkazmasi',
+  cash: tr('Naqd'),
+  card: tr('Karta'),
+  transfer: tr('O\'tkazma'),
+}
+
+// To'lov turi; onlayn to'lov tizimi orqali kelgan bo'lsa — nomi bilan ("Karta · Payme")
+export function methodLabel(t: Pick<Transaction, 'method' | 'provider'>): string {
+  const base = METHOD_LABELS[t.method]
+  return t.provider ? `${base} · ${t.provider === 'payme' ? 'Payme' : 'Click'}` : base
+}
+
+export const TX_STATUS_LABELS: Record<TransactionStatus, string> = {
+  paid: tr('To\'langan'),
+  pending: tr('Kutilmoqda'),
+  cancelled: tr('Bekor qilingan'),
 }
 
 export const TYPE_LABELS: Record<TransactionType, string> = {
-  income: 'Kirim',
-  expense: 'Chiqim',
+  income: tr('Kirim'),
+  expense: tr('Chiqim'),
 }
 
 export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
-  course_fee: 'Kurs to\'lovi',
-  other_income: 'Boshqa kirim',
-  rent: 'Ijara',
-  salary: 'Maosh',
-  marketing: 'Marketing',
-  equipment: 'Jihozlar',
-  utilities: 'Kommunal xizmatlar',
-  other_expense: 'Boshqa chiqim',
+  course_fee: tr('Kurs to\'lovi'),
+  other_income: tr('Boshqa kirim'),
+  rent: tr('Ijara'),
+  salary: tr('Maosh'),
+  marketing: tr('Marketing'),
+  equipment: tr('Jihozlar'),
+  utilities: tr('Kommunal xizmatlar'),
+  other_expense: tr('Boshqa chiqim'),
 }
 
 export const INCOME_CATEGORIES: readonly IncomeCategory[] = ['course_fee', 'other_income']

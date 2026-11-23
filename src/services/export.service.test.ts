@@ -29,7 +29,8 @@ describe('escapeCsvCell', () => {
   it('formula bilan boshlangan matnni zararsizlantiradi (CSV injection)', () => {
     expect(escapeCsvCell('=SUM(A1:A2)')).toBe('\'=SUM(A1:A2)')
     expect(escapeCsvCell('@cmd')).toBe('\'@cmd')
-    expect(escapeCsvCell('+998 90 123 45 67')).toBe('\'+998 90 123 45 67')
+    // A-07: telefon formula emas — apostrofsiz
+    expect(escapeCsvCell('+998 90 123 45 67')).toBe('+998 90 123 45 67')
   })
 
   it('raqamlar o\'zgarishsiz (manfiy summa formula emas)', () => {
@@ -77,3 +78,25 @@ describe('dateStamp', () => {
     expect(dateStamp(new Date(2026, 9, 5, 23, 30))).toBe('2026-10-05')
   })
 })
+
+describe('Excel: kasr qiymatlar', () => {
+  it('butun son #,##0, kasr #,##0.0 formatida', () => {
+    const xml = toSpreadsheetXml([{ a: 66.7, b: 1200 }], [
+      { header: 'A', value: (r: { a: number; b: number }) => r.a, type: 'number' },
+      { header: 'B', value: (r: { a: number; b: number }) => r.b, type: 'number' },
+    ], 'Test')
+    expect(xml).toContain('<Cell ss:StyleID="decimal"><Data ss:Type="Number">66.7</Data></Cell>')
+    expect(xml).toContain('<Cell ss:StyleID="number"><Data ss:Type="Number">1200</Data></Cell>')
+  })
+})
+
+describe('A-07: telefon CSV\'da apostrofsiz', () => {
+  it('+998 … telefon formula emas; haqiqiy formula ekranlanadi', () => {
+    expect(escapeCsvCell('+998 33 526 01 42')).toBe('+998 33 526 01 42')
+    expect(escapeCsvCell('+1-(202) 555')).toBe('+1-(202) 555')
+    expect(escapeCsvCell('+HYPERLINK(1)')).toBe(`'+HYPERLINK(1)`)
+    expect(escapeCsvCell('=1+2')).toBe(`'=1+2`)
+    expect(escapeCsvCell('-2+3')).toBe(`'-2+3`)
+  })
+})
+

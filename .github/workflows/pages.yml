@@ -1,0 +1,80 @@
+name: GitHub Pages
+
+# Namoyish (demo) sayti: https://ulugbek-ar.github.io/eduflow-crm/ — asosiy sayt Vercel'da (vercel.json)
+# Shu branch'ga har push'da tekshiruv (npm run check) o'tsa, sayt qayta yig'ilib gh-pages branch'iga joylanadi
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: build va gh-pages ga joylash
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+      # Repozitoriya o'zgaruvchilari (Settings -> Secrets and variables -> Actions -> Variables) — DEPLOY.md
+      - name: Sozlamalarni tekshirish
+        env:
+          MAIN_SITE_URL: ${{ vars.MAIN_SITE_URL }}
+          SUPPORT_TELEGRAM: ${{ vars.SUPPORT_TELEGRAM }}
+          SUPPORT_PHONE: ${{ vars.SUPPORT_PHONE }}
+          SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+        run: |
+          if [ -z "$MAIN_SITE_URL" ]; then
+            echo "::warning::MAIN_SITE_URL berilmagan — namoyish saytidagi 'Bepul sinash' o'rniga 'Demo' va 'Ulanish uchun ariza' ko'rinadi"
+          fi
+          if [ -z "$SUPPORT_TELEGRAM$SUPPORT_PHONE$SUPPORT_EMAIL" ]; then
+            echo "::warning::SUPPORT_TELEGRAM / SUPPORT_PHONE / SUPPORT_EMAIL berilmagan — ariza tugmasi va bog'lanish ma'lumoti yashirinadi, faqat demo qoladi"
+          fi
+
+      # Sayt /eduflow-crm/ ostida. scripts/spa-routes.mjs: /app, /privacy, /terms, /owner uchun haqiqiy
+      # index.html nusxalari (200 status, o'z sarlavhasi va canonical), sitemap.xml, 404.html va .nojekyll
+      - run: npm run build:pages
+        env:
+          VITE_SITE_URL: https://ulugbek-ar.github.io/eduflow-crm
+          # Pages — faqat namoyish: ro'yxatdan o'tish yo'q, /app da darhol "Demo'ni ko'rish"
+          VITE_DEMO_ONLY: '1'
+          VITE_MAIN_SITE_URL: ${{ vars.MAIN_SITE_URL }}
+          VITE_SUPPORT_TELEGRAM: ${{ vars.SUPPORT_TELEGRAM }}
+          VITE_SUPPORT_PHONE: ${{ vars.SUPPORT_PHONE }}
+          VITE_SUPPORT_EMAIL: ${{ vars.SUPPORT_EMAIL }}
+          # Brend (sayt nomi va logosi) — mijozga qarab; berilmasa standart. README → "Brend (sayt nomi va logosi)"
+          VITE_BRAND_NAME: ${{ vars.BRAND_NAME }}
+          VITE_BRAND_SHORT_NAME: ${{ vars.BRAND_SHORT_NAME }}
+          VITE_BRAND_DESCRIPTION: ${{ vars.BRAND_DESCRIPTION }}
+          VITE_BRAND_LOGO: ${{ vars.BRAND_LOGO }}
+          VITE_BRAND_FAVICON: ${{ vars.BRAND_FAVICON }}
+          VITE_BRAND_APPLE_ICON: ${{ vars.BRAND_APPLE_ICON }}
+          VITE_BRAND_OG_IMAGE: ${{ vars.BRAND_OG_IMAGE }}
+
+      - name: gh-pages branch'iga joylash
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "deploy: ${GITHUB_REPOSITORY}@${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

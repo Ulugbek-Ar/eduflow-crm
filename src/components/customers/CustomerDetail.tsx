@@ -1,20 +1,40 @@
-import { METHOD_LABELS, SOURCE_LABELS, STATUS_LABELS } from '../../constants/navigation'
+import { tr } from '../../i18n'
+import { lazy, Suspense, useState } from 'react'
+import { FUNNEL_STAGES, methodLabel, SOURCE_LABELS, STATUS_LABELS, TX_STATUS_LABELS } from '../../constants/navigation'
+import type { CustomerStatus } from '../../types/customer.types'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuditActor, useCan } from '../../hooks/useAuth'
+import { useCloudOrgId } from '../../hooks/useCloudOrg'
 import { useConfirm } from '../../hooks/useConfirm'
-import { getInitials } from '../../utils/customers'
+import { deleteCustomerMessage, getInitials } from '../../utils/customers'
+import { attendanceRate, rateLabel, recordsFor } from '../../utils/attendance'
+import { customerEnrollments, ENROLLMENT_STATUS_LABELS, enrollmentMonthlyFee } from '../../utils/groups'
 import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
+import { cx } from '../../utils/cx'
+import { customerDebt, last12Months, paymentPreset, studyMonthNumber } from '../../utils/debts'
+import { formatNumber } from '../../utils/format'
+import { CustomerCard } from '../print/CustomerCard'
+import { PrintDocument } from '../print/PrintDocument'
+import { Button, IconButton } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 
+// Faqat bulutli rejimda va bot ulangan bo'lsa yuklanadi
+const ParentBot = lazy(() => import('./ParentBot').then((m) => ({ default: m.ParentBot })))
+
 export function CustomerDetail({ customerId }: { customerId: string }) {
-  const { getCustomer, transactions, money, openModal, closeModal, deleteCustomer, formatDate } = useDashboard()
+  const { getCustomer, transactions, courses, groups, enrollments, attendance, money, openModal, closeModal, deleteCustomer, updateCustomer, formatDate, settings, debtContext, getBranch } = useDashboard()
   const confirm = useConfirm()
+  const can = useCan()
+  const actor = useAuditActor()
+  const cloudOrgId = useCloudOrgId()
+  // Chop etish vaqti (bosilgan paytda) — kartada ko'rsatiladi
+  const [printedAt, setPrintedAt] = useState<string | null>(null)
   const customer = getCustomer(customerId)
 
   if (!customer) {
     return (
-      <Modal title="Mijoz topilmadi" onClose={closeModal} variant="drawer">
-        <p className="muted">Bu mijoz o'chirilgan bo'lishi mumkin.</p>
+      <Modal title={tr('Mijoz topilmadi')} onClose={closeModal} variant="drawer">
+        <p className="muted">{tr('Bu mijoz o\'chirilgan bo\'lishi mumkin.')}</p>
       </Modal>
     )
   }
@@ -22,13 +42,22 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
   const payments = transactions
     .filter((t) => t.customerId === customer.id)
     .sort((a, b) => b.date.localeCompare(a.date))
-  const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : 0), 0)
+  // Faqat "To'langan" kirimlar
+  const totalPaid = payments.reduce((sum, t) => sum + (t.type === 'income' && t.status === 'paid' ? t.amount : 0), 0)
+  const debt = customerDebt(customer, courses, transactions, undefined, debtContext)
+  // Oylar jadvali — faqat guruhdagi o'qish bo'yicha (eskicha mijozda yo'q)
+  const months = debt && debt.ledgers.length > 0 ? last12Months(debt) : []
+  const course = courses.find((c) => c.name === customer.course)
+  const studentEnrollments = customerEnrollments(customer.id, enrollments)
+  // Eskicha "nechanchi oy" — guruhga yozilmagan mijozlar uchun
+  const studyMonth = customer.status === 'paid' && studentEnrollments.length === 0 ? studyMonthNumber(customer) : null
+  const finished = course && course.durationMonths > 0 && studyMonth !== null && studyMonth > course.durationMonths
 
   const handleDelete = async () => {
     const ok = await confirm({
-      title: 'Mijozni o\'chirish',
-      message: `"${customer.name}" mijozi butunlay o'chiriladi. Davom etasizmi?`,
-      confirmLabel: 'O\'chirish',
+      title: tr('Mijozni o\'chirish'),
+      message: deleteCustomerMessage(customer, transactions, money),
+      confirmLabel: tr('O\'chirish'),
     })
     if (ok) {
       deleteCustomer(customer.id)
@@ -44,81 +73,250 @@ export function CustomerDetail({ customerId }: { customerId: string }) {
       variant="drawer"
       footer={
         <>
-          <Button variant="danger" icon="trash" onClick={handleDelete}>
-            O'chirish
+          {can('customers.delete') && (
+            <Button variant="danger" icon="trash" onClick={handleDelete}>
+              {tr('O\'chirish')}
+            </Button>
+          )}
+          <Button variant="ghost" icon="fileText" onClick={() => setPrintedAt(new Date().toISOString())}>
+            {tr('Chop etish')}
           </Button>
-          <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
-            Tahrirlash
-          </Button>
-          <Button
-            icon="plus"
-            onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id } })}
-          >
-            To'lov
-          </Button>
+          {can('customers.edit') && (
+            <Button variant="ghost" icon="edit" onClick={() => openModal({ type: 'customer', payload: { id: customer.id } })}>
+              {tr('Tahrirlash')}
+            </Button>
+          )}
+          {can('payments.create') && (
+            <Button
+              icon="plus"
+              onClick={() => openModal({ type: 'transaction', payload: { kind: 'income', customerId: customer.id, ...paymentPreset(debt) } })}
+            >
+              {tr('To\'lov')}
+            </Button>
+          )}
         </>
       }
     >
       <div className="profile-head">
         <span className="avatar avatar-lg">{getInitials(customer.name)}</span>
         <div>
-          <Badge tone={customer.status}>{STATUS_LABELS[customer.status]}</Badge>
-          <p className="muted">{SOURCE_LABELS[customer.source]} orqali kelgan</p>
+          {/* Bosqich rangli tanlov ko'rinishida — badge vazifasini ham bajaradi */}
+          <label className="stage-quick">
+            <span className="sr-only">{tr('Bosqich')}</span>
+            <select
+            className={`status-select badge-${customer.status}`}
+            value={customer.status}
+            aria-label={tr('Bosqichni o\'zgartirish')}
+            disabled={!can('customers.edit')}
+            onChange={(e) => updateCustomer(customer.id, { status: e.target.value as CustomerStatus })}
+          >
+            {FUNNEL_STAGES.map((stage) => (
+              <option key={stage} value={stage}>
+                {STATUS_LABELS[stage]}
+              </option>
+            ))}
+            </select>
+          </label>
+          <p className="muted">{SOURCE_LABELS[customer.source]} {tr('orqali kelgan')}</p>
         </div>
       </div>
 
       <dl className="detail-list">
         <div>
-          <dt>Telefon</dt>
+          <dt>{tr('Telefon')}</dt>
           <dd>
             <a href={`tel:${customer.phone.replace(/\s/g, '')}`}>{customer.phone}</a>
           </dd>
         </div>
         <div>
-          <dt>Email</dt>
+          <dt>{tr('Email')}</dt>
           <dd>{customer.email ? <a href={`mailto:${customer.email}`}>{customer.email}</a> : '—'}</dd>
         </div>
         <div>
-          <dt>Qo'shilgan</dt>
+          <dt>{tr('Qo\'shilgan')}</dt>
           <dd>{formatDate(customer.createdAt)}</dd>
         </div>
+        {customer.branchId && getBranch(customer.branchId) && (
+          <div>
+            <dt>{tr('Filial')}</dt>
+            <dd>{getBranch(customer.branchId)?.name}</dd>
+          </div>
+        )}
         <div>
-          <dt>Yangilangan</dt>
+          <dt>{tr('Yangilangan')}</dt>
           <dd>{customer.updatedAt ? formatDate(customer.updatedAt) : '—'}</dd>
         </div>
+        {customer.paidAt && (
+          <div>
+            <dt>{tr('To\'lov qildi')}</dt>
+            <dd>{formatDate(customer.paidAt)}</dd>
+          </div>
+        )}
+        {course && studyMonth !== null && (
+          <div>
+            <dt>{tr('O\'qish')}</dt>
+            <dd>
+              {finished
+                ? tr('Tugagan ({0} oy)', { 0: course.durationMonths })
+                : course.durationMonths > 0
+                  ? tr('{0}-oy / {1}', { 0: studyMonth, 1: course.durationMonths })
+                  : tr('{0}-oy (muddatsiz)', { 0: studyMonth })}
+            </dd>
+          </div>
+        )}
         {customer.note && (
           <div className="detail-wide">
-            <dt>Izoh</dt>
+            <dt>{tr('Izoh')}</dt>
             <dd>{customer.note}</dd>
           </div>
         )}
       </dl>
 
+      {cloudOrgId && settings.telegramBot && (can('payments.create') || can('customers.edit')) && (
+        <Suspense fallback={null}>
+          <ParentBot customerId={customer.id} name={customer.name} bot={settings.telegramBot} />
+        </Suspense>
+      )}
+
+      {studentEnrollments.length > 0 && (
+        <>
+          <h3 className="detail-subtitle">{tr('Guruhlari')}</h3>
+          <ul className="student-groups">
+            {studentEnrollments.map((e) => {
+              const group = groups.find((g) => g.id === e.groupId)
+              const groupCourse = courses.find((c) => c.id === group?.courseId)
+              const rate = attendanceRate(recordsFor(attendance, { customerId: customer.id, groupId: e.groupId }))
+              const balance = debt?.ledgers.find((l) => l.enrollment.id === e.id)?.balance ?? 0
+              return (
+                <li key={e.id}>
+                  <div>
+                    {group && can('groups.view') ? (
+                      <button type="button" className="link-btn" onClick={() => openModal({ type: 'groupDetail', payload: { id: group.id } })}>
+                        {group.name}
+                      </button>
+                    ) : (
+                      <strong>{group?.name ?? tr('O\'chirilgan guruh')}</strong>
+                    )}
+                    <small className="muted cell-block">
+                      {tr('{0} dan', { 0: formatDate(`${e.startDate}T12:00:00`) })}
+                      {e.endDate && e.status !== 'active' ? ` · ${tr('{0} gacha', { 0: formatDate(`${e.endDate}T12:00:00`) })}` : ''}
+                      {' · '}
+                      {money(enrollmentMonthlyFee(e, groupCourse))}
+                      {tr('/oy')}
+                    </small>
+                  </div>
+                  <span className="student-group-stats">
+                    <Badge tone={e.status === 'active' ? 'paid' : e.status === 'paused' ? 'thinking' : 'neutral'}>{ENROLLMENT_STATUS_LABELS[e.status]}</Badge>
+                    <span className="muted">{tr('Davomat: {0}', { 0: rateLabel(rate) })}</span>
+                    {balance !== 0 && (
+                      <span className={balance < 0 ? 'text-danger strong' : 'text-success'}>
+                        {balance < 0 ? tr('Qarz: {0}', { 0: money(-balance) }) : tr('Avans: {0}', { 0: money(balance) })}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+
       <div className="detail-total">
-        <span>Jami to'lagan</span>
+        <span>{tr('Jami to\'lagan')}</span>
         <strong className="text-success">{money(totalPaid)}</strong>
       </div>
 
-      <h3 className="detail-subtitle">To'lovlar tarixi</h3>
+      {debt && (
+        <div className={debt.debt > 0 ? 'detail-total is-debt' : 'detail-total'}>
+          <span>
+            {debt.ledgers.length > 0 ? (
+              tr('O\'qish boshidan: kutilgan {0}, to\'langan {1}', { 0: money(debt.expected), 1: money(debt.paid) })
+            ) : (
+              <>
+                {tr('Joriy oy: kutilgan')} {money(debt.expected)}
+                {tr(', to\'langan')} {money(debt.paid)}
+              </>
+            )}
+          </span>
+          <strong className={debt.debt > 0 ? 'text-danger nowrap' : 'text-success nowrap'}>
+            {debt.debt > 0 ? tr('Qarz: {0}', { 0: money(debt.debt) }) : debt.advance > 0 ? tr('Avans: {0}', { 0: money(debt.advance) }) : tr('Qarz yo\'q')}
+          </strong>
+        </div>
+      )}
+
+      {months.length > 0 && (
+        <>
+          <h3 className="detail-subtitle">{tr('Oylar bo\'yicha (oxirgi 12 oy)')}</h3>
+          <table className="ledger-table">
+            <thead>
+              <tr>
+                <th scope="col">{tr('Oy')}</th>
+                <th scope="col">{tr('Kutilgan')}</th>
+                <th scope="col">{tr('To\'langan')}</th>
+                <th scope="col">{tr('Balans')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {months.map((m) => (
+                <tr key={m.period}>
+                  <th scope="row">
+                    {`${m.period.slice(5, 7)}.${m.period.slice(0, 4)}`}
+                    {!m.due && <span aria-label={tr('to\'lov muddati hali kelmagan')}> *</span>}
+                  </th>
+                  <td>{formatNumber(m.expected)}</td>
+                  <td>{formatNumber(m.paid)}</td>
+                  <td className={cx(m.balance < 0 && 'text-danger', m.balance > 0 && 'text-success')}>
+                    {m.balance > 0 ? '+' : ''}
+                    {formatNumber(m.balance)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="small-note muted">
+            {tr('Summalar: {0}. Balans — o\'qish boshidan shu oy oxirigacha to\'langan minus kutilgan (minus — qarz, plyus — avans).', { 0: settings.currency === 'USD' ? 'USD' : tr('so\'m') })}
+            {months.some((m) => !m.due) && ` ${tr('* — to\'lov muddati hali kelmagan, qarzga kirmaydi.')}`}
+          </p>
+        </>
+      )}
+
+      <h3 className="detail-subtitle">{tr('To\'lovlar tarixi')}</h3>
       {payments.length === 0 ? (
-        <p className="muted">Hali to'lov qayd etilmagan.</p>
+        <p className="muted">{tr('Hali to\'lov qayd etilmagan.')}</p>
       ) : (
         <ul className="payment-list">
           {payments.map((t) => (
             <li key={t.id}>
               <div>
-                <strong>{t.note || 'To\'lov'}</strong>
+                <strong>{t.note || tr('To\'lov')}</strong>
                 <small className="muted">
-                  {formatDate(t.date)} · {METHOD_LABELS[t.method]}
+                  {formatDate(t.date)} · {methodLabel(t)} · {TX_STATUS_LABELS[t.status]}
                 </small>
               </div>
-              <span className={t.type === 'income' ? 'text-success' : 'text-danger'}>
+              <span className={t.status !== 'paid' ? 'muted' : t.type === 'income' ? 'text-success' : 'text-danger'}>
                 {t.type === 'income' ? '+' : '−'}
                 {money(t.amount)}
               </span>
+              {t.type === 'income' && (
+                <IconButton icon="receipt" label={tr('Chek: {0}, {1}', { 0: formatDate(t.date), 1: money(t.amount) })} onClick={() => openModal({ type: 'receipt', payload: { id: t.id } })} />
+              )}
             </li>
           ))}
         </ul>
+      )}
+      {printedAt && (
+        <PrintDocument size="a4" onDone={() => setPrintedAt(null)}>
+          <CustomerCard
+            customer={customer}
+            payments={payments}
+            debt={debt}
+            totalPaid={totalPaid}
+            settings={settings}
+            money={money}
+            printedBy={actor?.userName ?? ''}
+            printedAt={printedAt}
+          />
+        </PrintDocument>
       )}
     </Modal>
   )

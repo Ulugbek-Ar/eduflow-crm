@@ -36,3 +36,8 @@ export function compareText(a: string, b: string): number {
 export function applyDirection(result: number, direction: SortDirection): number {
   return direction === 'asc' ? result : -result
 }
+
+// Standart qiymatdan farq qiladigan filtrlar soni
+export function countActive<T extends object>(filters: T, empty: T, extra = 0): number {
+  return (Object.keys(empty) as Array<keyof T>).filter((key) => filters[key] !== empty[key]).length + extra
+}

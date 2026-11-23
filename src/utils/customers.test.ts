@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Customer } from '../types/customer.types'
-import { filterCustomers, sortCustomers, validateCustomer } from './customers'
+import type { Transaction } from '../types/finance.types'
+import { customerPayments, groupByStage, neighbourStage, deleteCustomerMessage, deletedCustomerName, filterCustomers, matchesCustomer, resolveCustomerName, sortCustomers, validateCustomer } from './customers'
 import { paginate } from './list'
 import { formatPhone, isValidPhone } from './phone'
 
@@ -9,14 +10,14 @@ const base: Customer = {
   name: 'Aziza Karimova',
   phone: '+998 90 123 45 67',
   course: 'IELTS',
-  status: 'active',
+  status: 'paid',
   source: 'instagram',
   createdAt: '2026-05-01T10:00:00.000Z',
 }
 const list: Customer[] = [
   base,
-  { ...base, id: 'c2', name: 'Bekzod Ergashev', phone: '+998 97 678 90 12', status: 'lead', course: 'Python' },
-  { ...base, id: 'c3', name: 'Otabek Nazarov', phone: '+998 88 890 12 34', status: 'left', source: 'website' },
+  { ...base, id: 'c2', name: 'Bekzod Ergashev', phone: '+998 97 678 90 12', status: 'new', course: 'Python' },
+  { ...base, id: 'c3', name: 'Otabek Nazarov', phone: '+998 88 890 12 34', status: 'cancelled', source: 'website' },
 ]
 
 describe('telefon maskasi', () => {
@@ -25,7 +26,8 @@ describe('telefon maskasi', () => {
     ['998901234567', '+998 90 123 45 67'],
     ['+998 90 12', '+998 90 12'],
     ['+998', '+998'],
-    ['90123456789999', '+998 90 123 45 67'],
+    // Ortiqcha raqam jim kesilmaydi (QA-01): ko'rinib turadi, isValidPhone — false
+    ['90123456789999', '+998 90 123 45 6789999'],
   ])('%s -> %s', (input, expected) => {
     expect(formatPhone(input)).toBe(expected)
   })
@@ -33,11 +35,12 @@ describe('telefon maskasi', () => {
   it('isValidPhone', () => {
     expect(isValidPhone('+998 90 123 45 67')).toBe(true)
     expect(isValidPhone('+998 90 123')).toBe(false)
+    expect(isValidPhone('90123456789999')).toBe(false)
   })
 })
 
 describe('validateCustomer', () => {
-  const input = { name: 'Yangi', phone: '+998 91 000 00 00', course: 'IELTS', status: 'lead', source: 'telegram' } as const
+  const input = { name: 'Yangi', phone: '+998 91 000 00 00', course: 'IELTS', status: 'new', source: 'telegram' } as const
 
   it('to\'g\'ri ma\'lumotda xato yo\'q', () => {
     expect(validateCustomer({ ...input }, list)).toEqual({})
@@ -56,11 +59,11 @@ describe('validateCustomer', () => {
 
 describe('filtr, saralash, sahifalash', () => {
   it('telefon raqamlari bo\'yicha qidiruv', () => {
-    expect(filterCustomers(list, '97 678', { status: 'all', course: 'all', source: 'all' }).map((c) => c.id)).toEqual(['c2'])
+    expect(filterCustomers(list, '97 678', { status: 'all', course: 'all', source: 'all', from: '', to: '' }).map((c) => c.id)).toEqual(['c2'])
   })
 
   it('holat voronka tartibida saralanadi', () => {
-    expect(sortCustomers(list, { key: 'status', direction: 'asc' }).map((c) => c.status)).toEqual(['lead', 'active', 'left'])
+    expect(sortCustomers(list, { key: 'status', direction: 'asc' }).map((c) => c.status)).toEqual(['new', 'paid', 'cancelled'])
   })
 
   it('paginate chegaralarni qisadi', () => {
@@ -69,3 +72,102 @@ describe('filtr, saralash, sahifalash', () => {
     expect(paginate([], 1, 10)).toMatchObject({ from: 0, to: 0, pageCount: 1 })
   })
 })
+
+describe('mijozni o\'chirish va bog\'liq to\'lovlar', () => {
+  const tx = (id: string, amount: number, type: Transaction['type'] = 'income', customerId: string | undefined = 'c1'): Transaction => ({
+    id,
+    type,
+    amount,
+    method: 'cash',
+    status: 'paid',
+    category: type === 'income' ? 'course_fee' : 'rent',
+    note: '',
+    customerId,
+    date: '2026-10-01T10:00:00.000Z',
+  })
+  const money = (amount: number) => `${amount} so'm`
+
+  it('customerPayments: soni va jami kirim', () => {
+    expect(customerPayments('c1', [tx('t1', 500), tx('t2', 300), tx('t3', 900, 'income', 'c2')])).toEqual({ count: 2, total: 800 })
+  })
+
+  it('tasdiqlash matnida to\'lovlar soni va summasi bor', () => {
+    const message = deleteCustomerMessage(base, [tx('t1', 500), tx('t2', 300)], money)
+    expect(message).toContain('2 ta to\'lov')
+    expect(message).toContain('jami 800 so\'m')
+    expect(message).toContain('"Aziza Karimova (o\'chirilgan)"')
+  })
+
+  it('to\'lov bo\'lmasa buni aytadi', () => {
+    expect(deleteCustomerMessage(base, [], money)).toContain('to\'lovlar yo\'q')
+  })
+
+  it('resolveCustomerName: mavjud, o\'chirilgan va bog\'lanmagan', () => {
+    expect(resolveCustomerName('c1', base, 'Eski')).toBe('Aziza Karimova')
+    expect(resolveCustomerName('c1', undefined, 'Aziza Karimova')).toBe('Aziza Karimova (o\'chirilgan)')
+    expect(resolveCustomerName('c1', undefined, undefined)).toBe(deletedCustomerName())
+    expect(deletedCustomerName()).toBe('Mijoz (o\'chirilgan)')
+    expect(resolveCustomerName(undefined, undefined, undefined)).toBe('—')
+  })
+})
+
+describe('voronka', () => {
+  it('filtr: qo\'shilgan sana oralig\'i (chegaralar kiradi)', () => {
+    const dated = [
+      { ...base, id: 'a', createdAt: new Date(2026, 9, 1, 9).toISOString() },
+      { ...base, id: 'b', createdAt: new Date(2026, 9, 15, 23).toISOString() },
+      { ...base, id: 'c', createdAt: new Date(2026, 9, 20, 9).toISOString() },
+    ]
+    const filters = { status: 'all', course: 'all', source: 'all', from: '2026-10-01', to: '2026-10-15' } as const
+    expect(filterCustomers(dated, '', filters).map((c) => c.id)).toEqual(['a', 'b'])
+    expect(filterCustomers(dated, '', { ...filters, from: '', to: '2026-10-01' }).map((c) => c.id)).toEqual(['a'])
+    expect(filterCustomers(dated, '', { ...filters, from: '2026-10-16', to: '' }).map((c) => c.id)).toEqual(['c'])
+  })
+
+  it('groupByStage: har bosqich uchun ustun, bo\'shlari ham bor', () => {
+    const groups = groupByStage(list, ['new', 'contacted', 'thinking', 'paid', 'cancelled'])
+    expect(Object.keys(groups)).toEqual(['new', 'contacted', 'thinking', 'paid', 'cancelled'])
+    expect(groups.new.map((c) => c.id)).toEqual(['c2'])
+    expect(groups.contacted).toEqual([])
+    expect(groups.paid.map((c) => c.id)).toEqual(['c1'])
+  })
+
+  it('neighbourStage: chetlarda null', () => {
+    expect(neighbourStage('new', 1)).toBe('contacted')
+    expect(neighbourStage('new', -1)).toBeNull()
+    expect(neighbourStage('cancelled', 1)).toBeNull()
+    expect(neighbourStage('paid', -1)).toBe('thinking')
+  })
+})
+
+describe('qidiruv: o\'zbekcha apostrof turlari (QA-02)', () => {
+  it('"Gʻulom Qoʻchqorov" — G\'ulom, G‘ulom, qo\'chqorov va apostrofsiz "gulom" bilan topiladi', async () => {
+    const { matchesCustomer } = await import('./customers')
+    const { makeCustomer } = await import('../test/helpers')
+    const customer = makeCustomer({ name: 'Gʻulom Qoʻchqorov', phone: '+998 93 111 22 33' })
+    for (const query of ["G'ulom", 'G‘ulom', "qo'chqorov", 'gulom', 'GʻULOM  qoʻch']) expect(matchesCustomer(customer, query), query).toBe(true)
+    expect(matchesCustomer(customer, 'Bahrom')).toBe(false)
+    // Telefon bo'shliqsiz ham
+    expect(matchesCustomer(customer, '931112233')).toBe(true)
+    expect(matchesCustomer(customer, '+998931112233')).toBe(true)
+  })
+})
+
+describe('A-05: harf va raqam aralash qidiruv', () => {
+  it('"Python 1" telefon raqami bo\'yicha moslanmaydi; raqamli so\'rov — telefon bo\'yicha', () => {
+    const c = { id: 'c1', name: 'Aziza Karimova', phone: '+998 90 123 45 67', course: 'IELTS', status: 'new', source: 'website', createdAt: '' } as Customer
+    expect(matchesCustomer(c, 'Python 1')).toBe(false)
+    expect(matchesCustomer(c, '90 123')).toBe(true)
+    expect(matchesCustomer(c, '+998901234567')).toBe(true)
+    expect(matchesCustomer(c, 'Aziza 9')).toBe(false)
+  })
+})
+
+describe('A-06: ism uzunligi', () => {
+  it('100 belgidan uzun ism qabul qilinmaydi', () => {
+    const base = { name: 'A'.repeat(101), phone: '+998 90 765 43 21', course: 'IELTS', status: 'new', source: 'website' } as Parameters<typeof validateCustomer>[0]
+    expect(validateCustomer(base, []).name).toMatch(/100/)
+    expect(validateCustomer({ ...base, name: 'A'.repeat(100) }, []).name).toBeUndefined()
+  })
+})
+

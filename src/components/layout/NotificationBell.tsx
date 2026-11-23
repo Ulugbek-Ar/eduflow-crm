@@ -1,13 +1,27 @@
+import { tr } from '../../i18n'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
 import { useNotifications } from '../../hooks/useNotifications'
+import { useCan } from '../../hooks/useAuth'
 import { cx } from '../../utils/cx'
 import { buildNotifications } from '../../utils/notifications'
+import { CASH_BALANCE_PERMISSION } from '../../auth/permissions'
 
 export function NotificationBell() {
-  const { customers, transactions, balance, money, setActiveSection, setCustomerFilters, customerFilters } = useDashboard()
-  const { items, unread, markRead, markAllRead, clearAll } = useNotifications(buildNotifications(customers, transactions, balance, money))
+  const { customers, transactions, courses, balance, money, setActiveSection, setCustomerFilters, customerFilters, groups, enrollments, attendance, lessonExceptions, settings } = useDashboard()
+  const can = useCan()
+  const { items, unread, markRead, markAllRead, clearAll } = useNotifications(
+    buildNotifications(customers, transactions, balance, money, courses, undefined, {
+      groups,
+      enrollments,
+      attendance,
+      lessonExceptions,
+      finance: can('payments.view'),
+      cashBalance: can(CASH_BALANCE_PERMISSION),
+      settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay },
+    }),
+  )
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const panelId = useId()
@@ -21,7 +35,7 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', onPointer)
   }, [open])
 
-  const label = unread > 0 ? `Bildirishnomalar: ${unread} ta o'qilmagan` : 'Bildirishnomalar'
+  const label = unread > 0 ? tr('Bildirishnomalar: {0} ta o\'qilmagan', { 0: unread }) : tr('Bildirishnomalar')
 
   return (
     <div
@@ -52,22 +66,22 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div id={panelId} className="dropdown-menu notification-panel" role="region" aria-label="Bildirishnomalar">
+        <div id={panelId} className="dropdown-menu notification-panel" role="region" aria-label={tr('Bildirishnomalar')}>
           <div className="notification-head">
-            <strong>Bildirishnomalar</strong>
+            <strong>{tr('Bildirishnomalar')}</strong>
             {items.length > 0 && (
               <div className="notification-tools">
                 <button type="button" className="text-btn" onClick={markAllRead} disabled={unread === 0}>
-                  Hammasi o'qildi
+                  {tr('Hammasi o\'qildi')}
                 </button>
                 <button type="button" className="text-btn" onClick={clearAll}>
-                  Tozalash
+                  {tr('Tozalash')}
                 </button>
               </div>
             )}
           </div>
           {items.length === 0 ? (
-            <p className="notification-empty muted">Hozircha eslatma yo'q — hammasi joyida.</p>
+            <p className="notification-empty muted">{tr('Hozircha eslatma yo\'q — hammasi joyida.')}</p>
           ) : (
             <ul className="notification-list">
               {items.map((n) => (
@@ -78,7 +92,7 @@ export function NotificationBell() {
                     onClick={() => {
                       markRead(n.id)
                       setOpen(false)
-                      if (n.id.startsWith('stale-leads')) setCustomerFilters({ ...customerFilters, status: 'lead' })
+                      if (n.id.startsWith('stale-leads')) setCustomerFilters({ ...customerFilters, status: 'new' })
                       setActiveSection(n.target)
                     }}
                   >
@@ -89,7 +103,7 @@ export function NotificationBell() {
                       <strong>{n.title}</strong>
                       <small>{n.description}</small>
                     </span>
-                    {!n.read && <span className="unread-dot" aria-label="O'qilmagan" />}
+                    {!n.read && <span className="unread-dot" aria-label={tr('O\'qilmagan')} />}
                   </button>
                 </li>
               ))}

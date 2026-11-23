@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useEffect, useId, useRef } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -20,11 +21,40 @@ const FOCUSABLE =
 
 // Bir vaqtda ochiq modallar soni: body scroll faqat oxirgisi yopilganda qaytariladi
 let openModals = 0
+// Ochiq oynalar (eng ustidagisi — oxirgi). Fokus yo'qolsa (bosilgan tugma ro'yxatdan yo'qoldi va h.k.) Escape va Tab
+// eng ustidagi oynaga tegishli bo'ladi
+const stack: HTMLElement[] = []
 
 export function Modal({ title, description, onClose, children, footer, size = 'md', variant = 'dialog', role = 'dialog' }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef(onClose)
   const titleId = useId()
   const descriptionId = useId()
+
+  useEffect(() => {
+    closeRef.current = onClose
+  })
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    stack.push(dialog)
+    const onLostFocusKey = (event: globalThis.KeyboardEvent) => {
+      if (stack[stack.length - 1] !== dialog || event.target !== document.body) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRef.current()
+      } else if (event.key === 'Tab') {
+        event.preventDefault()
+        ;(dialog.querySelector<HTMLElement>(FOCUSABLE) ?? dialog).focus()
+      }
+    }
+    document.addEventListener('keydown', onLostFocusKey)
+    return () => {
+      document.removeEventListener('keydown', onLostFocusKey)
+      stack.splice(stack.indexOf(dialog), 1)
+    }
+  }, [])
 
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -33,8 +63,10 @@ export function Modal({ title, description, onClose, children, footer, size = 'm
 
     const dialog = dialogRef.current
     const preferred = dialog?.querySelector<HTMLElement>('[data-autofocus]')
-    const firstField = dialog?.querySelector<HTMLElement>('.modal-body input, .modal-body select, .modal-body textarea')
+    // A-03: disabled maydonga fokus jim o'tmaydi — faqat faol maydon; baribir oyna tashqarisida qolsa — oynaning o'ziga
+    const firstField = dialog?.querySelector<HTMLElement>('.modal-body input:not([disabled]), .modal-body select:not([disabled]), .modal-body textarea:not([disabled])')
     ;(preferred ?? firstField ?? dialog)?.focus()
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus()
 
     return () => {
       openModals -= 1
@@ -65,8 +97,9 @@ export function Modal({ title, description, onClose, children, footer, size = 'm
 
   return createPortal(
     <div
+      // Tashqariga (fonga) bosilganda oyna YOPILMAYDI — kiritilgan ma'lumot tasodifan yo'qolmasin.
+      // Yopish: X tugmasi, "Bekor qilish" yoki Escape
       className={cx('modal-overlay', variant === 'drawer' && 'is-drawer')}
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       onKeyDown={handleKeyDown}
     >
       <div
@@ -87,7 +120,7 @@ export function Modal({ title, description, onClose, children, footer, size = 'm
               </p>
             )}
           </div>
-          <IconButton icon="close" label="Yopish" onClick={onClose} />
+          <IconButton icon="close" label={tr('Yopish')} onClick={onClose} />
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-actions">{footer}</div>}

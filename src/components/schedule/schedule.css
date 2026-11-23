@@ -1,0 +1,293 @@
+/* Dars jadvali (alohida bo'lak). Kurs ranglari — tokenlar, yorug' va qorong'i mavzuda AA kontrast */
+.course-c1 { --c-bg: #e0e7ff; --c-text: #3730a3; --c-border: #6366f1; }
+.course-c2 { --c-bg: #d1fae5; --c-text: #065f46; --c-border: #10b981; }
+.course-c3 { --c-bg: #fef3c7; --c-text: #92400e; --c-border: #d97706; }
+.course-c4 { --c-bg: #ffe4e6; --c-text: #9f1239; --c-border: #f43f5e; }
+.course-c5 { --c-bg: #e0f2fe; --c-text: #075985; --c-border: #0ea5e9; }
+.course-c6 { --c-bg: #ede9fe; --c-text: #5b21b6; --c-border: #8b5cf6; }
+.course-c7 { --c-bg: #ccfbf1; --c-text: #115e59; --c-border: #14b8a6; }
+.course-c8 { --c-bg: #ffedd5; --c-text: #9a3412; --c-border: #f97316; }
+
+:root[data-theme='dark'] .course-c1 { --c-bg: rgb(99 102 241 / 0.22); --c-text: #c7d2fe; }
+:root[data-theme='dark'] .course-c2 { --c-bg: rgb(16 185 129 / 0.2); --c-text: #a7f3d0; }
+:root[data-theme='dark'] .course-c3 { --c-bg: rgb(245 158 11 / 0.2); --c-text: #fde68a; }
+:root[data-theme='dark'] .course-c4 { --c-bg: rgb(244 63 94 / 0.2); --c-text: #fecdd3; }
+:root[data-theme='dark'] .course-c5 { --c-bg: rgb(14 165 233 / 0.2); --c-text: #bae6fd; }
+:root[data-theme='dark'] .course-c6 { --c-bg: rgb(139 92 246 / 0.22); --c-text: #ddd6fe; }
+:root[data-theme='dark'] .course-c7 { --c-bg: rgb(20 184 166 / 0.2); --c-text: #99f6e4; }
+:root[data-theme='dark'] .course-c8 { --c-bg: rgb(249 115 22 / 0.2); --c-text: #fed7aa; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .course-c1 { --c-bg: rgb(99 102 241 / 0.22); --c-text: #c7d2fe; }
+  :root:not([data-theme='light']) .course-c2 { --c-bg: rgb(16 185 129 / 0.2); --c-text: #a7f3d0; }
+  :root:not([data-theme='light']) .course-c3 { --c-bg: rgb(245 158 11 / 0.2); --c-text: #fde68a; }
+  :root:not([data-theme='light']) .course-c4 { --c-bg: rgb(244 63 94 / 0.2); --c-text: #fecdd3; }
+  :root:not([data-theme='light']) .course-c5 { --c-bg: rgb(14 165 233 / 0.2); --c-text: #bae6fd; }
+  :root:not([data-theme='light']) .course-c6 { --c-bg: rgb(139 92 246 / 0.22); --c-text: #ddd6fe; }
+  :root:not([data-theme='light']) .course-c7 { --c-bg: rgb(20 184 166 / 0.2); --c-text: #99f6e4; }
+  :root:not([data-theme='light']) .course-c8 { --c-bg: rgb(249 115 22 / 0.2); --c-text: #fed7aa; }
+}
+
+.schedule-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.schedule-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.week {
+  --slot-h: 28px;
+  display: grid;
+  grid-template-columns: 52px repeat(var(--cols), minmax(118px, 1fr));
+  min-width: calc(52px + var(--cols) * 118px);
+}
+
+.week-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.week-head small {
+  display: block;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.week-head.is-today {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.week-times {
+  position: relative;
+}
+
+.week-time {
+  height: var(--slot-h);
+  padding-right: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  transform: translateY(-0.5em);
+}
+
+/* Birinchi yorliq sarlavha ostida qolmasin */
+.week-time:first-child {
+  transform: none;
+}
+
+.week-col {
+  position: relative;
+  border-left: 1px solid var(--border);
+  background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 100% calc(var(--slot-h) * 2);
+}
+
+.week-col.is-today {
+  background-color: var(--primary-soft);
+}
+
+.lesson-block {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  padding: 3px 6px;
+  border: 0;
+  border-left: 3px solid var(--c-border, var(--primary));
+  border-radius: 6px;
+  background: var(--c-bg, var(--primary-soft));
+  color: var(--c-text, var(--primary-text));
+  font-size: 0.74rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lesson-block:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+  z-index: 3;
+}
+
+.lesson-block strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson-block span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson-block.is-conflict {
+  outline: 2px solid var(--danger);
+  outline-offset: -2px;
+}
+
+.lesson-block.is-cancelled {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.schedule-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.schedule-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border-left: 3px solid var(--c-border);
+  border-radius: 3px;
+  background: var(--c-bg);
+  vertical-align: -1px;
+}
+
+.day-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding-bottom: 2px;
+}
+
+.day-tabs button {
+  flex: 1 1 0;
+  min-width: 40px;
+  padding: 6px 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.day-tabs button small {
+  display: block;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.day-tabs button[aria-selected='true'] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.day-tabs button[aria-selected='true'] small {
+  color: var(--on-primary);
+}
+
+.day-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day-list .lesson-block {
+  position: static;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+}
+
+.day-list .lesson-block strong {
+  font-size: 0.95rem;
+  white-space: normal;
+}
+
+.day-list .lesson-block span {
+  white-space: normal;
+}
+
+/* Chop etish (A4 albom): mavzudan qat'i nazar yorug' tokenlar, ixcham satrlar */
+:root body .print-root {
+  --surface: #fff;
+  --border: #d0d7e2;
+  --text-muted: #555;
+  --text-secondary: #222;
+  --primary-soft: #eef2ff;
+  --primary-text: #3730a3;
+}
+
+.print-root .schedule-print {
+  color: #111;
+}
+
+.print-root .schedule-print h1 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.print-root .week {
+  --slot-h: 16px;
+  grid-template-columns: 40px repeat(var(--cols), minmax(0, 1fr));
+  min-width: 0;
+}
+
+.print-root .week-head,
+.print-root .week-col,
+.print-root .lesson-block {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-root .week-head {
+  background: #fff;
+  color: #111;
+}
+
+.print-root .lesson-block {
+  font-size: 9px;
+}
+
+:root body .print-root .course-c1 { --c-bg: #e0e7ff; --c-text: #3730a3; }
+:root body .print-root .course-c2 { --c-bg: #d1fae5; --c-text: #065f46; }
+:root body .print-root .course-c3 { --c-bg: #fef3c7; --c-text: #92400e; }
+:root body .print-root .course-c4 { --c-bg: #ffe4e6; --c-text: #9f1239; }
+:root body .print-root .course-c5 { --c-bg: #e0f2fe; --c-text: #075985; }
+:root body .print-root .course-c6 { --c-bg: #ede9fe; --c-text: #5b21b6; }
+:root body .print-root .course-c7 { --c-bg: #ccfbf1; --c-text: #115e59; }
+:root body .print-root .course-c8 { --c-bg: #ffedd5; --c-text: #9a3412; }
+
+@media (max-width: 1024px) {
+  .schedule-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .schedule-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

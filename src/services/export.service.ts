@@ -1,4 +1,5 @@
 import type { CsvDelimiter } from '../types/dashboard.types'
+import { EXPORT_FILE_PREFIX } from '../constants/app'
 
 export interface ExportColumn<T> {
   header: string
@@ -12,10 +13,12 @@ const BOM = '﻿'
 
 // =, +, -, @ bilan boshlangan matnni Excel formula deb bajarmasligi uchun (CSV injection)
 const FORMULA_START = /^[=+\-@\t\r]/
+// A-07: telefon (+998 33 526 01 42) — faqat raqam, bo'shliq, qavs va chiziqcha: formula emas, apostrofsiz yoziladi
+const PHONE_LIKE = /^\+[\d\s()-]+$/
 
 export function escapeCsvCell(value: string | number, delimiter: CsvDelimiter = ';'): string {
   if (typeof value === 'number') return String(value)
-  const text = FORMULA_START.test(value) ? `'${value}` : value
+  const text = FORMULA_START.test(value) && !PHONE_LIKE.test(value) ? `'${value}` : value
   const needsQuotes = text.includes(delimiter) || /["\n\r]/.test(text)
   return needsQuotes ? `"${text.replace(/"/g, '""')}"` : text
 }
@@ -52,7 +55,9 @@ function escapeXml(value: string): string {
 function cell(value: string | number, type: 'string' | 'number', style?: string): string {
   const styleAttr = style ? ` ss:StyleID="${style}"` : ''
   if (type === 'number' && typeof value === 'number' && Number.isFinite(value)) {
-    return `<Cell${styleAttr}><Data ss:Type="Number">${value}</Data></Cell>`
+    // Kasr qiymat (konversiya, ROI) yaxlitlanib ketmasligi uchun bir xonali format
+    const numberStyle = style === 'number' && !Number.isInteger(value) ? ' ss:StyleID="decimal"' : styleAttr
+    return `<Cell${numberStyle}><Data ss:Type="Number">${value}</Data></Cell>`
   }
   return `<Cell${styleAttr}><Data ss:Type="String">${escapeXml(String(value))}</Data></Cell>`
 }
@@ -72,6 +77,7 @@ export function toSpreadsheetXml<T>(rows: readonly T[], columns: readonly Export
     '<Styles>',
     '<Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#EEF2FF" ss:Pattern="Solid"/></Style>',
     '<Style ss:ID="number"><NumberFormat ss:Format="#,##0"/></Style>',
+    '<Style ss:ID="decimal"><NumberFormat ss:Format="#,##0.0"/></Style>',
     '</Styles>',
     `<Worksheet ss:Name="${safeName}">`,
     `<Table>${cols}`,
@@ -105,7 +111,7 @@ export function exportRows<T>(
   format: ExportFormat,
   options: { delimiter: CsvDelimiter; sheetName: string },
 ): string {
-  const filename = `apex-${baseName}-${dateStamp()}.${format}`
+  const filename = `${EXPORT_FILE_PREFIX}-${baseName}-${dateStamp()}.${format}`
   if (format === 'csv') downloadFile(filename, toCsv(rows, columns, options.delimiter), 'text/csv;charset=utf-8')
   else downloadFile(filename, toSpreadsheetXml(rows, columns, options.sheetName), 'application/vnd.ms-excel;charset=utf-8')
   return filename

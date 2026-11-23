@@ -1,6 +1,9 @@
-import type { Customer, CustomerSource } from '../types/customer.types'
+import type { Course } from '../types/course.types'
+import type { Customer, CustomerSource, CustomerStatus } from '../types/customer.types'
 import type { DateRange } from '../types/dashboard.types'
 import type { Transaction } from '../types/finance.types'
+import type { Enrollment } from '../types/group.types'
+import { activeStudentsOn, dayString } from './groups'
 
 export interface Period {
   start: Date
@@ -87,12 +90,27 @@ export function filterByPeriod<T>(items: readonly T[], getDate: (item: T) => str
   return items.filter((item) => inPeriod(getDate(item), period))
 }
 
+// Balans, KPI, grafiklar va hisobotlar faqat "To'langan" tranzaksiyalar bo'yicha:
+// "Kutilmoqda" hali kassaga tushmagan, "Bekor qilingan" umuman hisobga olinmaydi
+export function isPaid(t: Transaction): boolean {
+  return t.status === 'paid'
+}
+
+export function paidOnly(transactions: readonly Transaction[]): Transaction[] {
+  return transactions.filter(isPaid)
+}
+
 export function sumIncome(transactions: readonly Transaction[]): number {
-  return transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : 0), 0)
+  return transactions.reduce((sum, t) => sum + (t.type === 'income' && isPaid(t) ? t.amount : 0), 0)
 }
 
 export function sumExpense(transactions: readonly Transaction[]): number {
-  return transactions.reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : 0), 0)
+  return transactions.reduce((sum, t) => sum + (t.type === 'expense' && isPaid(t) ? t.amount : 0), 0)
+}
+
+// Kassa balansi: barcha vaqt davomidagi to'langan kirim − to'langan chiqim
+export function cashBalance(transactions: readonly Transaction[]): number {
+  return sumIncome(transactions) - sumExpense(transactions)
 }
 
 export interface BreakdownRow<K extends string> {
@@ -109,6 +127,7 @@ export function breakdown<K extends string>(
 ): BreakdownRow<K>[] {
   const totals = new Map<K, number>(keys.map((k) => [k, 0]))
   for (const t of transactions) {
+    if (!isPaid(t)) continue
     const key = getKey(t)
     totals.set(key, (totals.get(key) ?? 0) + t.amount)
   }
@@ -120,10 +139,11 @@ export function breakdown<K extends string>(
 
 // ===== KPI va trendlar =====
 
-// Davrda kelgan mijozlardan lead bosqichidan o'tganlar ulushi (0–100); mijoz bo'lmasa null
+// Konversiya: berilgan (masalan, davrda kelgan) lidlardan "To'lov qildi" bosqichiga o'tganlar ulushi (0–100);
+// lid bo'lmasa null ("—")
 export function conversion(customers: readonly Customer[]): number | null {
   if (customers.length === 0) return null
-  return (customers.filter((c) => c.status !== 'lead').length / customers.length) * 100
+  return (customers.filter((c) => c.status === 'paid').length / customers.length) * 100
 }
 
 // Oldingi davrga nisbatan o'zgarish foizi; oldingi qiymat 0 bo'lsa null ("—")
@@ -139,7 +159,54 @@ export function pointChange(current: number | null, previous: number | null): nu
 }
 
 export function payingCustomers(transactions: readonly Transaction[]): number {
-  return new Set(transactions.filter((t) => t.type === 'income' && t.customerId).map((t) => t.customerId)).size
+  return new Set(transactions.filter((t) => t.type === 'income' && isPaid(t) && t.customerId).map((t) => t.customerId)).size
+}
+
+// Davr oxirida "To'lov qildi" bosqichidagi mijozlar: shu bosqichga o'tgan vaqt (paidAt) bo'yicha.
+// Keyin bosqichdan chiqqanlar tarixi saqlanmaydi — ular hisobga kirmaydi
+export function activeCustomersAt(customers: readonly Customer[], end: Date): number {
+  return customers.filter((c) => c.status === 'paid' && new Date(c.paidAt ?? c.createdAt).getTime() <= end.getTime()).length
+}
+
+export interface OverviewKpis {
+  // Jami tushum: davrdagi "To'langan" kirimlar
+  revenue: { value: number; change: number | null }
+  // Faol mijozlar: "To'lov qildi" bosqichida (davr oxiri holati)
+  active: { value: number; change: number | null }
+  // Yangi lidlar: davrda qo'shilgan mijozlar (istalgan bosqichda)
+  newLeads: { value: number; change: number | null }
+  // Konversiya: davrda kelgan lidlardan "To'lov qildi" ga o'tganlar ulushi; o'zgarish — foiz bandida
+  conversion: { value: number | null; change: number | null }
+}
+
+// v11: guruhlar (enrollment) bo'lsa "Faol mijozlar" — davr oxirida guruhda o'qiyotgan, pauzada bo'lmaganlar;
+// bo'lmasa — eskicha, "To'lov qildi" bosqichi bo'yicha
+export function activeAt(customers: readonly Customer[], enrollments: readonly Enrollment[], end: Date): number {
+  return enrollments.length > 0 ? activeStudentsOn(enrollments, dayString(end)) : activeCustomersAt(customers, end)
+}
+
+export function overviewKpis(
+  customers: readonly Customer[],
+  transactions: readonly Transaction[],
+  range: DateRange,
+  now = new Date(),
+  enrollments: readonly Enrollment[] = [],
+): OverviewKpis {
+  const current = getPeriod(range, now)
+  const previous = getPreviousPeriod(range, now)
+  const txNow = filterByPeriod(transactions, (t) => t.date, current)
+  const txPrev = filterByPeriod(transactions, (t) => t.date, previous)
+  const leadsNow = filterByPeriod(customers, (c) => c.createdAt, current)
+  const leadsPrev = filterByPeriod(customers, (c) => c.createdAt, previous)
+  const revenue = sumIncome(txNow)
+  const active = activeAt(customers, enrollments, current.end)
+  const conversionNow = conversion(leadsNow)
+  return {
+    revenue: { value: revenue, change: trend(revenue, sumIncome(txPrev)) },
+    active: { value: active, change: trend(active, activeAt(customers, enrollments, previous.end)) },
+    newLeads: { value: leadsNow.length, change: trend(leadsNow.length, leadsPrev.length) },
+    conversion: { value: conversionNow, change: pointChange(conversionNow, conversion(leadsPrev)) },
+  }
 }
 
 // ===== Grafik uchun guruhlash =====
@@ -158,6 +225,7 @@ export interface Bucket {
 
 function fillBuckets(buckets: Bucket[], transactions: readonly Transaction[]): Bucket[] {
   for (const t of transactions) {
+    if (!isPaid(t)) continue
     const time = new Date(t.date).getTime()
     const bucket = buckets.find((b) => time >= b.start.getTime() && time <= b.end.getTime())
     if (!bucket) continue
@@ -258,4 +326,117 @@ export function recentActivity(customers: readonly Customer[], transactions: rea
     ...transactions.map((transaction): ActivityItem => ({ kind: 'transaction', id: transaction.id, date: transaction.date, transaction })),
   ]
   return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit)
+}
+
+// ===== Tahlil va hisobotlar =====
+
+// O'rtacha chek (AOV) = davrdagi "To'langan" kirimlar summasi / shunday to'lovlar soni; to'lov bo'lmasa null
+export function averageOrderValue(transactions: readonly Transaction[]): { value: number | null; count: number; total: number } {
+  const paid = transactions.filter((t) => t.type === 'income' && isPaid(t))
+  const total = paid.reduce((sum, t) => sum + t.amount, 0)
+  return { value: paid.length > 0 ? total / paid.length : null, count: paid.length, total }
+}
+
+export interface SourcePerformance {
+  source: CustomerSource
+  // Davrda shu manbadan kelgan lidlar
+  leads: number
+  // Ulardan "To'lov qildi" bosqichidagilar
+  paid: number
+  // paid / leads × 100; lid bo'lmasa null
+  conversion: number | null
+  // Davrdagi "To'langan" marketing chiqimlari (manbasi ko'rsatilgan)
+  spend: number
+  // CPL = chiqim / lidlar; chiqim yoki lid 0 bo'lsa null ("—", nolga bo'linmaydi)
+  cpl: number | null
+  // Shu manbadan kelgan (istalgan vaqtda) mijozlarning davrdagi "To'langan" kirimlari
+  revenue: number
+  // ROI = (kirim − chiqim) / chiqim × 100; chiqim 0 bo'lsa null
+  roi: number | null
+}
+
+export function safeRatio(numerator: number, denominator: number): number | null {
+  return denominator > 0 ? numerator / denominator : null
+}
+
+function performanceRow(source: CustomerSource, leads: number, paid: number, spend: number, revenue: number): SourcePerformance {
+  const conversionRatio = safeRatio(paid, leads)
+  const roiRatio = safeRatio(revenue - spend, spend)
+  return {
+    source,
+    leads,
+    paid,
+    conversion: conversionRatio === null ? null : conversionRatio * 100,
+    spend,
+    cpl: spend > 0 ? safeRatio(spend, leads) : null,
+    revenue,
+    roi: roiRatio === null ? null : roiRatio * 100,
+  }
+}
+
+export function sourcePerformance(
+  customers: readonly Customer[],
+  transactions: readonly Transaction[],
+  sources: readonly CustomerSource[],
+  period: Period,
+): SourcePerformance[] {
+  const leadsInPeriod = filterByPeriod(customers, (c) => c.createdAt, period)
+  const txInPeriod = filterByPeriod(transactions, (t) => t.date, period).filter(isPaid)
+  const sourceOf = new Map(customers.map((c) => [c.id, c.source]))
+  return sources.map((source) => {
+    const leads = leadsInPeriod.filter((c) => c.source === source)
+    const spend = txInPeriod.filter((t) => t.type === 'expense' && t.category === 'marketing' && t.source === source).reduce((sum, t) => sum + t.amount, 0)
+    const revenue = txInPeriod
+      .filter((t) => t.type === 'income' && t.customerId !== undefined && sourceOf.get(t.customerId) === source)
+      .reduce((sum, t) => sum + t.amount, 0)
+    return performanceRow(source, leads.length, leads.filter((c) => c.status === 'paid').length, spend, revenue)
+  })
+}
+
+// Jadvalning "Jami" qatori: yig'indilardan qayta hisoblanadi (o'rtachalarning o'rtachasi emas)
+export function totalPerformance(rows: readonly SourcePerformance[]): Omit<SourcePerformance, 'source'> {
+  const sum = (key: 'leads' | 'paid' | 'spend' | 'revenue') => rows.reduce((total, r) => total + r[key], 0)
+  const { source: _source, ...total } = performanceRow('website', sum('leads'), sum('paid'), sum('spend'), sum('revenue'))
+  return total
+}
+
+// ===== Voronka va kurslar =====
+
+export interface FunnelRow {
+  stage: CustomerStatus
+  count: number
+  // Davr lidlariga nisbatan ulush (0–100)
+  share: number
+}
+
+// Davrda kelgan lidlar hozir qaysi bosqichda turibdi
+export function funnelStats(customers: readonly Customer[], stages: readonly CustomerStatus[], period: Period): FunnelRow[] {
+  const leads = filterByPeriod(customers, (c) => c.createdAt, period)
+  return stages.map((stage) => {
+    const count = leads.filter((c) => c.status === stage).length
+    return { stage, count, share: leads.length > 0 ? (count / leads.length) * 100 : 0 }
+  })
+}
+
+export interface CourseRevenueRow {
+  course: Course
+  // "To'lov qildi" bosqichidagi talabalar
+  students: number
+  // Davrda shu kurs mijozlaridan tushgan "To'langan" kirim
+  revenue: number
+  // Oylik kutilayotgan tushum = talabalar × oylik narx
+  expectedMonthly: number
+}
+
+export function courseRevenue(customers: readonly Customer[], courses: readonly Course[], transactions: readonly Transaction[], period: Period): CourseRevenueRow[] {
+  const courseOf = new Map(customers.map((c) => [c.id, c.course]))
+  const income = filterByPeriod(transactions, (t) => t.date, period).filter((t) => t.type === 'income' && isPaid(t) && t.customerId)
+  return courses
+    .map((course) => {
+      const students = customers.filter((c) => c.course === course.name && c.status === 'paid').length
+      const revenue = income.filter((t) => courseOf.get(t.customerId ?? '') === course.name).reduce((sum, t) => sum + t.amount, 0)
+      return { course, students, revenue, expectedMonthly: students * course.monthlyPrice }
+    })
+    .filter((row) => row.course.status === 'active' || row.revenue > 0 || row.students > 0)
+    .sort((a, b) => b.revenue - a.revenue || b.expectedMonthly - a.expectedMonthly)
 }

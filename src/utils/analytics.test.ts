@@ -2,24 +2,35 @@ import { describe, expect, it } from 'vitest'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
 import {
+  activeCustomersAt,
+  averageOrderValue,
   breakdown,
+  cashBalance,
   conversion,
+  courseRevenue,
   customPeriod,
   filterByPeriod,
+  funnelStats,
   getPeriod,
   getPreviousPeriod,
   groupByMonth,
   groupByWeek,
   inPeriod,
+  isPaid,
   niceScale,
   overlaps,
+  overviewKpis,
+  paidOnly,
   payingCustomers,
   pointChange,
   recentActivity,
+  safeRatio,
   shiftMonths,
+  sourcePerformance,
   sourceStats,
   sumExpense,
   sumIncome,
+  totalPerformance,
   trend,
 } from './analytics'
 
@@ -29,7 +40,7 @@ const NOW = new Date(2026, 9, 28, 15, 0)
 const at = (y: number, m: number, d: number, h = 12) => new Date(y, m, d, h).toISOString()
 
 function tx(partial: Partial<Transaction> & Pick<Transaction, 'type' | 'amount' | 'date'>): Transaction {
-  return { id: Math.random().toString(36), method: 'cash', category: partial.type === 'income' ? 'course_fee' : 'rent', note: '', ...partial }
+  return { id: Math.random().toString(36), method: 'cash', category: partial.type === 'income' ? 'course_fee' : 'rent', note: '', status: 'paid', ...partial }
 }
 
 function customer(partial: Partial<Customer>): Customer {
@@ -38,7 +49,7 @@ function customer(partial: Partial<Customer>): Customer {
     name: 'Test',
     phone: '+998 90 000 00 00',
     course: 'IELTS',
-    status: 'lead',
+    status: 'new',
     source: 'telegram',
     createdAt: at(2026, 9, 1),
     ...partial,
@@ -131,8 +142,9 @@ describe('yig\'indilar, konversiya va trend', () => {
 
   it('conversion', () => {
     expect(conversion([])).toBeNull()
-    const group = [customer({ status: 'lead' }), customer({ status: 'active' }), customer({ status: 'paused' }), customer({ status: 'left' })]
-    expect(conversion(group)).toBe(75)
+    const group = [customer({ status: 'new' }), customer({ status: 'paid' }), customer({ status: 'thinking' }), customer({ status: 'cancelled' })]
+    // Faqat "To'lov qildi" bosqichidagilar konversiya hisoblanadi
+    expect(conversion(group)).toBe(25)
   })
 
   it('trend: oldingi 0 bo\'lsa null', () => {
@@ -196,11 +208,17 @@ describe('guruhlash', () => {
 describe('taqsimotlar', () => {
   it('breakdown: ulushlar 100 ga teng, nollar saqlanadi, kamayish tartibida', () => {
     const rows = breakdown(
-      [tx({ type: 'income', amount: 300, date: at(2026, 9, 1), method: 'click' }), tx({ type: 'income', amount: 100, date: at(2026, 9, 1), method: 'cash' })],
-      ['payme', 'click', 'cash', 'bank'] as const,
+      [
+        tx({ type: 'income', amount: 300, date: at(2026, 9, 1), method: 'card' }),
+        tx({ type: 'income', amount: 100, date: at(2026, 9, 1), method: 'cash' }),
+        // Kutilmoqda va bekor qilingan taqsimotga kirmaydi
+        tx({ type: 'income', amount: 900, date: at(2026, 9, 1), method: 'transfer', status: 'pending' }),
+        tx({ type: 'income', amount: 900, date: at(2026, 9, 1), method: 'transfer', status: 'cancelled' }),
+      ],
+      ['cash', 'card', 'transfer'] as const,
       (t) => t.method,
     )
-    expect(rows.map((r) => r.key)).toEqual(['click', 'cash', 'payme', 'bank'])
+    expect(rows.map((r) => r.key)).toEqual(['card', 'cash', 'transfer'])
     expect(rows[0].share).toBe(75)
     expect(rows.reduce((s, r) => s + r.share, 0)).toBe(100)
   })
@@ -211,7 +229,7 @@ describe('taqsimotlar', () => {
 
   it('sourceStats: soni, ulushi va konversiyasi', () => {
     const stats = sourceStats(
-      [customer({ source: 'instagram', status: 'active' }), customer({ source: 'instagram', status: 'lead' }), customer({ source: 'telegram' })],
+      [customer({ source: 'instagram', status: 'paid' }), customer({ source: 'instagram', status: 'new' }), customer({ source: 'telegram' })],
       ['telegram', 'instagram', 'website'],
     )
     expect(stats[0]).toMatchObject({ source: 'instagram', count: 2, conversion: 50 })
@@ -225,5 +243,189 @@ describe('taqsimotlar', () => {
       2,
     )
     expect(items.map((i) => i.id)).toEqual(['t1', 'c'])
+  })
+})
+
+describe('faqat "To\'langan" hisoblanadi', () => {
+  it('sumIncome, sumExpense, cashBalance, payingCustomers va grafik kutilmoqda/bekor qilinganni o\'tkazib yuboradi', () => {
+    const list = [
+      tx({ type: 'income', amount: 1000, date: at(2026, 9, 5), customerId: 'a' }),
+      tx({ type: 'income', amount: 500, date: at(2026, 9, 6), customerId: 'b', status: 'pending' }),
+      tx({ type: 'income', amount: 700, date: at(2026, 9, 7), customerId: 'c', status: 'cancelled' }),
+      tx({ type: 'expense', amount: 300, date: at(2026, 9, 8) }),
+      tx({ type: 'expense', amount: 900, date: at(2026, 9, 8), status: 'pending' }),
+    ]
+    expect(isPaid(list[0])).toBe(true)
+    expect(paidOnly(list)).toHaveLength(2)
+    expect(sumIncome(list)).toBe(1000)
+    expect(sumExpense(list)).toBe(300)
+    expect(cashBalance(list)).toBe(700)
+    expect(payingCustomers(list)).toBe(1)
+    const october = groupByMonth(list, 1, NOW)[0]
+    expect(october).toMatchObject({ income: 1000, expense: 300 })
+  })
+})
+
+describe('overviewKpis', () => {
+  // NOW = 2026-10-28; 'month' davri: 1–28-oktabr, oldingi: 1–28-sentabr
+  const people = [
+    customer({ id: 'a', status: 'paid', createdAt: at(2026, 9, 3) }),
+    customer({ id: 'b', status: 'new', createdAt: at(2026, 9, 10) }),
+    customer({ id: 'c', status: 'contacted', createdAt: at(2026, 9, 12) }),
+    customer({ id: 'd', status: 'paid', createdAt: at(2026, 9, 20) }),
+    customer({ id: 'e', status: 'paid', createdAt: at(2026, 8, 5) }),
+    customer({ id: 'f', status: 'cancelled', createdAt: at(2026, 8, 6) }),
+  ]
+  const money = [
+    tx({ type: 'income', amount: 2000, date: at(2026, 9, 5) }),
+    tx({ type: 'income', amount: 9999, date: at(2026, 9, 6), status: 'pending' }),
+    tx({ type: 'income', amount: 1000, date: at(2026, 8, 5) }),
+  ]
+
+  it('Jami tushum — faqat to\'langan, trend oldingi davrga nisbatan', () => {
+    expect(overviewKpis(people, money, 'month', NOW).revenue).toEqual({ value: 2000, change: 100 })
+  })
+
+  it('Faol mijozlar — "To\'lov qildi", davr oxiri holati', () => {
+    // hozir: a, d, e = 3; oldingi davr oxiri (28-sentabr): faqat e = 1
+    expect(overviewKpis(people, money, 'month', NOW).active).toEqual({ value: 3, change: 200 })
+  })
+
+  it('Yangi lidlar — davrda qo\'shilganlar; konversiya — ulardan "To\'lov qildi" (foiz bandida o\'zgarish)', () => {
+    const k = overviewKpis(people, money, 'month', NOW)
+    expect(k.newLeads).toEqual({ value: 4, change: 100 })
+    // oktabr: 4 liddan 2 tasi to'lov qildi = 50%; sentabr: 2 dan 1 = 50%
+    expect(k.conversion).toEqual({ value: 50, change: 0 })
+    expect(activeCustomersAt(people, new Date(2026, 8, 1))).toBe(0)
+  })
+
+  it('ma\'lumot bo\'lmasa trend va konversiya "—" (null)', () => {
+    expect(overviewKpis([], [], 'today', NOW)).toEqual({
+      revenue: { value: 0, change: null },
+      active: { value: 0, change: null },
+      newLeads: { value: 0, change: null },
+      conversion: { value: null, change: null },
+    })
+  })
+})
+
+describe('tahlil formulalari', () => {
+  const october = getPeriod('month', NOW)
+
+  it('AOV = to\'langan kirimlar summasi / ular soni; to\'lov bo\'lmasa null', () => {
+    const list = [
+      tx({ type: 'income', amount: 600, date: at(2026, 9, 1) }),
+      tx({ type: 'income', amount: 300, date: at(2026, 9, 2) }),
+      tx({ type: 'income', amount: 5000, date: at(2026, 9, 2), status: 'pending' }),
+      tx({ type: 'expense', amount: 999, date: at(2026, 9, 2) }),
+    ]
+    expect(averageOrderValue(list)).toEqual({ value: 450, count: 2, total: 900 })
+    expect(averageOrderValue([])).toEqual({ value: null, count: 0, total: 0 })
+  })
+
+  it('manbalar samaradorligi: lidlar, konversiya, CPL, ROI', () => {
+    const people = [
+      customer({ id: 'i1', source: 'instagram', status: 'paid', createdAt: at(2026, 9, 2) }),
+      customer({ id: 'i2', source: 'instagram', status: 'new', createdAt: at(2026, 9, 3) }),
+      customer({ id: 'i3', source: 'instagram', status: 'paid', createdAt: at(2026, 9, 4) }),
+      customer({ id: 'i4', source: 'instagram', status: 'contacted', createdAt: at(2026, 9, 5) }),
+      // O'tgan oyda kelgan, lekin shu oy to'lagan — kirim ROI ga kiradi, lid soniga emas
+      customer({ id: 'i0', source: 'instagram', status: 'paid', createdAt: at(2026, 8, 5) }),
+      customer({ id: 't1', source: 'telegram', status: 'new', createdAt: at(2026, 9, 5) }),
+    ]
+    const money = [
+      tx({ type: 'expense', category: 'marketing', source: 'instagram', amount: 400_000, date: at(2026, 9, 1) }),
+      tx({ type: 'expense', category: 'marketing', source: 'instagram', amount: 999_000, date: at(2026, 9, 1), status: 'pending' }),
+      tx({ type: 'expense', category: 'marketing', amount: 50_000, date: at(2026, 9, 1) }), // manbasiz
+      tx({ type: 'income', customerId: 'i1', amount: 650_000, date: at(2026, 9, 10) }),
+      tx({ type: 'income', customerId: 'i0', amount: 350_000, date: at(2026, 9, 11) }),
+      tx({ type: 'income', customerId: 'i3', amount: 100_000, date: at(2026, 8, 11) }), // davrdan tashqari
+    ]
+    const [instagram, telegram, website] = sourcePerformance(people, money, ['instagram', 'telegram', 'website'], october)
+    expect(instagram).toEqual({ source: 'instagram', leads: 4, paid: 2, conversion: 50, spend: 400_000, cpl: 100_000, revenue: 1_000_000, roi: 150 })
+    // Chiqim 0 — CPL va ROI "—" (null), nolga bo'linmaydi
+    expect(telegram).toMatchObject({ leads: 1, paid: 0, conversion: 0, spend: 0, cpl: null, revenue: 0, roi: null })
+    expect(website).toMatchObject({ leads: 0, conversion: null, cpl: null, roi: null })
+    expect(totalPerformance([instagram, telegram, website])).toEqual({
+      leads: 5,
+      paid: 2,
+      conversion: 40,
+      spend: 400_000,
+      cpl: 80_000,
+      revenue: 1_000_000,
+      roi: 150,
+    })
+  })
+
+  it('ROI manfiy bo\'lishi mumkin; safeRatio nolga bo\'lmaydi', () => {
+    const people = [customer({ id: 'a', source: 'website', createdAt: at(2026, 9, 2) })]
+    const money = [tx({ type: 'expense', category: 'marketing', source: 'website', amount: 200, date: at(2026, 9, 2) })]
+    expect(sourcePerformance(people, money, ['website'], october)[0]).toMatchObject({ cpl: 200, roi: -100 })
+    expect(safeRatio(1, 0)).toBeNull()
+    expect(safeRatio(3, 4)).toBe(0.75)
+  })
+})
+
+describe('activeCustomersAt: paidAt bo\'yicha', () => {
+  it('eski mijoz yaqinda to\'lov qilgan bo\'lsa, oldingi davr oxirida faol hisoblanmaydi', () => {
+    const list = [
+      customer({ status: 'paid', createdAt: at(2026, 0, 5), paidAt: at(2026, 9, 10) }),
+      customer({ status: 'paid', createdAt: at(2026, 0, 5), paidAt: at(2026, 6, 1) }),
+      customer({ status: 'paid', createdAt: at(2026, 0, 5) }), // paidAt yo'q — qo'shilgan sana
+    ]
+    expect(activeCustomersAt(list, new Date(2026, 8, 30))).toBe(2)
+    expect(activeCustomersAt(list, new Date(2026, 9, 28))).toBe(3)
+  })
+})
+
+describe('voronka va kurslar bo\'yicha tushum', () => {
+  const october = getPeriod('month', NOW)
+
+  it('funnelStats: davr lidlari bosqichlar bo\'yicha, ulushlar', () => {
+    const people = [
+      customer({ status: 'new', createdAt: at(2026, 9, 2) }),
+      customer({ status: 'paid', createdAt: at(2026, 9, 3) }),
+      customer({ status: 'paid', createdAt: at(2026, 9, 4) }),
+      customer({ status: 'cancelled', createdAt: at(2026, 9, 5) }),
+      customer({ status: 'paid', createdAt: at(2026, 8, 5) }), // davrdan tashqari
+    ]
+    const rows = funnelStats(people, ['new', 'contacted', 'thinking', 'paid', 'cancelled'], october)
+    expect(rows.map((r) => [r.stage, r.count, r.share])).toEqual([
+      ['new', 1, 25],
+      ['contacted', 0, 0],
+      ['thinking', 0, 0],
+      ['paid', 2, 50],
+      ['cancelled', 1, 25],
+    ])
+    expect(funnelStats([], ['new'], october)).toEqual([{ stage: 'new', count: 0, share: 0 }])
+  })
+
+  it('courseRevenue: kurs mijozlaridan davrdagi to\'langan kirim, talabalar va kutilgan tushum', () => {
+    const course = (id: string, name: string, monthlyPrice: number, status: 'active' | 'archived' = 'active') => ({
+      id,
+      name,
+      type: 'course' as const,
+      durationMonths: 6,
+      monthlyPrice,
+      activeGroups: 1,
+      status,
+      createdAt: at(2026, 0, 1),
+    })
+    const people = [
+      customer({ id: 'a', course: 'IELTS', status: 'paid' }),
+      customer({ id: 'b', course: 'IELTS', status: 'new' }),
+      customer({ id: 'c', course: 'Python', status: 'paid' }),
+    ]
+    const money = [
+      tx({ type: 'income', customerId: 'a', amount: 650, date: at(2026, 9, 5) }),
+      tx({ type: 'income', customerId: 'c', amount: 900, date: at(2026, 9, 6) }),
+      tx({ type: 'income', customerId: 'c', amount: 900, date: at(2026, 9, 7), status: 'pending' }),
+      tx({ type: 'income', customerId: 'a', amount: 650, date: at(2026, 8, 5) }), // davrdan tashqari
+    ]
+    const rows = courseRevenue(people, [course('k1', 'IELTS', 650), course('k2', 'Python', 900), course('k3', 'Koreys', 500, 'archived')], money, october)
+    expect(rows.map((r) => [r.course.name, r.students, r.revenue, r.expectedMonthly])).toEqual([
+      ['Python', 1, 900, 900],
+      ['IELTS', 1, 650, 650],
+    ])
   })
 })

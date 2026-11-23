@@ -1,14 +1,18 @@
+import { tr } from '../../i18n'
 import { useId, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Icon } from '../../constants/navigation'
 import { cx } from '../../utils/cx'
 import { IconButton } from './Button'
 import { FieldShell } from './FieldShell'
+import { normalizeSearch, phoneQuery, searchIncludes } from '../../utils/searchText'
 
 export interface ComboboxOption {
   value: string
   label: string
   description?: string
+  // Qidiruv uchun qo'shimcha so'zlar (ko'rinmaydi), masalan telefonning faqat raqamlari
+  keywords?: string
 }
 
 interface ComboboxProps {
@@ -19,11 +23,13 @@ interface ComboboxProps {
   placeholder?: string
   emptyText?: string
   hint?: string
+  error?: string
+  required?: boolean
 }
 
 const MAX_VISIBLE = 50
 
-export function Combobox({ label, options, value, onChange, placeholder, emptyText = 'Hech narsa topilmadi', hint }: ComboboxProps) {
+export function Combobox({ label, options, value, onChange, placeholder, emptyText = 'Hech narsa topilmadi', hint, error, required }: ComboboxProps) {
   const id = useId()
   const listId = `${id}-list`
   const [open, setOpen] = useState(false)
@@ -31,9 +37,15 @@ export function Combobox({ label, options, value, onChange, placeholder, emptyTe
   const [active, setActive] = useState(0)
 
   const selected = options.find((o) => o.value === value)
-  const needle = query.trim().toLowerCase()
+  // Apostrof turlaridan qat'i nazar; telefon raqami bo'shliqsiz yozilsa ham ("931112233") — raqamlar bo'yicha
+  const needle = normalizeSearch(query)
+  const digits = phoneQuery(query)
   const filtered = options
-    .filter((o) => !needle || `${o.label} ${o.description ?? ''}`.toLowerCase().includes(needle))
+    .filter((o) => {
+      if (!needle) return true
+      const text = `${o.label} ${o.description ?? ''} ${o.keywords ?? ''}`
+      return searchIncludes(text, needle) || (digits !== '' && text.replace(/\D/g, '').includes(digits))
+    })
     .slice(0, MAX_VISIBLE)
   const activeIndex = Math.min(active, Math.max(filtered.length - 1, 0))
 
@@ -72,7 +84,7 @@ export function Combobox({ label, options, value, onChange, placeholder, emptyTe
   }
 
   return (
-    <FieldShell id={id} label={label} hint={hint}>
+    <FieldShell id={id} label={label} hint={hint} error={error} required={required}>
       <div className="combobox">
         <Icon name="search" size={16} className="combobox-icon" />
         <input
@@ -83,7 +95,8 @@ export function Combobox({ label, options, value, onChange, placeholder, emptyTe
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={open && filtered[activeIndex] ? `${listId}-${activeIndex}` : undefined}
-          aria-describedby={hint ? `${id}-hint` : undefined}
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+          aria-invalid={error ? true : undefined}
           autoComplete="off"
           value={open ? query : (selected?.label ?? '')}
           placeholder={selected?.label ?? placeholder}
@@ -101,7 +114,7 @@ export function Combobox({ label, options, value, onChange, placeholder, emptyTe
           onKeyDown={handleKeyDown}
         />
         {value && (
-          <IconButton icon="close" label="Tanlovni tozalash" className="combobox-clear" onClick={() => onChange('')} />
+          <IconButton icon="close" label={tr('Tanlovni tozalash')} className="combobox-clear" onClick={() => onChange('')} />
         )}
         {open && (
           <ul id={listId} role="listbox" className="combobox-list" aria-label={label}>

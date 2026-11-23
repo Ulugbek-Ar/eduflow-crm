@@ -1,38 +1,71 @@
-import { useEffect, useRef, useState } from 'react'
+import { changeLang, getLang, LANG_LABELS, tr } from '../../i18n'
+import type { Lang } from '../../i18n'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Icon } from '../../constants/navigation'
 import type { IconName } from '../../constants/navigation'
+import type { Permission } from '../../auth/permissions'
 import { useDashboard } from '../../context/useDashboard'
+import { useCan, useRoleCan } from '../../hooks/useAuth'
+import { useCloudOrgId } from '../../hooks/useCloudOrg'
+import { useTheme } from '../../hooks/useTheme'
+import type { ThemePreference } from '../../hooks/useTheme'
 import type { CsvDelimiter, Currency, DateFormat, Settings } from '../../types/dashboard.types'
 import { formatDateWith } from '../../utils/format'
 import { formatPhone, phoneDigits } from '../../utils/phone'
 import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
+import { Input, Textarea } from '../ui/Input'
+import { REMINDER_VARIABLES } from '../../utils/reminders'
+import { DEFAULT_REMINDER_RU, DEFAULT_REMINDER_UZ } from '../../constants/mockData'
 import { Select } from '../ui/Select'
-import { CourseSettings } from './CourseSettings'
+import { BranchSettings } from './BranchSettings'
 import { DataSettings } from './DataSettings'
+import { LogoUpload } from './LogoUpload'
+import { PlanSettings } from './PlanSettings'
+import { ProfileSettings } from './ProfileSettings'
 import { SecuritySettings } from './SecuritySettings'
 
+// Faqat bulutli rejimda yuklanadi (Supabase mijozi lokal rejimda kerak emas)
+const IntegrationsSettings = lazy(() => import('./IntegrationsSettings').then((m) => ({ default: m.IntegrationsSettings })))
+const SmsSettings = lazy(() => import('./SmsSettings').then((m) => ({ default: m.SmsSettings })))
+const TelegramSettings = lazy(() => import('./TelegramSettings').then((m) => ({ default: m.TelegramSettings })))
+const AutoRemindSettings = lazy(() => import('./AutoRemindSettings').then((m) => ({ default: m.AutoRemindSettings })))
+
 const CURRENCIES: Record<Currency, string> = {
-  UZS: 'O\'zbek so\'mi (UZS)',
-  USD: 'AQSH dollari (USD)',
+  UZS: tr('O\'zbek so\'mi (UZS)'),
+  USD: tr('AQSH dollari (USD)'),
 }
 
 const DELIMITERS: Record<CsvDelimiter, string> = {
-  ';': 'Nuqtali vergul (;) — Excel UZ/RU',
-  ',': 'Vergul (,) — Excel EN, Google Sheets',
+  ';': tr('Nuqtali vergul (;) — Excel UZ/RU'),
+  ',': tr('Vergul (,) — Excel EN, Google Sheets'),
+}
+
+const THEMES: Record<ThemePreference, string> = {
+  light: tr('Yorug\''),
+  dark: tr('Qorong\'i'),
+  system: tr('Tizim bo\'yicha'),
 }
 
 const DATE_FORMATS: DateFormat[] = ['dd.mm.yyyy', 'dd/mm/yyyy', 'yyyy-mm-dd']
 // Format namunasi uchun qat'iy sana: 31-yanvar
 const SAMPLE_DATE = new Date(2026, 0, 31, 12).toISOString()
 
-const SECTIONS: Array<{ id: string; label: string; icon: IconName }> = [
-  { id: 'organization', label: 'Tashkilot', icon: 'building' },
-  { id: 'region', label: 'Mintaqa', icon: 'globe' },
-  { id: 'security', label: 'Xavfsizlik', icon: 'lock' },
-  { id: 'courses', label: 'Kurslar', icon: 'book' },
-  { id: 'data', label: 'Ma\'lumotlar', icon: 'database' },
+// permission — bo'limni ko'rish uchun kerakli ruxsat (null — hammaga)
+// anyPlan — tarif muddati tugaganda ham ko'rinadi (tarifni ko'rish va ma'lumotni yuklab olish uchun)
+const SECTIONS: Array<{ id: string; label: string; icon: IconName; permission: Permission | null; anyPlan?: true }> = [
+  { id: 'organization', label: tr('Tashkilot'), icon: 'building', permission: 'settings.manage' },
+  { id: 'region', label: tr('Mintaqa'), icon: 'globe', permission: 'settings.manage' },
+  { id: 'learning', label: tr('O\'quv jarayoni'), icon: 'calendar', permission: 'settings.manage' },
+  { id: 'branches', label: tr('Filiallar'), icon: 'layers', permission: 'settings.manage' },
+  { id: 'integrations', label: tr('Integratsiyalar'), icon: 'card', permission: 'settings.manage' },
+  { id: 'sms', label: tr('SMS'), icon: 'mail', permission: 'settings.manage' },
+  { id: 'telegram', label: tr('Telegram bot'), icon: 'bell', permission: 'settings.manage' },
+  { id: 'auto-reminders', label: tr('Avtomatik eslatma'), icon: 'clock', permission: 'settings.manage' },
+  { id: 'appearance', label: tr('Ko\'rinish'), icon: 'sun', permission: null },
+  { id: 'profile', label: tr('Profil'), icon: 'user', permission: null },
+  { id: 'plan', label: tr('Tarif'), icon: 'card', permission: 'staff.manage', anyPlan: true },
+  { id: 'data', label: tr('Ma\'lumotlar'), icon: 'database', permission: 'data.manage', anyPlan: true },
 ]
 
 type FormErrors = Partial<Record<'orgName' | 'logoText' | 'phone', string>>
@@ -52,7 +85,12 @@ function SettingsCard({ id, title, description, children }: { id: string; title:
 }
 
 export function SettingsPanel() {
-  const { settings, updateSettings, setUnsavedChanges } = useDashboard()
+  const { settings, updateSettings, setUnsavedChanges, restrictedBranch } = useDashboard()
+  const can = useCan()
+  const roleCan = useRoleCan()
+  const canManage = can('settings.manage')
+  const cloudOrgId = useCloudOrgId()
+  const { preference, setPreference } = useTheme()
   const [form, setForm] = useState<Settings>(settings)
   const [errors, setErrors] = useState<FormErrors>({})
   const orgNameRef = useRef<HTMLInputElement>(null)
@@ -83,10 +121,10 @@ export function SettingsPanel() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const next: FormErrors = {}
-    if (form.orgName.trim().length < 2) next.orgName = 'Tashkilot nomini kiriting (kamida 2 ta belgi)'
-    if (!/^[\p{L}\p{N}]{0,3}$/u.test(form.logoText.trim())) next.logoText = '1–3 ta harf yoki raqam'
+    if (form.orgName.trim().length < 2) next.orgName = tr('Tashkilot nomini kiriting (kamida 2 ta belgi)')
+    if (!/^[\p{L}\p{N}]{0,3}$/u.test(form.logoText.trim())) next.logoText = tr('1–3 ta harf yoki raqam')
     const digits = phoneDigits(form.phone)
-    if (digits.length > 0 && digits.length !== 9) next.phone = 'Telefon +998 XX XXX XX XX formatida bo\'lishi kerak'
+    if (digits.length > 0 && digits.length !== 9) next.phone = tr('Telefon +998 XX XXX XX XX formatida bo\'lishi kerak')
     setErrors(next)
     if (next.orgName) return orgNameRef.current?.focus()
     if (next.logoText) return logoRef.current?.focus()
@@ -97,13 +135,18 @@ export function SettingsPanel() {
       logoText: form.logoText.trim().toUpperCase(),
       phone: digits.length === 0 ? '' : form.phone,
       address: form.address.trim(),
+      paymentDueDay: form.paymentDueDay >= 1 ? form.paymentDueDay : 10,
+      // Bo'sh shablon — standart matn
+      reminderTemplateUz: form.reminderTemplateUz.trim() || DEFAULT_REMINDER_UZ,
+      reminderTemplateRu: form.reminderTemplateRu.trim() || DEFAULT_REMINDER_RU,
     })
   }
 
   return (
     <div className="settings-layout">
-      <nav className="settings-nav" aria-label="Sozlamalar bo'limlari">
-        {SECTIONS.map((section) => (
+      <nav className="settings-nav" aria-label={tr('Sozlamalar bo\'limlari')}>
+        {/* Filiallarni faqat butun markazni ko'radigan administrator boshqaradi; Tarif va Ma'lumotlar — tarif muddati tugaganda ham */}
+        {SECTIONS.filter((section) => (!section.permission || (section.anyPlan ? roleCan : can)(section.permission)) && !(section.id === 'branches' && restrictedBranch)).map((section) => (
           <a key={section.id} href={`#${section.id}`}>
             <Icon name={section.icon} size={16} />
             {section.label}
@@ -112,13 +155,15 @@ export function SettingsPanel() {
       </nav>
 
       <div className="settings-content">
+        {canManage && (
         <form id="settings-form" className="stack" onSubmit={handleSubmit} noValidate>
-          <SettingsCard id="organization" title="Tashkilot" description="Sidebar va hisobotlarda ko'rinadigan ma'lumotlar">
+          <SettingsCard id="organization" title={tr('Tashkilot')} description={tr('Sidebar va hisobotlarda ko\'rinadigan ma\'lumotlar')}>
             <div className="form">
+              <LogoUpload value={form.logoImage} logoText={form.logoText} onChange={(value) => update('logoImage', value)} />
               <div className="form-row">
                 <Input
                   ref={orgNameRef}
-                  label="Tashkilot nomi"
+                  label={tr('Tashkilot nomi')}
                   required
                   value={form.orgName}
                   error={errors.orgName}
@@ -126,78 +171,220 @@ export function SettingsPanel() {
                 />
                 <Input
                   ref={logoRef}
-                  label="Logo harflari"
+                  label={tr('Logo harflari')}
                   maxLength={3}
                   value={form.logoText}
                   error={errors.logoText}
-                  hint="1–3 belgi, bo'sh bo'lsa ikon ko'rinadi"
+                  hint={tr('1–3 belgi; logotip rasmi bo\'lmasa ko\'rinadi')}
                   onChange={(e) => update('logoText', e.target.value.toUpperCase())}
                 />
               </div>
               <div className="form-row">
                 <Input
                   ref={phoneRef}
-                  label="Telefon"
+                  label={tr('Telefon')}
                   type="tel"
                   value={form.phone}
                   error={errors.phone}
-                  onChange={(e) => update('phone', formatPhone(e.target.value))}
+                  onChange={(e) => update('phone', formatPhone(e.target.value, form.phone))}
                   placeholder="+998 71 200 00 00"
                 />
-                <Input label="Manzil" value={form.address} onChange={(e) => update('address', e.target.value)} />
+                <Input label={tr('Manzil')} value={form.address} onChange={(e) => update('address', e.target.value)} />
               </div>
             </div>
           </SettingsCard>
 
-          <SettingsCard id="region" title="Mintaqa" description="Valyuta, sana va eksport formati">
+          <SettingsCard id="region" title={tr('Mintaqa va ko\'rinish')} description={tr('Valyuta, sana, eksport formati va mavzu')}>
             <div className="form">
               <div className="form-row">
                 <Select
-                  label="Valyuta"
+                  label={tr('Asosiy valyuta')}
                   value={form.currency}
                   onChange={(e) => update('currency', e.target.value as Currency)}
                   options={(Object.keys(CURRENCIES) as Currency[]).map((c) => ({ value: c, label: CURRENCIES[c] }))}
                 />
                 <Select
-                  label="Sana formati"
+                  label={tr('Sana formati')}
                   value={form.dateFormat}
                   onChange={(e) => update('dateFormat', e.target.value as DateFormat)}
                   options={DATE_FORMATS.map((f) => ({ value: f, label: `${f} — ${formatDateWith(SAMPLE_DATE, f)}` }))}
                 />
               </div>
-              <Select
-                label="CSV ajratgichi"
-                value={form.csvDelimiter}
-                onChange={(e) => update('csvDelimiter', e.target.value as CsvDelimiter)}
-                options={(Object.keys(DELIMITERS) as CsvDelimiter[]).map((d) => ({ value: d, label: DELIMITERS[d] }))}
+              <div className="form-row">
+                <Select
+                  label={tr('CSV ajratgichi')}
+                  value={form.csvDelimiter}
+                  onChange={(e) => update('csvDelimiter', e.target.value as CsvDelimiter)}
+                  options={(Object.keys(DELIMITERS) as CsvDelimiter[]).map((d) => ({ value: d, label: DELIMITERS[d] }))}
+                />
+              </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard id="learning" title={tr('O\'quv jarayoni')} description={tr('Davomat, to\'lov muddati va qarz hisobi')}>
+            <div className="form">
+              <div className="form-row">
+                <Input
+                  label={tr('O\'qituvchi davomatni necha kun orqagacha tahrirlaydi')}
+                  type="number"
+                  min={0}
+                  max={60}
+                  inputMode="numeric"
+                  value={String(form.attendanceEditDays)}
+                  hint={tr('Bugun + shuncha kun (0 — faqat bugun). Administrator va menejer istalgan kunni tahrirlaydi.')}
+                  onChange={(e) => update('attendanceEditDays', Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))))}
+                />
+                <Input
+                  label={tr('Oylik to\'lov muddati (oyning sanasi)')}
+                  type="number"
+                  min={1}
+                  max={28}
+                  inputMode="numeric"
+                  value={form.paymentDueDay > 0 ? String(form.paymentDueDay) : ''}
+                  hint={tr('Shu sanagacha to\'lanmasa — qarz. Birinchi oy o\'qish boshlangan kuni to\'lanadi.')}
+                  // Bo'sh maydon vaqtincha 0 (saqlashda — standart 10), 28 dan katta — 28
+                  onChange={(e) => update('paymentDueDay', Math.max(0, Math.min(28, Math.round(Number(e.target.value) || 0))))}
+                />
+              </div>
+              <label className="check-field">
+                <input type="checkbox" checked={form.prorateFirstMonth} onChange={(e) => update('prorateFirstMonth', e.target.checked)} />
+                <span>
+                  {tr('Birinchi oyni kunlar bo\'yicha hisoblash')}
+                  <small className="muted cell-block">{tr('Oy o\'rtasida qo\'shilgan o\'quvchi shu oy uchun faqat qolgan kunlar ulushini to\'laydi')}</small>
+                </span>
+              </label>
+              <Textarea
+                label={tr('To\'lov eslatmasi shabloni (o\'zbekcha)')}
+                rows={3}
+                maxLength={600}
+                value={form.reminderTemplateUz}
+                onChange={(e) => update('reminderTemplateUz', e.target.value)}
+              />
+              <Textarea
+                label={tr('To\'lov eslatmasi shabloni (ruscha)')}
+                rows={3}
+                maxLength={600}
+                value={form.reminderTemplateRu}
+                hint={tr('O\'zgaruvchilar: {0}', { 0: REMINDER_VARIABLES.map((v) => `{${v}}`).join(' ') })}
+                onChange={(e) => update('reminderTemplateRu', e.target.value)}
               />
             </div>
           </SettingsCard>
         </form>
+        )}
 
-        <SettingsCard id="security" title="Xavfsizlik" description="Kirish logini va paroli">
+        {canManage && !restrictedBranch && (
+          <SettingsCard id="branches" title={tr('Filiallar')} description={tr('Bir nechta manzil: guruh, o\'quvchi va to\'lovlar filial bo\'yicha, xodimni filialga cheklash')}>
+            <BranchSettings />
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="integrations" title={tr('Onlayn to\'lov (Payme, Click)')} description={tr('Ota-ona havola orqali to\'laydi — to\'lov kassaga avtomatik kirim bo\'lib tushadi')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <IntegrationsSettings orgId={cloudOrgId} />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('Onlayn to\'lov bulutli rejimda ishlaydi: Payme va Click to\'lovni serverga (Supabase Edge Function) yuboradi, kalitlar ham faqat serverda saqlanadi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="sms" title={tr('SMS (Eskiz)')} description={tr('Qarzdorlarga SMS eslatma — eslatma oynasidan yoki avtomatik')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <SmsSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('SMS bulutli rejimda ishlaydi: Eskiz login va paroli serverda saqlanadi, avtomatik eslatmani server har kuni yuboradi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="telegram" title={tr('Telegram bot (ota-onalar uchun)')} description={tr('Ota-ona dars qoldirilganda va to\'lov qabul qilinganda xabar oladi, qarz va jadvalni botdan so\'raydi')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <TelegramSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">
+                {tr('Telegram bot bulutli rejimda ishlaydi: markaz o\'z botini ulaydi, bot tokeni serverda saqlanadi, xabarlarni server yuboradi. Ulash tartibi — DEPLOY.md.')}
+              </p>
+            )}
+          </SettingsCard>
+        )}
+
+        {canManage && (
+          <SettingsCard id="auto-reminders" title={tr('Avtomatik eslatma')} description={tr('Har kuni ertalab qarzdorlarga — Telegram bot yoki SMS orqali')}>
+            {cloudOrgId ? (
+              <Suspense fallback={<p className="muted">{tr('Yuklanmoqda...')}</p>}>
+                <AutoRemindSettings />
+              </Suspense>
+            ) : (
+              <p className="notice notice-info">{tr('Avtomatik eslatma bulutli rejimda ishlaydi: server har kuni ertalab qarzdorlarga Telegram bot yoki SMS orqali yuboradi.')}</p>
+            )}
+          </SettingsCard>
+        )}
+
+        <SettingsCard id="appearance" title={tr('Ko\'rinish')} description={tr('Faqat shu qurilmada: darhol qo\'llanadi')}>
+          <div className="form">
+            <div className="form-row">
+              <Select
+                label={tr('Mavzu')}
+                value={preference}
+                hint={tr('Header\'dagi tugma yorug\' va qorong\'i orasida almashtiradi')}
+                onChange={(e) => setPreference(e.target.value as ThemePreference)}
+                options={(Object.keys(THEMES) as ThemePreference[]).map((t) => ({ value: t, label: THEMES[t] }))}
+              />
+              <Select
+                label="Til / Язык"
+                value={getLang()}
+                hint={tr('Tanlangach sahifa yangi tilda qayta ochiladi')}
+                onChange={(e) => changeLang(e.target.value as Lang)}
+                options={(Object.keys(LANG_LABELS) as Lang[]).map((l) => ({ value: l, label: LANG_LABELS[l] }))}
+              />
+            </div>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard id="profile" title={tr('Profil va xavfsizlik')} description={tr('Header\'dagi profil menyusida ko\'rinadi; kirish logini va paroli')}>
+          <ProfileSettings />
+          <h3 className="settings-subtitle">{tr('Login va parol')}</h3>
           <SecuritySettings />
         </SettingsCard>
 
-        <SettingsCard id="courses" title="Kurslar" description="Mijoz formalarida tanlanadigan kurslar ro'yxati">
-          <CourseSettings courses={form.courses} onChange={(courses) => update('courses', courses)} />
-        </SettingsCard>
+        {roleCan('staff.manage') && (
+          <SettingsCard id="plan" title={tr('Tarif')} description={tr('Joriy tarif, muddat va xodimlar chegarasi')}>
+            <PlanSettings />
+          </SettingsCard>
+        )}
 
-        <SettingsCard id="data" title="Ma'lumotlar" description="Zaxira, tiklash va demo ma'lumotlar">
-          <DataSettings />
-        </SettingsCard>
+        {roleCan('data.manage') && (
+          <SettingsCard id="data" title={tr('Ma\'lumotlar')} description={tr('Zaxira, tiklash va demo ma\'lumotlar')}>
+            <DataSettings />
+          </SettingsCard>
+        )}
 
-        <div className={dirty ? 'save-bar is-dirty' : 'save-bar'} role="region" aria-label="Saqlash">
-          <span className="muted">{dirty ? 'Saqlanmagan o\'zgarishlar bor' : 'Barcha o\'zgarishlar saqlangan'}</span>
+        {canManage && (
+        <div className={dirty ? 'save-bar is-dirty' : 'save-bar'} role="region" aria-label={tr('Saqlash')}>
+          <span className="muted">{dirty ? tr('Saqlanmagan o\'zgarishlar bor') : tr('Barcha o\'zgarishlar saqlangan')}</span>
           <div className="save-actions">
             <Button variant="ghost" disabled={!dirty} onClick={() => setForm(settings)}>
-              Bekor qilish
+              {tr('Bekor qilish')}
             </Button>
             <Button type="submit" form="settings-form" icon="save" disabled={!dirty}>
-              Saqlash
+              {tr('Saqlash')}
             </Button>
           </div>
         </div>
+        )}
       </div>
     </div>
   )

@@ -1,24 +1,65 @@
-import { useEffect, useRef, useState } from 'react'
+import { tr } from '../i18n'
+import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { STATUS_LABELS } from '../constants/navigation'
+import { canOpenSection, SECTION_PERMISSION, sectionAllowed, sectionPermissions } from '../auth/permissions'
+import type { Permission } from '../auth/permissions'
+import { CATEGORY_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
+import { AuthContext, useAuditActor, useCan } from '../hooks/useAuth'
+import { logAudit } from '../services/audit.service'
+import type { AuditAction } from '../services/audit.service'
+import { isTourDone, markTourDone } from '../services/tour.service'
+import { loadTrash, pruneTrash, saveTrash, TRASH_KEY, TRASH_KINDS } from '../services/trash.service'
+import { createEduActions } from './eduActions'
+import { teacherForUser } from '../utils/groups'
+import { loadDemoData } from '../services/demo/load'
+import type { TrashEntry, TrashKind } from '../services/trash.service'
 import { useConfirm } from '../hooks/useConfirm'
+import { isBoolean, usePersistentState } from '../hooks/usePersistentState'
 import { useToast } from '../hooks/useToast'
-import { loadData, readStored, resetToMock, saveAll, setItem, STORAGE_KEYS } from '../services/storage.service'
-import type { StoredData } from '../services/storage.service'
+import {
+  combineResults,
+  createEmptyData,
+  isDemoMode,
+  loadData,
+  physicalKey,
+  readStored,
+  removePreMigrationBackup,
+  resetToMock,
+  saveAll,
+  saveErrorMessage,
+  setDemoMode,
+  setItem,
+  LIST_KEYS,
+  STORAGE_KEYS,
+} from '../services/storage.service'
+import type { ListKey, SaveResult, StoredData } from '../services/storage.service'
+import type { CloudSnapshot, CloudSync } from '../data/supabase'
+import { SyncConflictError } from '../data/syncConflict'
+import type { Settings } from '../types/dashboard.types'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
-import type { DateRange, ModalState, Section, SortState } from '../types/dashboard.types'
-import type { TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
-import { EMPTY_CUSTOMER_FILTERS } from '../utils/customers'
+import type { DateRange, ModalState, ModalType, Section, SortState } from '../types/dashboard.types'
+import type { Transaction, TransactionFilters, TransactionInput, TransactionSortKey } from '../types/finance.types'
+import type { Course } from '../types/course.types'
+import type { Branch } from '../types/branch.types'
+import { cashBalance } from '../utils/analytics'
+import { courseInUse, normalizeCourseName } from '../utils/courses'
+import { EMPTY_CUSTOMER_FILTERS, resolveCustomerName } from '../utils/customers'
 import { createId, formatDateWith, formatMoney } from '../utils/format'
-import { EMPTY_TRANSACTION_FILTERS } from '../utils/transactions'
+import { createSaveMonitor } from '../utils/saveMonitor'
+import { EMPTY_TRANSACTION_FILTERS, mergeRemote } from '../utils/transactions'
 import { DashboardContext } from './useDashboard'
 import type { DashboardContextValue } from './useDashboard'
 
 function cleanTransaction<T extends Partial<TransactionInput>>(data: T): T {
   const result = { ...data }
   if (result.note !== undefined) result.note = result.note.trim()
+  // Manba faqat marketing chiqimida saqlanadi
+  if (result.category !== undefined && result.category !== 'marketing') result.source = undefined
   if (result.type === 'expense') result.customerId = undefined
-  if ('customerId' in result && !result.customerId) result.customerId = undefined
+  if ('customerId' in result && !result.customerId) {
+    result.customerId = undefined
+    result.customerName = undefined
+  }
   return result
 }
 
@@ -31,88 +72,634 @@ function cleanCustomer<T extends Partial<CustomerInput>>(data: T): T {
   return result
 }
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
+// "To'lov qildi" bosqichiga o'tilsa — shu vaqt, chiqilsa — o'chiriladi; bosqich o'zgarmasa — avvalgisi
+function withPaidAt(before: Customer, after: Customer, now: string): Customer {
+  if (after.status === before.status) return after
+  if (after.status === 'paid') return { ...after, paidAt: now }
+  const { paidAt: _paidAt, ...rest } = after
+  return rest
+}
+
+export const SIDEBAR_COLLAPSED_KEY = 'apex:sidebar-collapsed'
+// Header'da tanlangan filial ('' — barcha filiallar); shu brauzerda eslab qolinadi
+export const BRANCH_FILTER_KEY = 'apex:branch-filter'
+const isString = (value: unknown): value is string => typeof value === 'string'
+
+const DENIED_MESSAGE = tr('Bu amal uchun ruxsatingiz yo\'q. Administratorga murojaat qiling.')
+
+// Oyna ochish uchun kerakli ruxsat
+function modalPermission(modal: NonNullable<ModalState>): Permission {
+  const byType: Record<ModalType, Permission> = {
+    customer: 'customers.edit',
+    customerDetail: 'customers.view',
+    course: 'courses.edit',
+    transaction: 'payments.create',
+    receipt: 'payments.view',
+    group: 'groups.edit',
+    groupDetail: 'groups.view',
+    teacher: 'teachers.manage',
+    import: 'customers.edit',
+  }
+  if (modal.type === 'transaction' && (modal.payload?.id || modal.payload?.kind === 'expense')) return 'payments.manage'
+  return byType[modal.type]
+}
+
+// Bulutli rejim: boshlang'ich ma'lumot serverdan, o'zgarishlar CloudSync orqali
+export interface CloudBinding {
+  initial: CloudSnapshot
+  sync: CloudSync
+  // Serverdan yangi holat (boshqa xodimlar o'zgarishlari): oyna ochilganda, internet qaytganda va davriy
+  reload?: () => Promise<CloudSnapshot>
+}
+
+// Bulut: boshqa xodimlar kiritgan o'zgarishlarni olib kelish oralig'i
+export const CLOUD_REFRESH_MS = 90_000
+
+// Kalitlar tartibiga bog'liq bo'lmagan taqqoslash (serverdan kelgan obyektda kalitlar tartibi boshqacha bo'lishi mumkin —
+// bir xil ma'lumot bo'lsa ham har safar butun panel qayta chizilmasin)
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v,
+  )
+}
+
+export function DashboardProvider({ children, cloud }: { children: ReactNode; cloud?: CloudBinding }) {
   const toast = useToast()
   const confirm = useConfirm()
-  const [initial] = useState(loadData)
+  const can = useCan()
+  const actor = useAuditActor()
+  const authMode = useContext(AuthContext)?.mode
+  const authUser = useContext(AuthContext)?.user
+  const branchLimit = useContext(AuthContext)?.access.branchLimit ?? null
+  // Filialga biriktirilgan xodim bo'lsa filial o'chirilmaydi (bulutda ham tashqi kalit to'xtatadi)
+  const authContextUsers = useContext(AuthContext)?.users
+  // AuthProvider bo'lmasa (alohida komponent testlari) — administrator kabi
+  const role = authUser ? authUser.role : 'admin'
+  // Demo markazda rol almashtirilsa ham tanishtiruv qayta chiqmaydi
+  const tourKey = authMode === 'demo' ? 'demo' : (actor?.userId ?? 'local')
+  const [tourOpen, setTourOpen] = useState(() => Boolean(actor) && !isTourDone(tourKey))
+  // Tanishtiruv ko'rsatildi — darhol belgilanadi (keyingi kirishlarda chiqmaydi)
+  useEffect(() => {
+    if (tourOpen) markTourDone(tourKey)
+  }, [tourOpen, tourKey])
+  const [initial] = useState(() => (cloud ? { data: cloud.initial.data, dropped: 0 } : loadData()))
+  const [trash, setTrash] = useState(() => (cloud ? cloud.initial.trash : loadTrash()))
   // Saqlanmagan o'zgarishlar bayrog'i renderga ta'sir qilmaydi, shuning uchun ref
   const unsavedRef = useRef(false)
+  // B-04: konfliktlar soni — o'zgarsa serverdagi holat olib kelinadi
+  const [conflicts, setConflicts] = useState(0)
   const startupNoticeRef = useRef(false)
+  const [saveMonitor] = useState(createSaveMonitor)
   const [customers, setCustomers] = useState(initial.data.customers)
   const [transactions, setTransactions] = useState(initial.data.transactions)
   const [settings, setSettings] = useState(initial.data.settings)
+  const [courses, setCourses] = useState(initial.data.courses)
+  const [teachers, setTeachers] = useState(initial.data.teachers)
+  const [groups, setGroups] = useState(initial.data.groups)
+  const [enrollments, setEnrollments] = useState(initial.data.enrollments)
+  const [attendance, setAttendance] = useState(initial.data.attendance)
+  const [lessonExceptions, setLessonExceptions] = useState(initial.data.lessonExceptions)
+  const [branches, setBranches] = useState(initial.data.branches)
+  const [branchFilter, setBranchFilter] = usePersistentState(BRANCH_FILTER_KEY, '', isString)
+  const [isDemo, setIsDemo] = useState(() => !cloud && isDemoMode())
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
-  const [activeSection, setSection] = useState<Section>('overview')
+  // A-09: bo'lim manzilda (#finance) — sahifa yangilansa ham shu bo'lim ochiladi (ruxsat bo'lsa)
+  const [activeSection, setSection] = useState<Section>(() => {
+    const fromHash = window.location.hash.slice(1) as Section
+    return fromHash && fromHash in SECTION_PERMISSION && canOpenSection(role, fromHash) ? fromHash : 'overview'
+  })
   const [modal, setModal] = useState<ModalState>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = usePersistentState(SIDEBAR_COLLAPSED_KEY, false, isBoolean)
   const [customerFilters, setCustomerFilters] = useState<CustomerFilters>(EMPTY_CUSTOMER_FILTERS)
   const [customerSort, setCustomerSort] = useState<SortState<CustomerSortKey>>({ key: 'createdAt', direction: 'desc' })
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>(EMPTY_TRANSACTION_FILTERS)
   const [transactionSort, setTransactionSort] = useState<SortState<TransactionSortKey>>({ key: 'date', direction: 'desc' })
 
+  // Saqlash natijasini kuzatadi: yangi xato bo'lsa bir marta toast chiqadi
+  const reportSave = (key: string, result: SaveResult) => {
+    const reason = saveMonitor.report(key, result)
+    if (reason) toast.error(saveErrorMessage(reason))
+  }
+  // Effektlardan chaqirish uchun: toast o'zgarsa ham effektlar qayta ishga tushmaydi
+  const onSaved = useEffectEvent(reportSave)
+
+  useEffect(() => {
+    // Faqat birinchi yuklashda (migratsiyani qayta saqlash muvaffaqiyatsiz bo'lsa)
+    if (initial.saveError) onSaved('all', { ok: false, reason: initial.saveError })
+  }, [initial.saveError])
+
+  useEffect(() => {
+    if (initial.backupError) toast.error(tr('Yangilanishdan oldingi zaxira nusxasi saqlanmadi (brauzer xotirasi to\'lgan). Sozlamalar → Ma\'lumotlar\'dan JSON zaxira yuklab oling.'))
+  }, [initial.backupError, toast])
+
   useEffect(() => {
     if (initial.dropped > 0 && !startupNoticeRef.current) {
       startupNoticeRef.current = true
-      toast.info(`${initial.dropped} ta buzuq yozuv topildi va tashlab yuborildi`)
+      toast.info(tr('{0} ta buzuq yozuv topildi va tashlab yuborildi', { 0: initial.dropped }))
     }
   }, [initial.dropped, toast])
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (unsavedRef.current) event.preventDefault()
+      // Sozlamalarda saqlanmagan forma yoki brauzerga yozib bo'lmagan ma'lumot bor
+      if (unsavedRef.current || saveMonitor.isFailing()) event.preventDefault()
     }
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [])
+  }, [saveMonitor])
 
-  useEffect(() => setItem(STORAGE_KEYS.customers, customers), [customers])
-  useEffect(() => setItem(STORAGE_KEYS.transactions, transactions), [transactions])
-  useEffect(() => setItem(STORAGE_KEYS.settings, settings), [settings])
+  // Har bir ro'yxat o'zgarganda alohida yoziladi; natija reportSave orqali kuzatiladi
+  // Bulut: oxirgi muvaffaqiyatli yuborilgan holat va navbat (o'zgarishlar ketma-ket, faqat farqi yuboriladi).
+  // Xato bo'lsa holat yangilanmaydi — keyingi o'zgarishda farq qayta yuboriladi
+  const synced = useRef(initial.data)
+  // Ilovadagi eng oxirgi holat (yuborilgan-yuborilmaganidan qat'i nazar) — qayta urinish va yangilash uchun
+  const latest = useRef<StoredData>(initial.data)
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  const pushCloud = useEffectEvent(<K extends ListKey | 'settings'>(key: K, next: StoredData[K]) => {
+    if (!cloud) return
+    latest.current = { ...latest.current, [key]: next }
+    if (synced.current[key] === next) return
+    queue.current = queue.current.then(async () => {
+      const prev = synced.current[key]
+      try {
+        if (key === 'settings') await cloud.sync.settings(next as Settings)
+        else await cloud.sync.list(key as ListKey, prev as never, next as never)
+        synced.current = { ...synced.current, [key]: next }
+        onSaved(key, { ok: true })
+      } catch (error) {
+        // B-04: boshqa xodim shu yozuvni o'zgartirgan — ustidan yozilmaydi, serverdagi holat olib kelinadi
+        if (error instanceof SyncConflictError) {
+          synced.current = { ...synced.current, [key]: next }
+          latest.current = { ...latest.current, [key]: next }
+          onSaved(key, { ok: true })
+          toast.error(tr('Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi', { 0: error.ids.length }))
+          setConflicts((n) => n + 1)
+          return
+        }
+        onSaved(key, { ok: false, reason: 'network' })
+      }
+    })
+  })
+
+  useEffect(() => (cloud ? pushCloud('branches', branches) : onSaved(STORAGE_KEYS.branches, setItem(STORAGE_KEYS.branches, branches))), [branches, cloud])
+  // Yuborilmay qolgan o'zgarishlar (internet yo'q edi) — qayta yuboriladi
+  const retryCloud = useEffectEvent(() => {
+    for (const key of [...LIST_KEYS, 'settings'] as const) {
+      if (latest.current[key] !== synced.current[key]) pushCloud(key, latest.current[key])
+    }
+  })
+
+  // Serverdagi yangi holatni olish: faqat yuborilmagan o'zgarishi YO'Q ro'yxatlar almashtiriladi
+  const refreshCloud = useEffectEvent(() => {
+    const reload = cloud?.reload
+    if (!cloud || !reload) return
+    queue.current = queue.current.then(async () => {
+      try {
+        const snapshot = await reload()
+        const setters: { [K in ListKey | 'settings']: (value: never) => void } = {
+          branches: setBranches,
+          customers: setCustomers,
+          transactions: setTransactions,
+          courses: setCourses,
+          teachers: setTeachers,
+          groups: setGroups,
+          enrollments: setEnrollments,
+          attendance: setAttendance,
+          lessonExceptions: setLessonExceptions,
+          settings: setSettings,
+        }
+        let clean = true
+        for (const key of [...LIST_KEYS, 'settings'] as const) {
+          if (latest.current[key] !== synced.current[key]) {
+            clean = false
+            continue
+          }
+          const fresh = snapshot.data[key]
+          if (stableJson(fresh) === stableJson(synced.current[key])) continue
+          synced.current = { ...synced.current, [key]: fresh }
+          latest.current = { ...latest.current, [key]: fresh }
+          setters[key](fresh as never)
+        }
+        if (clean) {
+          cloud.sync.setTrash(snapshot.trash)
+          setTrash((current) => (stableJson(current) === stableJson(snapshot.trash) ? current : snapshot.trash))
+        }
+      } catch {
+        // Tarmoq xatosi — keyingi safar
+      }
+    })
+  })
+
+  useEffect(() => {
+    if (conflicts > 0) refreshCloud()
+  }, [conflicts])
+
+  useEffect(() => {
+    if (!cloud) return
+    const onOnline = () => {
+      retryCloud()
+      refreshCloud()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') onOnline()
+    }
+    window.addEventListener('online', onOnline)
+    document.addEventListener('visibilitychange', onVisible)
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && navigator.onLine !== false) onOnline()
+    }, CLOUD_REFRESH_MS)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.clearInterval(timer)
+    }
+  }, [cloud])
+
+  useEffect(() => (cloud ? pushCloud('customers', customers) : onSaved(STORAGE_KEYS.customers, setItem(STORAGE_KEYS.customers, customers))), [customers, cloud])
+  useEffect(() => (cloud ? pushCloud('transactions', transactions) : onSaved(STORAGE_KEYS.transactions, setItem(STORAGE_KEYS.transactions, transactions))), [transactions, cloud])
+  useEffect(() => (cloud ? pushCloud('settings', settings) : onSaved(STORAGE_KEYS.settings, setItem(STORAGE_KEYS.settings, settings))), [settings, cloud])
+  useEffect(() => (cloud ? pushCloud('courses', courses) : onSaved(STORAGE_KEYS.courses, setItem(STORAGE_KEYS.courses, courses))), [courses, cloud])
+  useEffect(() => (cloud ? pushCloud('teachers', teachers) : onSaved(STORAGE_KEYS.teachers, setItem(STORAGE_KEYS.teachers, teachers))), [teachers, cloud])
+  useEffect(() => (cloud ? pushCloud('groups', groups) : onSaved(STORAGE_KEYS.groups, setItem(STORAGE_KEYS.groups, groups))), [groups, cloud])
+  useEffect(() => (cloud ? pushCloud('enrollments', enrollments) : onSaved(STORAGE_KEYS.enrollments, setItem(STORAGE_KEYS.enrollments, enrollments))), [enrollments, cloud])
+  useEffect(() => (cloud ? pushCloud('attendance', attendance) : onSaved(STORAGE_KEYS.attendance, setItem(STORAGE_KEYS.attendance, attendance))), [attendance, cloud])
+  useEffect(
+    () => (cloud ? pushCloud('lessonExceptions', lessonExceptions) : onSaved(STORAGE_KEYS.lessonExceptions, setItem(STORAGE_KEYS.lessonExceptions, lessonExceptions))),
+    [lessonExceptions, cloud],
+  )
+  useEffect(() => {
+    if (!cloud) onSaved(TRASH_KEY, saveTrash(trash))
+  }, [trash, cloud])
+
+  // Bulut: onlayn to'lovlar (Payme/Click) serverda yoziladi — har daqiqada va oynaga qaytilganda olib kelinadi.
+  // Olib kelingan yozuvlar "yuborilgan" holatga ham qo'shiladi (serverga qayta yozilmaydi)
+  const providerSince = useRef('')
+  const pollProviders = useEffectEvent(async () => {
+    if (!cloud) return
+    if (!providerSince.current) {
+      const latest = transactions.reduce((max, t) => (t.provider && t.updatedAt && t.updatedAt > max ? t.updatedAt : max), '')
+      providerSince.current = latest || new Date(Date.now() - 10 * 60_000).toISOString()
+    }
+    try {
+      const remote = await cloud.sync.providerPayments(providerSince.current)
+      if (remote.length === 0) return
+      providerSince.current = remote.reduce((max, t) => (t.updatedAt && t.updatedAt > max ? t.updatedAt : max), providerSince.current)
+      const known = new Set(transactions.map((t) => t.id))
+      synced.current = { ...synced.current, transactions: mergeRemote(synced.current.transactions, remote) }
+      setTransactions((list) => mergeRemote(list, remote))
+      for (const t of remote) {
+        if (known.has(t.id) || t.status !== 'paid') continue
+        toast.success(tr('{0} orqali to\'lov: {1} — {2}', { 0: t.provider === 'click' ? 'Click' : 'Payme', 1: formatMoney(t.amount, settings.currency), 2: t.customerName ?? '' }))
+      }
+    } catch {
+      // Tarmoq yoki migratsiya hali qo'llanmagan — keyingi safar qayta urinadi
+    }
+  })
+  useEffect(() => {
+    if (!cloud) return
+    const tick = () => void pollProviders()
+    const timer = window.setInterval(tick, 60_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    tick()
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [cloud])
 
   // Boshqa tabda o'zgargan ma'lumotni shu tabga olib kelish (storage event faqat boshqa tablarda chiqadi)
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
-      if (event.storageArea !== localStorage) return
-      const watched: Array<string | null> = [null, STORAGE_KEYS.customers, STORAGE_KEYS.transactions, STORAGE_KEYS.settings]
-      if (!watched.includes(event.key)) return
+      if (cloud || event.storageArea !== localStorage) return
+      // Demo rejimda kalitlar boshqa nom maydonida (eduflow-demo:*)
+      const is = (key: string) => event.key === null || event.key === physicalKey(key)
+      const watched = [...LIST_KEYS.map((key) => STORAGE_KEYS[key]), STORAGE_KEYS.settings, STORAGE_KEYS.demo, TRASH_KEY]
+      if (!watched.some(is)) return
+      if (is(TRASH_KEY)) setTrash(loadTrash())
+      if (is(STORAGE_KEYS.demo)) setIsDemo(isDemoMode())
       const { data } = readStored()
-      if (event.key === null || event.key === STORAGE_KEYS.customers) setCustomers(data.customers)
-      if (event.key === null || event.key === STORAGE_KEYS.transactions) setTransactions(data.transactions)
-      if (event.key === null || event.key === STORAGE_KEYS.settings) setSettings(data.settings)
+      if (is(STORAGE_KEYS.customers)) setCustomers(data.customers)
+      if (is(STORAGE_KEYS.transactions)) setTransactions(data.transactions)
+      if (is(STORAGE_KEYS.settings)) setSettings(data.settings)
+      if (is(STORAGE_KEYS.courses)) setCourses(data.courses)
+      if (is(STORAGE_KEYS.teachers)) setTeachers(data.teachers)
+      if (is(STORAGE_KEYS.groups)) setGroups(data.groups)
+      if (is(STORAGE_KEYS.enrollments)) setEnrollments(data.enrollments)
+      if (is(STORAGE_KEYS.attendance)) setAttendance(data.attendance)
+      if (is(STORAGE_KEYS.lessonExceptions)) setLessonExceptions(data.lessonExceptions)
+      if (is(STORAGE_KEYS.branches)) setBranches(data.branches)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [])
-
-  // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi
-  const balance = transactions.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0)
-
-  const courses = settings.courses
+  }, [cloud])
 
   const getCustomer = (id?: string) => (id ? customers.find((c) => c.id === id) : undefined)
+
+  // Mijoz tanlangan bo'lsa, uning joriy ismi snapshot sifatida yoziladi
+  const withCustomerName = <T extends Partial<TransactionInput>>(data: T): T => {
+    const customer = getCustomer(data.customerId)
+    return customer ? { ...data, customerName: customer.name } : data
+  }
+
+  // O'chirilgan mijozlar ismi tranzaksiyalardagi snapshot'dan olinadi
+  const snapshotNames = new Map<string, string>()
+  for (const t of transactions) if (t.customerId && t.customerName) snapshotNames.set(t.customerId, t.customerName)
   const money = (amount: number) => formatMoney(amount, settings.currency)
+
+  // Ruxsat bo'lmasa amal bajarilmaydi (tugmalar ham yashiriladi — bu ikkinchi himoya qatlami)
+  const allowed = (permission: Permission): boolean => {
+    if (can(permission)) return true
+    toast.error(DENIED_MESSAGE)
+    return false
+  }
+
+  const audit = (action: AuditAction, summary: string, entityId?: string) => logAudit(actor, action, summary, entityId)
+
+  const txSummary = (t: Pick<Transaction, 'type' | 'amount' | 'category' | 'customerId' | 'customerName'>) =>
+    `${TYPE_LABELS[t.type]} ${money(t.amount)} · ${t.customerName ?? (t.customerId ? getCustomer(t.customerId)?.name : undefined) ?? CATEGORY_LABELS[t.category]}`
+
+  // Savatchaga: bir xil yozuv ikki marta tushmaydi
+  const toTrash = (entry: TrashEntry) => {
+    setTrash((list) => [entry, ...pruneTrash(list).filter((e) => !(e.kind === entry.kind && e.id === entry.id))])
+  }
+
+  // Savatchadan qaytarish (toast'dagi "Bekor qilish" ham shuni chaqiradi — holat funksional yangilanadi)
+  const restoreEntry = (entry: TrashEntry) => {
+    setTrash((list) => list.filter((e) => !(e.kind === entry.kind && e.id === entry.id)))
+    switch (entry.kind) {
+      case 'customer':
+        setCustomers((list) => (list.some((c) => c.id === entry.id) ? list : [entry.item, ...list]))
+        audit('customer.restore', entry.item.name, entry.id)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
+        break
+      case 'transaction':
+        setTransactions((list) => (list.some((t) => t.id === entry.id) ? list : [entry.item, ...list]))
+        audit('payment.restore', txSummary(entry.item), entry.id)
+        toast.success(tr('Tranzaksiya tiklandi'))
+        break
+      case 'course':
+        setCourses((list) => {
+          if (list.some((c) => c.id === entry.id)) return list
+          // Shu nomli kurs keyin qo'shilgan bo'lsa — nomlar takrorlanmasligi uchun belgi qo'shiladi
+          const taken = list.some((c) => c.name.toLowerCase() === entry.item.name.toLowerCase())
+          return [...list, taken ? { ...entry.item, name: `${entry.item.name} (tiklangan)` } : entry.item]
+        })
+        audit('course.restore', entry.item.name, entry.id)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
+        break
+      case 'teacher':
+        setTeachers((list) => (list.some((t) => t.id === entry.id) ? list : [...list, entry.item]))
+        audit('teacher.restore', entry.item.name, entry.id)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
+        break
+      case 'group':
+        setGroups((list) => (list.some((g) => g.id === entry.id) ? list : [...list, entry.item]))
+        audit('group.restore', entry.item.name, entry.id)
+        toast.success(tr('"{0}" tiklandi', { 0: entry.item.name }))
+        break
+      case 'enrollment':
+        setEnrollments((list) => (list.some((e) => e.id === entry.id) ? list : [...list, entry.item]))
+        audit('enrollment.restore', entry.label ?? entry.id, entry.id)
+        toast.success(tr('{0} guruhga qaytarildi', { 0: entry.label ?? '' }))
+        break
+    }
+  }
+
+  const undo = (entry: TrashEntry) => ({ action: { label: tr('Bekor qilish'), onClick: () => restoreEntry(entry) } })
+
+  const trashed = <K extends TrashKind>(kind: K, id: string, item: Extract<TrashEntry, { kind: K }>['item']) =>
+    ({ kind, id, item, deletedAt: new Date().toISOString(), deletedBy: actor?.userName ?? '' }) as TrashEntry
+
+  // ===== Filial: filialga cheklangan xodim — faqat o'z filiali; qolganlar — Header'da tanlangani ('' — barchasi).
+  // Qoida bulutdagi RLS bilan bir xil (20261108000003_branches.sql): guruh va to'lov — shu filialniki; o'quvchi — shu
+  // filialniki yoki shu filial guruhida o'qiydi; o'qish, davomat — shu filial guruhlarida. Filialsiz yozuv — faqat "Barchasi"da
+  const restrictedBranch = authUser?.branchId || undefined
+  const branchScope = restrictedBranch ?? (branchFilter && branches.some((b) => b.id === branchFilter) ? branchFilter : '')
+  const scopedGroups = branchScope ? groups.filter((g) => g.branchId === branchScope) : groups
+  const scopedGroupIds = new Set(scopedGroups.map((g) => g.id))
+  const scopedEnrollments = branchScope ? enrollments.filter((e) => scopedGroupIds.has(e.groupId)) : enrollments
+  const branchStudents = new Set(scopedEnrollments.map((e) => e.customerId))
+  const scopedCustomers = branchScope ? customers.filter((c) => c.branchId === branchScope || branchStudents.has(c.id)) : customers
+  const scopedTransactions = branchScope ? transactions.filter((t) => t.branchId === branchScope) : transactions
+  // Yangi yozuv filiali: filiallar bo'lsa — cheklangan xodimniki yoki tanlangani (barchasi tanlangan bo'lsa — forma so'raydi)
+  const defaultBranch = branches.length > 0 ? restrictedBranch ?? (branchScope || undefined) : undefined
+  // Mijoz to'lovi — o'qish guruhining, bo'lmasa o'quvchining filiali; boshqa yozuv — formada tanlangani yoki standart
+  const transactionBranch = (t: Partial<TransactionInput>): string | undefined => {
+    if (branches.length === 0) return t.branchId
+    if (restrictedBranch) return restrictedBranch
+    const enrollment = t.enrollmentId ? enrollments.find((e) => e.id === t.enrollmentId) : undefined
+    const groupBranch = enrollment ? groups.find((g) => g.id === enrollment.groupId)?.branchId : undefined
+    const customerBranch = t.customerId ? customers.find((c) => c.id === t.customerId)?.branchId : undefined
+    return groupBranch || customerBranch || (t.branchId ?? defaultBranch)
+  }
+
+  // Kassa balansi saqlanmaydi — har safar tranzaksiyalardan hisoblanadi (tanlangan filial bo'yicha)
+  const balance = cashBalance(scopedTransactions)
+
+  // ===== O'qituvchi faqat o'z guruhlarini ko'radi; o'quvchilarning telefoni yashirin; to'lovlar — ruxsat bo'yicha =====
+  const ownTeacher = role === 'teacher' ? teacherForUser(authUser?.id, teachers) : undefined
+  const scoped = role === 'teacher'
+  const visibleGroups = scoped ? scopedGroups.filter((g) => ownTeacher !== undefined && g.teacherId === ownTeacher.id) : scopedGroups
+  const visibleGroupIds = new Set(visibleGroups.map((g) => g.id))
+  // Savatchadagi (o'chirilgan) mijozning o'qishlari ko'rinmaydi — tiklansa qaytadi
+  const liveCustomerIds = new Set(customers.map((c) => c.id))
+  const visibleEnrollments = scopedEnrollments.filter((e) => liveCustomerIds.has(e.customerId) && (!scoped || visibleGroupIds.has(e.groupId)))
+  const studentIds = new Set(visibleEnrollments.map((e) => e.customerId))
+  const visibleCustomers = scoped
+    ? customers.filter((c) => studentIds.has(c.id)).map((c): Customer => ({ id: c.id, name: c.name, phone: '', course: c.course, status: c.status, source: c.source, createdAt: c.createdAt }))
+    : scopedCustomers
+  const visibleTransactions = can('payments.view') ? scopedTransactions : []
+  const groupScoped = scoped || Boolean(branchScope)
+
+  // Filial ishlatilganmi (guruh, o'quvchi, to'lov yoki xodim biriktirilgan) — bo'lsa o'chirilmaydi, arxivlanadi
+  const branchInUse = (id: string) =>
+    groups.some((g) => g.branchId === id) ||
+    customers.some((c) => c.branchId === id) ||
+    transactions.some((t) => t.branchId === id) ||
+    (authContextUsers ?? []).some((u) => u.branchId === id)
+
+  const edu = createEduActions({
+    customers,
+    courses,
+    teachers,
+    groups,
+    enrollments,
+    attendance,
+    lessonExceptions,
+    settings,
+    setCustomers,
+    setTeachers,
+    setGroups,
+    setEnrollments,
+    setAttendance,
+    setLessonExceptions,
+    role,
+    ownTeacherId: ownTeacher?.id,
+    defaultBranch,
+    actorName: actor?.userName ?? '',
+    can,
+    allowed: (permission) => allowed(permission),
+    audit: (action, summary, entityId) => audit(action, summary, entityId),
+    toast,
+    toTrash: (entry) => toTrash(entry),
+    undo: (entry) => undo(entry),
+  })
 
   const applyData = (data: StoredData) => {
     setCustomers(data.customers)
     setTransactions(data.transactions)
     setSettings(data.settings)
+    setCourses(data.courses)
+    setTeachers(data.teachers)
+    setGroups(data.groups)
+    setEnrollments(data.enrollments)
+    setAttendance(data.attendance)
+    setLessonExceptions(data.lessonExceptions)
+    setBranches(data.branches)
     setSearch('')
     setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
     setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
   }
 
   const value: DashboardContextValue = {
-    customers,
-    transactions,
+    customers: visibleCustomers,
+    transactions: visibleTransactions,
     settings,
     courses,
+    teachers: scoped ? (ownTeacher ? [ownTeacher] : []) : teachers,
+    groups: visibleGroups,
+    enrollments: visibleEnrollments,
+    attendance: groupScoped ? attendance.filter((r) => visibleGroupIds.has(r.groupId)) : attendance,
+    lessonExceptions: groupScoped ? lessonExceptions.filter((e) => visibleGroupIds.has(e.groupId)) : lessonExceptions,
+    ownTeacher,
+    branches: restrictedBranch ? branches.filter((b) => b.id === restrictedBranch) : branches,
+    branchFilter: branchScope,
+    restrictedBranch,
+    setBranchFilter: (id) => {
+      if (!restrictedBranch) setBranchFilter(id)
+    },
+    getBranch: (id) => (id ? branches.find((b) => b.id === id) : undefined),
+    addBranch: (input, options) => {
+      if (!allowed('settings.manage')) return null
+      if (restrictedBranch) {
+        toast.error(DENIED_MESSAGE)
+        return null
+      }
+      const active = branches.filter((b) => b.status === 'active').length
+      if (branchLimit !== null && active >= branchLimit) {
+        toast.error(tr('Tarifingizda {0} ta filial. Ko\'proq filial uchun Pro tarifga o\'ting.', { 0: branchLimit }))
+        return null
+      }
+      const name = input.name.trim().replace(/\s+/g, ' ')
+      if (branches.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
+        toast.error(tr('"{0}" nomli filial bor', { 0: name }))
+        return null
+      }
+      const branch: Branch = { name, address: input.address.trim(), phone: input.phone.trim(), status: input.status, id: createId('b'), createdAt: new Date().toISOString() }
+      setBranches((list) => [...list, branch])
+      // Birinchi filial: mavjud guruhlar, o'quvchilar va to'lovlar shu filialga biriktiriladi
+      if (options?.assignExisting) {
+        const assign = <T extends { branchId?: string }>(list: T[]) => list.map((item) => (item.branchId ? item : { ...item, branchId: branch.id }))
+        setGroups(assign)
+        setCustomers(assign)
+        setTransactions(assign)
+      }
+      audit('branch.create', branch.name, branch.id)
+      toast.success(tr('"{0}" filiali qo\'shildi', { 0: branch.name }))
+      return branch.id
+    },
+    updateBranch: (id, patch) => {
+      if (!allowed('settings.manage') || restrictedBranch) return
+      const before = branches.find((b) => b.id === id)
+      if (!before) return
+      const name = patch.name === undefined ? before.name : patch.name.trim().replace(/\s+/g, ' ')
+      if (branches.some((b) => b.id !== id && b.name.toLowerCase() === name.toLowerCase())) {
+        toast.error(tr('"{0}" nomli filial bor', { 0: name }))
+        return
+      }
+      if (patch.status === 'active' && before.status === 'archived' && branchLimit !== null && branches.filter((b) => b.status === 'active').length >= branchLimit) {
+        toast.error(tr('Tarifingizda {0} ta filial. Ko\'proq filial uchun Pro tarifga o\'ting.', { 0: branchLimit }))
+        return
+      }
+      setBranches((list) =>
+        list.map((b) => (b.id === id ? { ...b, ...patch, name, address: (patch.address ?? b.address).trim(), phone: (patch.phone ?? b.phone).trim(), updatedAt: new Date().toISOString() } : b)),
+      )
+      const archived = patch.status === 'archived' && before.status !== 'archived'
+      audit(archived ? 'branch.archive' : 'branch.update', name, id)
+      toast.success(archived ? tr('"{0}" arxivlandi', { 0: name }) : tr('"{0}" saqlandi', { 0: name }))
+    },
+    removeBranch: (id) => {
+      if (!allowed('settings.manage') || restrictedBranch) return
+      const branch = branches.find((b) => b.id === id)
+      if (!branch) return
+      if (branchInUse(id)) {
+        setBranches((list) => list.map((b) => (b.id === id ? { ...b, status: 'archived', updatedAt: new Date().toISOString() } : b)))
+        audit('branch.archive', branch.name, id)
+        toast.info(tr('"{0}" filialida guruh, o\'quvchi yoki to\'lovlar bor — o\'chirish o\'rniga arxivlandi', { 0: branch.name }))
+        return
+      }
+      setBranches((list) => list.filter((b) => b.id !== id))
+      if (branchFilter === id) setBranchFilter('')
+      audit('branch.delete', branch.name, id)
+      toast.success(tr('"{0}" filiali o\'chirildi', { 0: branch.name }))
+    },
+    ...edu,
+    getGroup: (id) => (id ? groups.find((g) => g.id === id) : undefined),
+    getTeacher: (id) => (id ? teachers.find((t) => t.id === id) : undefined),
+    exportData: () => ({ customers, transactions, courses, settings, teachers, groups, enrollments, attendance, lessonExceptions, branches }),
+    debtContext: { groups: visibleGroups, enrollments: visibleEnrollments, settings: { prorateFirstMonth: settings.prorateFirstMonth, paymentDueDay: settings.paymentDueDay } },
+    logReminders: (customerIds, channel) => {
+      for (const id of customerIds) audit('reminder.sent', `${getCustomer(id)?.name ?? id} · ${channel}`, id)
+    },
+    importCustomers: (plan) => {
+      if (!allowed('customers.edit')) return null
+      const now = new Date().toISOString()
+      // Kurs yaratish — faqat courses.edit ruxsati bilan; nomi bir xil kurs ikkinchi marta yaratilmaydi
+      const known = new Set(courses.map((c) => c.name.toLowerCase()))
+      const newCourses: Course[] = can('courses.edit')
+        ? [...new Set(plan.courses.map(normalizeCourseName))]
+            .filter((name) => name && !known.has(name.toLowerCase()))
+            .map((name) => ({ id: createId('k'), name, type: 'course', durationMonths: 0, monthlyPrice: 0, status: 'active', createdAt: now }))
+        : []
+      const available = new Set([...courses, ...newCourses].map((c) => c.name))
+      const created: Customer[] = plan.create.map((c) => ({ ...c, course: available.has(c.course) ? c.course : '', id: createId('c'), ...(defaultBranch ? { branchId: defaultBranch } : {}) }))
+      const patches = new Map(plan.update.map((u) => [u.id, u.patch]))
+      const previous = customers.filter((c) => patches.has(c.id))
+      if (newCourses.length) setCourses((list) => [...list, ...newCourses])
+      setCustomers((list) => [
+        ...created,
+        ...list.map((c) => {
+          const patch = patches.get(c.id)
+          return patch ? withPaidAt(c, { ...c, ...cleanCustomer(patch), updatedAt: now }, now) : c
+        }),
+      ])
+      audit('import.run', tr('{0}: qo\'shildi {1}, yangilandi {2}, o\'tkazib yuborildi {3}', { 0: plan.fileName, 1: created.length, 2: previous.length, 3: plan.skipped }))
+      return { fileName: plan.fileName, createdIds: created.map((c) => c.id), previous, courseIds: newCourses.map((c) => c.id), added: created.length, updated: previous.length, skipped: plan.skipped }
+    },
+    undoImport: (receipt) => {
+      if (!allowed('customers.edit')) return
+      const createdIds = new Set(receipt.createdIds)
+      const previous = new Map(receipt.previous.map((c) => [c.id, c]))
+      setCustomers((list) => list.filter((c) => !createdIds.has(c.id)).map((c) => previous.get(c.id) ?? c))
+      // Import yaratgan kurs — guruh ochilmagan bo'lsa olib tashlanadi
+      const courseIds = new Set(receipt.courseIds)
+      if (courseIds.size) setCourses((list) => list.filter((k) => !courseIds.has(k.id) || groups.some((g) => g.courseId === k.id)))
+      audit('import.undo', tr('{0}: {1} ta mijoz o\'chirildi, {2} tasi qaytarildi', { 0: receipt.fileName, 1: receipt.added, 2: receipt.updated }))
+      toast.success(tr('Import bekor qilindi'))
+    },
     search,
     dateRange,
     activeSection,
     modal,
     sidebarOpen,
+    sidebarCollapsed,
     balance,
+    isDemo,
     customerFilters,
     customerSort,
     transactionFilters,
@@ -120,28 +707,37 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setSearch,
     setDateRange,
     setActiveSection: async (section) => {
+      if (!sectionAllowed(role, section)) {
+        const [required] = sectionPermissions(section)
+        if (required) allowed(required)
+        return
+      }
       if (section === activeSection) {
         setSidebarOpen(false)
         return
       }
       if (unsavedRef.current) {
         const leave = await confirm({
-          title: 'Saqlanmagan o\'zgarishlar',
-          message: 'Sozlamalarda saqlanmagan o\'zgarishlar bor. Chiqsangiz, ular yo\'qoladi.',
-          confirmLabel: 'Saqlamasdan chiqish',
+          title: tr('Saqlanmagan o\'zgarishlar'),
+          message: tr('Sozlamalarda saqlanmagan o\'zgarishlar bor. Chiqsangiz, ular yo\'qoladi.'),
+          confirmLabel: tr('Saqlamasdan chiqish'),
         })
         if (!leave) return
         unsavedRef.current = false
       }
       setSection(section)
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${section}`)
       setSidebarOpen(false)
     },
     setUnsavedChanges: (dirty) => {
       unsavedRef.current = dirty
     },
-    openModal: (next) => setModal(next),
+    openModal: (next) => {
+      if (allowed(modalPermission(next))) setModal(next)
+    },
     closeModal: () => setModal(null),
     toggleSidebar: () => setSidebarOpen((open) => !open),
+    toggleSidebarCollapsed: () => setSidebarCollapsed(!sidebarCollapsed),
     setCustomerFilters,
     setCustomerSort,
     setTransactionFilters,
@@ -149,52 +745,246 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     getCustomer,
     getTransaction: (id) => (id ? transactions.find((t) => t.id === id) : undefined),
     addCustomer: (data) => {
-      const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt: new Date().toISOString() }
+      if (!allowed('customers.edit')) return
+      const createdAt = new Date().toISOString()
+      const branchId = restrictedBranch ?? data.branchId ?? defaultBranch
+      const customer: Customer = { ...cleanCustomer(data), id: createId('c'), createdAt, ...(data.status === 'paid' ? { paidAt: createdAt } : {}), ...(branchId ? { branchId } : {}) }
       setCustomers((list) => [customer, ...list])
-      toast.success(`"${customer.name}" mijozlar bazasiga qo'shildi`)
+      audit('customer.create', customer.name, customer.id)
+      toast.success(tr('"{0}" mijozlar bazasiga qo\'shildi', { 0: customer.name }))
     },
     updateCustomer: (id, patch) => {
+      if (!allowed('customers.edit')) return
       const updatedAt = new Date().toISOString()
-      setCustomers((list) => list.map((c) => (c.id === id ? { ...c, ...cleanCustomer(patch), updatedAt } : c)))
-      const name = getCustomer(id)?.name ?? 'Mijoz'
+      setCustomers((list) => list.map((c) => (c.id === id ? withPaidAt(c, { ...c, ...cleanCustomer(patch), updatedAt }, updatedAt) : c)))
+      const before = getCustomer(id)
+      const name = before?.name ?? 'Mijoz'
       const keys = Object.keys(patch)
-      if (keys.length === 1 && patch.status) toast.success(`${name}: holat "${STATUS_LABELS[patch.status]}" ga o'zgartirildi`)
-      else toast.success(`${name} ma'lumotlari saqlandi`)
+      if (keys.length === 1 && patch.status) {
+        audit('customer.status', `${name}: ${before ? STATUS_LABELS[before.status] : '—'} → ${STATUS_LABELS[patch.status]}`, id)
+        toast.success(tr('{0}: bosqich "{1}" ga o\'zgartirildi', { 0: name, 1: STATUS_LABELS[patch.status] }))
+      } else {
+        audit('customer.update', patch.name && patch.name.trim() !== name ? `${name} → ${patch.name.trim()}` : name, id)
+        toast.success(tr('{0} ma\'lumotlari saqlandi', { 0: name }))
+      }
     },
     deleteCustomer: (id) => {
-      const name = getCustomer(id)?.name ?? 'Mijoz'
+      if (!allowed('customers.delete')) return
+      const customer = getCustomer(id)
+      if (!customer) return
+      const name = customer.name
       setCustomers((list) => list.filter((c) => c.id !== id))
-      toast.success(`"${name}" o'chirildi`)
+      // Bog'liq to'lovlar jurnalda qoladi — ism snapshot'i o'chirish paytidagi holatga yangilanadi
+      setTransactions((list) => list.map((t) => (t.customerId === id ? { ...t, customerName: name } : t)))
+      const entry = trashed('customer', id, customer)
+      toTrash(entry)
+      audit('customer.delete', name, id)
+      toast.success(tr('"{0}" savatchaga o\'tkazildi', { 0: name }), undo(entry))
     },
     addTransaction: (data) => {
-      setTransactions((list) => [{ ...cleanTransaction(data), id: createId('t') }, ...list])
-      toast.success(`${data.type === 'income' ? 'To\'lov' : 'Xarajat'} qayd etildi: ${money(data.amount)}`)
+      if (!allowed(data.type === 'income' ? 'payments.create' : 'payments.manage')) return false
+      const branchId = transactionBranch(data)
+      const created = { ...withCustomerName(cleanTransaction(data)), id: createId('t'), ...(branchId !== undefined ? { branchId } : {}) }
+      setTransactions((list) => [created, ...list])
+      audit('payment.create', txSummary(created), created.id)
+      const receipt = created.type === 'income' ? { action: { label: tr('Chek'), onClick: () => setModal({ type: 'receipt', payload: { id: created.id } }) } } : undefined
+      toast.success(tr('{0} qayd etildi: {1}', { 0: data.type === 'income' ? 'To\'lov' : 'Xarajat', 1: money(data.amount) }), receipt)
+      return true
     },
     updateTransaction: (id, patch) => {
+      if (!allowed('payments.manage')) return false
       const updatedAt = new Date().toISOString()
-      setTransactions((list) => list.map((t) => (t.id === id ? { ...t, ...cleanTransaction(patch), updatedAt } : t)))
-      toast.success('Tranzaksiya yangilandi')
+      const clean = withCustomerName(cleanTransaction(patch))
+      setTransactions((list) =>
+        list.map((t) => {
+          if (t.id !== id) return t
+          const next = { ...t, ...clean, updatedAt }
+          // Mijoz, o'qish yoki filial o'zgarsa — filial qayta aniqlanadi (filialsiz qilinsa — '' bulutga null bo'lib boradi)
+          if (branches.length > 0 && ('customerId' in patch || 'enrollmentId' in patch || 'branchId' in patch)) {
+            const branchId = transactionBranch(next)
+            next.branchId = branchId ?? (t.branchId ? '' : undefined)
+            if (next.branchId === undefined) delete next.branchId
+          }
+          // To'langan to'lov kelajakda bo'lolmaydi: kutilgan sana o'tmagan bo'lsa, bugungi kun yoziladi
+          if (next.status === 'paid' && new Date(next.date).getTime() > Date.now()) next.date = updatedAt
+          return next
+        }),
+      )
+      const keys = Object.keys(patch)
+      const before = transactions.find((t) => t.id === id)
+      if (keys.every((k) => k === 'status' || k === 'date') && patch.status) {
+        if (before) audit('payment.status', `${txSummary(before)}: ${TX_STATUS_LABELS[before.status]} → ${TX_STATUS_LABELS[patch.status]}`, id)
+        toast.success(tr('Status: "{0}"', { 0: TX_STATUS_LABELS[patch.status] }))
+      } else {
+        if (before) audit('payment.update', txSummary({ ...before, ...clean }), id)
+        toast.success(tr('Tranzaksiya yangilandi'))
+      }
+      return true
     },
     deleteTransaction: (id) => {
+      if (!allowed('payments.manage')) return
+      const transaction = transactions.find((t) => t.id === id)
+      if (!transaction) return
       setTransactions((list) => list.filter((t) => t.id !== id))
-      toast.success('Tranzaksiya o\'chirildi')
+      // Mijoz ismi snapshot'i bilan: mijoz keyin o'chirilsa ham savatchada kimniki ekani ko'rinadi
+      const entry = trashed('transaction', id, withCustomerName(transaction))
+      toTrash(entry)
+      audit('payment.delete', txSummary(transaction), id)
+      toast.success(tr('Tranzaksiya savatchaga o\'tkazildi'), undo(entry))
+    },
+    getCourse: (id) => (id ? courses.find((c) => c.id === id) : undefined),
+    addCourse: (data) => {
+      if (!allowed('courses.edit')) return
+      const course: Course = { ...data, name: normalizeCourseName(data.name), id: createId('k'), createdAt: new Date().toISOString() }
+      setCourses((list) => [...list, course])
+      audit('course.create', course.name, course.id)
+      toast.success(tr('"{0}" qo\'shildi', { 0: course.name }))
+    },
+    updateCourse: (id, patch) => {
+      if (!allowed('courses.edit')) return
+      const before = courses.find((c) => c.id === id)
+      if (!before) return
+      const name = patch.name === undefined ? before.name : normalizeCourseName(patch.name)
+      setCourses((list) => list.map((c) => (c.id === id ? { ...c, ...patch, name, updatedAt: new Date().toISOString() } : c)))
+      if (name !== before.name) {
+        setCustomers((list) => list.map((c) => (c.course === before.name ? { ...c, course: name } : c)))
+      }
+      const keys = Object.keys(patch)
+      if (keys.length === 1 && patch.status) {
+        audit(patch.status === 'archived' ? 'course.archive' : 'course.update', patch.status === 'archived' ? name : `${name}: arxivdan qaytarildi`, id)
+        toast.success(patch.status === 'archived' ? tr('"{0}" arxivlandi', { 0: name }) : tr('"{0}" arxivdan qaytarildi', { 0: name }))
+      } else {
+        audit('course.update', name !== before.name ? `${before.name} → ${name}` : name, id)
+        toast.success(tr('"{0}" saqlandi', { 0: name }))
+      }
+    },
+    removeCourse: (id) => {
+      if (!allowed('courses.edit')) return
+      const course = courses.find((c) => c.id === id)
+      if (!course) return
+      if (courseInUse(course, customers, groups)) {
+        setCourses((list) => list.map((c) => (c.id === id ? { ...c, status: 'archived', updatedAt: new Date().toISOString() } : c)))
+        audit('course.archive', course.name, id)
+        toast.info(tr('"{0}" mijozlari bor — o\'chirish o\'rniga arxivlandi', { 0: course.name }))
+        return
+      }
+      setCourses((list) => list.filter((c) => c.id !== id))
+      const entry = trashed('course', id, course)
+      toTrash(entry)
+      audit('course.delete', course.name, id)
+      toast.success(tr('"{0}" savatchaga o\'tkazildi', { 0: course.name }), undo(entry))
     },
     updateSettings: (next, options) => {
+      if (!allowed('settings.manage')) return
       setSettings(next)
-      if (!options?.silent) toast.success('Sozlamalar saqlandi')
+      audit('settings.update', next.orgName)
+      if (!options?.silent) toast.success(tr('Sozlamalar saqlandi'))
     },
     resetData: () => {
-      applyData(resetToMock())
-      toast.success('Demo ma\'lumotlar tiklandi')
+      if (!allowed('data.manage')) return
+      loadDemoData()
+        .then((demo) => {
+          const { data, saved } = resetToMock(demo)
+          applyData(data)
+          setIsDemo(true)
+          reportSave('all', saved)
+          audit('data.reset', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+          if (saved.ok) toast.success(tr('Demo ma\'lumotlar tiklandi'))
+        })
+        .catch(() => toast.error(tr('Demo yuklanmadi. Internetni tekshirib, qayta urinib ko\'ring.')))
+    },
+    clearAllData: () => {
+      if (!allowed('data.manage')) return
+      const empty = createEmptyData()
+      setCustomers(empty.customers)
+      setTransactions(empty.transactions)
+      setCourses(empty.courses)
+      setTeachers(empty.teachers)
+      setGroups(empty.groups)
+      setEnrollments(empty.enrollments)
+      setAttendance(empty.attendance)
+      setLessonExceptions(empty.lessonExceptions)
+      setBranches(empty.branches)
+      setBranchFilter('')
+      setSearch('')
+      setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
+      setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+      // Lokal: savatcha va migratsiyadan oldingi nusxada ham mijozlar ma'lumoti bor — ular ham o'chadi.
+      // Bulut: yozuvlar savatchaga o'tadi (30 kundan keyin serverda butunlay o'chadi)
+      if (!cloud) {
+        setTrash([])
+        removePreMigrationBackup()
+      }
+      setIsDemo(false)
+      reportSave(STORAGE_KEYS.demo, setDemoMode(false))
+      audit('data.clear', `${customers.length} mijoz, ${transactions.length} tranzaksiya, ${courses.length} kurs`)
+      toast.success(tr('Barcha ma\'lumot tozalandi'))
+    },
+    clearDemoData: () => {
+      if (!allowed('data.manage')) return
+      setCustomers([])
+      setTransactions([])
+      setEnrollments([])
+      setAttendance([])
+      setLessonExceptions([])
+      setSearch('')
+      setCustomerFilters(EMPTY_CUSTOMER_FILTERS)
+      setTransactionFilters(EMPTY_TRANSACTION_FILTERS)
+      setIsDemo(false)
+      reportSave(STORAGE_KEYS.demo, setDemoMode(false))
+      audit('data.clear', `Demo: ${customers.length} mijoz, ${transactions.length} tranzaksiya`)
+      toast.success(tr('Demo ma\'lumot tozalandi — endi o\'z ma\'lumotlaringizni kiritishingiz mumkin'))
     },
     replaceData: (data) => {
-      saveAll(data)
+      if (!allowed('data.manage')) return
+      // Zaxiradan tiklangan ma'lumot foydalanuvchiniki hisoblanadi
+      const saved = saveAll(data)
       applyData(data)
-      toast.success(`Zaxira tiklandi: ${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya`)
+      setIsDemo(false)
+      reportSave('all', combineResults([saved, setDemoMode(false)]))
+      audit('data.import', `${data.customers.length} mijoz, ${data.transactions.length} tranzaksiya, ${data.courses.length} kurs`)
+      if (saved.ok) toast.success(tr('Zaxira tiklandi: {0} mijoz, {1} tranzaksiya', { 0: data.customers.length, 1: data.transactions.length }))
     },
+    tourOpen,
+    startTour: () => {
+      setSection('overview')
+      setSidebarOpen(false)
+      setTourOpen(true)
+    },
+    endTour: () => {
+      markTourDone(tourKey)
+      setTourOpen(false)
+    },
+    trash,
+    restoreFromTrash: (kind, id) => {
+      if (!allowed('trash.manage')) return
+      const entry = trash.find((e) => e.kind === kind && e.id === id)
+      if (entry) restoreEntry(entry)
+    },
+    purgeFromTrash: (kind, id) => {
+      if (!allowed('trash.manage')) return
+      const entry = trash.find((e) => e.kind === kind && e.id === id)
+      if (!entry) return
+      setTrash((list) => list.filter((e) => e !== entry))
+      cloud?.sync.purge(entry.kind, [entry.id]).catch(() => reportSave('trash', { ok: false, reason: 'network' }))
+      audit('trash.purge', entry.kind === 'transaction' ? txSummary(entry.item) : entry.kind === 'enrollment' ? (entry.label ?? id) : entry.item.name, id)
+      toast.success(tr('Butunlay o\'chirildi'))
+    },
+    emptyTrash: () => {
+      if (!allowed('trash.manage') || trash.length === 0) return
+      audit('trash.purge', `Savatcha tozalandi: ${trash.length} ta yozuv`)
+      if (cloud) {
+        for (const kind of TRASH_KINDS) {
+          cloud.sync.purge(kind, trash.filter((e) => e.kind === kind).map((e) => e.id)).catch(() => reportSave('trash', { ok: false, reason: 'network' }))
+        }
+      }
+      setTrash([])
+      toast.success(tr('Savatcha tozalandi'))
+    },
+    logExport: (what, kind = 'export') => audit(kind === 'backup' ? 'data.backup' : 'data.export', what),
     money,
     formatDate: (iso) => formatDateWith(iso, settings.dateFormat),
-    getCustomerName: (id) => getCustomer(id)?.name ?? '—',
+    getCustomerName: (id) => resolveCustomerName(id, getCustomer(id), id ? snapshotNames.get(id) : undefined),
   }
 
   return <DashboardContext value={value}>{children}</DashboardContext>

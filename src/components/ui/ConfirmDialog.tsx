@@ -1,3 +1,4 @@
+import { tr } from '../../i18n'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ConfirmContext } from '../../hooks/useConfirm'
@@ -26,10 +27,10 @@ export function ConfirmDialog({ options, onResult }: ConfirmDialogProps) {
       footer={
         <>
           <Button variant="ghost" onClick={() => onResult(false)} data-autofocus={tone === 'danger' ? true : undefined}>
-            {options.cancelLabel ?? 'Bekor qilish'}
+            {options.cancelLabel ?? tr('Bekor qilish')}
           </Button>
           <Button variant={tone} onClick={() => onResult(true)} data-autofocus={tone === 'primary' ? true : undefined}>
-            {options.confirmLabel ?? 'Tasdiqlash'}
+            {options.confirmLabel ?? tr('Tasdiqlash')}
           </Button>
         </>
       }
