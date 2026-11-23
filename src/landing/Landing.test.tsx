@@ -36,6 +36,9 @@ describe('Landing', () => {
     expect(plain(plans[1].textContent)).toContain('199 000 so\'m / oy')
     expect(plans[1].textContent).toContain('Ko\'p tanlanadi')
     expect(plans[2].textContent).toContain('Cheksiz xodim')
+    // QA-16: karta sarlavhasidagi xodim soni ro'yxatda takrorlanmaydi
+    expect(plans[2].textContent?.split('Cheksiz xodim').length).toBe(2)
+    expect(plans[1].textContent?.split('5 tagacha xodim').length).toBe(2)
   })
 
   it('pastki qismda huquqiy sahifalar havolasi', () => {

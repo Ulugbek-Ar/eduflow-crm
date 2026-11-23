@@ -1744,4 +1744,5 @@ export const RU: Readonly<Record<string, string>> = {
   "Lokal rejimda har markaz ma'lumoti o'z brauzerida — bu yerda namunaviy ro'yxat. Supabase ulangach (README → \"Bulutli rejim\") haqiqiy markazlar, tarif va muddatlar shu yerdan boshqariladi va cheklovlar majburiy bo'ladi.": "В локальном режиме данные каждого центра хранятся в его браузере — здесь примерный список. После подключения Supabase (README → «Облачный режим») реальные центры, тарифы и сроки управляются отсюда, а ограничения становятся обязательными.",
   "Sahifa topilmadi": "Страница не найдена",
   "Manzil noto'g'ri yoki sahifa o'chirilgan.": "Неверный адрес или страница удалена.",
+  "Xodimlar rollari va ruxsatlari": "Роли и права сотрудников",
 }

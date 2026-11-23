@@ -44,7 +44,7 @@ export const PLANS: Plan[] = [
     branchLimit: 1,
     highlighted: true,
     features: [
-      tr('5 tagacha xodim va rollar'),
+      tr('Xodimlar rollari va ruxsatlari'),
       tr('O\'qituvchilar xodim limitiga kirmaydi'),
       tr('Guruhlar, jadval, davomat va maosh'),
       tr('Chek, qarzdorlar, eslatmalar, hisobotlar'),
@@ -61,7 +61,6 @@ export const PLANS: Plan[] = [
     branchLimit: null,
     features: [
       tr('Standart\'dagi hamma narsa'),
-      tr('Cheksiz xodim'),
       tr('Bir nechta filial va filiallar hisoboti'),
       tr('Bulutli saqlash — istalgan qurilmadan'),
       tr('Payme/Click, SMS va ota-onalar boti'),

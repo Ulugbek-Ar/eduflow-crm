@@ -169,7 +169,7 @@ function Terms() {
 export function LegalPage() {
   const route = currentRoute()
   useEffect(() => {
-    document.title = `${route === 'privacy' ? 'Maxfiylik siyosati' : 'Foydalanish shartlari'} · ${APP_NAME}`
+    document.title = `${route === 'privacy' ? tr('Maxfiylik siyosati') : tr('Foydalanish shartlari')} · ${APP_NAME}`
   }, [route])
 
   return (
@@ -196,7 +196,7 @@ export function LegalPage() {
         {route === 'privacy' ? <Privacy /> : <Terms />}
         <p className="lp-legal-links">
           <a href={routeHref('landing')}>← {tr('Bosh sahifa')}</a>
-          <a href={routeHref(route === 'privacy' ? 'terms' : 'privacy')}>{route === 'privacy' ? 'Foydalanish shartlari' : 'Maxfiylik siyosati'}</a>
+          <a href={routeHref(route === 'privacy' ? 'terms' : 'privacy')}>{route === 'privacy' ? tr('Foydalanish shartlari') : tr('Maxfiylik siyosati')}</a>
         </p>
       </main>
     </div>
