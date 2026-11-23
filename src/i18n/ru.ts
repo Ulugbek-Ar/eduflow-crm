@@ -1692,4 +1692,5 @@ export const RU: Readonly<Record<string, string>> = {
   'Test kaliti faol: u bilan kelgan to\'lovlar kassaga, qarzga va hisobotlarga kirmaydi. Sandbox sinovidan keyin test kalitini o\'chiring.': 'Тестовый ключ активен: платежи с ним не попадают в кассу, долги и отчёты. После проверки в песочнице удалите тестовый ключ.',
   'Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi': 'Другой сотрудник одновременно изменил записи ({0}) — ваши изменения не сохранены, загружено актуальное состояние',
   'Ism juda uzun (ko\'pi bilan {0} ta belgi)': 'Слишком длинное имя (не более {0} символов)',
+  "Butun markaz": "Весь центр",
 }

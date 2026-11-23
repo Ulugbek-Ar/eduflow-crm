@@ -152,4 +152,12 @@ describe('Filiallar', () => {
     expect((screen.getByRole('combobox', { name: 'Filial' }) as HTMLSelectElement).value).toBe('b2')
     expect(screen.queryByRole('region', { name: 'Filiallar bo\'yicha' })).toBeNull()
   })
+
+  it('QA-14: xodimlar jadvalida filial ustuni (filiallar bo\'lsa)', async () => {
+    const { user } = await renderSignedIn(twoBranches())
+    await user.click(screen.getByRole('button', { name: 'Boshqaruv' }))
+    expect(await screen.findByRole('columnheader', { name: 'Filial' })).toBeTruthy()
+    expect(screen.getAllByText('Butun markaz').length).toBeGreaterThan(0)
+  })
 })
+

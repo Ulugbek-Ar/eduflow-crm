@@ -52,7 +52,9 @@ type Issued = { title: string; fullName: string; login: string; password: string
 
 function StaffTab() {
   const { users, user: me, updateUser, resetPassword } = useAuth()
-  const { formatDate, settings } = useDashboard()
+  const { formatDate, settings, branches } = useDashboard()
+  // QA-14: filiallar bo'lsa — xodim qaysi filialga cheklangani ro'yxatda ko'rinadi
+  const branchName = (id?: string) => (id ? (branches.find((b) => b.id === id)?.name ?? '—') : tr('Butun markaz'))
   const confirm = useConfirm()
   const toast = useToast()
   const [editing, setEditing] = useState<PublicUser | 'new' | null>(null)
@@ -104,6 +106,7 @@ function StaffTab() {
             <tr>
               <th scope="col">{tr('Xodim')}</th>
               <th scope="col">{tr('Rol')}</th>
+              {branches.length > 0 && <th scope="col">{tr('Filial')}</th>}
               <th scope="col">{tr('Holat')}</th>
               <th scope="col">{tr('Oxirgi kirish')}</th>
               <th scope="col">
@@ -132,6 +135,7 @@ function StaffTab() {
                 <td data-label={tr('Rol')}>
                   <Badge tone={u.role === 'admin' ? 'primary' : 'neutral'}>{ROLE_LABELS[u.role]}</Badge>
                 </td>
+                {branches.length > 0 && <td data-label={tr('Filial')}>{branchName(u.branchId)}</td>}
                 <td data-label={tr('Holat')}>
                   {u.status === 'blocked' ? (
                     <Badge tone="cancelled">{tr('Bloklangan')}</Badge>
