@@ -2,14 +2,16 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { makeCustomer, makeTransaction } from '../test/helpers'
-import { CloudSync, logEvent, setClient } from './supabase'
+import { CloudSync, logEvent, setClient, SyncConflictError } from './supabase'
 
 type Call = { op: string; table?: string; args?: unknown }
 
-function fakeClient(calls: Call[]) {
+function fakeClient(calls: Call[], server: Record<string, Array<{ id: string; updated_at: string | null }>> = {}) {
   const ok = Promise.resolve({ error: null, data: null })
   const chain = (table: string) => {
     const builder = {
+      // Versiya tekshiruvi: select('id, updated_at').eq(org).in(ids)
+      select: () => ({ eq: () => ({ in: (_c: string, ids: string[]) => Promise.resolve({ error: null, data: (server[table] ?? []).filter((r) => ids.includes(r.id)) }) }) }),
       upsert: (rows: unknown, opts: unknown) => {
         calls.push({ op: 'upsert', table, args: { rows, opts } })
         return ok
@@ -155,5 +157,42 @@ describe('createId', () => {
     const { createId } = await import('../utils/format')
     const ids = new Set(Array.from({ length: 10_000 }, () => createId('c')))
     expect(ids.size).toBe(10_000)
+  })
+})
+
+describe('B-04: konflikt (lost update)', () => {
+  it('boshqa xodim serverda o\'zgartirgan yozuv ustidan yozilmaydi — SyncConflictError; qolganlari yoziladi', async () => {
+    const calls: Call[] = []
+    const a = makeCustomer({ id: 'a', updatedAt: '2026-11-20T10:00:00.000Z' })
+    const b = makeCustomer({ id: 'b', updatedAt: '2026-11-20T10:00:00.000Z' })
+    setClient(fakeClient(calls, { customers: [{ id: 'a', updated_at: '2026-11-20T10:05:00+00:00' }, { id: 'b', updated_at: '2026-11-20T10:00:00+00:00' }] }))
+    const sync = new CloudSync('org-1', [])
+    const error = await sync.customers([a, b], [{ ...a, name: 'Eski holatdan' }, { ...b, name: 'Yangi' }]).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(SyncConflictError)
+    expect((error as SyncConflictError).ids).toEqual(['a'])
+    const upserts = calls.filter((c) => c.op === 'upsert').flatMap((c) => (c.args as { rows: Array<{ id: string }> }).rows.map((r) => r.id))
+    expect(upserts).toEqual(['b'])
+  })
+
+  it('o\'z yozuvimizdan keyin trigger o\'zgartirgan versiya eslab qolinadi — keyingi tahrir konflikt emas', async () => {
+    const calls: Call[] = []
+    const server = { customers: [{ id: 'a', updated_at: '2026-11-20T10:00:00+00:00' }] }
+    const client = fakeClient(calls, server)
+    const upsert = client.from('customers').upsert
+    // Trigger taqlidi: yozilgach server updated_at ni o'zi qo'yadi
+    ;(client as unknown as { from: (t: string) => unknown }).from = ((orig) => (t: string) => {
+      const b = orig(t) as { upsert: typeof upsert }
+      const raw = b.upsert
+      b.upsert = ((rows: unknown, opts: unknown) => { server.customers[0].updated_at = '2026-11-20T11:00:00.123+00:00'; return raw(rows as never, opts as never) }) as typeof upsert
+      return b
+    })((client as unknown as { from: (t: string) => unknown }).from)
+    setClient(client)
+    const sync = new CloudSync('org-1', [])
+    const a = makeCustomer({ id: 'a', updatedAt: '2026-11-20T10:00:00.000Z' })
+    const a2 = { ...a, name: 'Bir', updatedAt: '2026-11-20T11:00:00.000Z' }
+    await sync.customers([a], [a2])
+    await expect(sync.customers([a2], [{ ...a2, name: 'Ikki' }])).resolves.toBeUndefined()
+    server.customers[0].updated_at = '2026-11-20T12:00:00+00:00'
+    await expect(sync.customers([a2], [{ ...a2, name: 'Uch' }])).rejects.toBeInstanceOf(SyncConflictError)
   })
 })

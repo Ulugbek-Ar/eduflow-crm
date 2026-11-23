@@ -352,11 +352,19 @@ function chunks<T>(items: readonly T[], size: number): T[][] {
   return out
 }
 
+import { SyncConflictError } from './syncConflict'
+export { SyncConflictError }
+
+const versionMs = (value: unknown): number | null => (typeof value === 'string' && value ? Date.parse(value) : null)
+
 // Holat o'zgarishini serverga yuborish: yangi/o'zgarganlar — upsert, olib tashlanganlar — savatchaga (trash_move).
+// O'zgargan yozuv uchun avval serverdagi updated_at oxirgi ma'lum versiya bilan solishtiriladi (optimistik qulf).
 // Savatchada turgan id qayta paydo bo'lsa — tiklash (trash_restore)
 export class CloudSync {
   private trashed: Set<string>
   private org: string
+  // Serverdagi oxirgi ma'lum updated_at (o'z yozuvimizdan keyin trigger qo'ygan qiymat ham)
+  private versions = new Map<string, number | null>()
 
   constructor(org: string, trash: readonly TrashEntry[]) {
     this.org = org
@@ -368,15 +376,41 @@ export class CloudSync {
     this.trashed = new Set(trash.map((e) => `${e.kind}:${e.id}`))
   }
 
-  private async apply<T extends { id: string }>(kind: TrashKind, changes: Changes<T>, toRow: (item: T, org: string) => Row) {
+  private async serverVersions(table: string, ids: string[]): Promise<Map<string, number | null>> {
+    const result = new Map<string, number | null>()
+    for (const part of chunks(ids, DELETE_CHUNK)) {
+      const { data, error } = await getClient().from(table).select('id, updated_at').eq('organization_id', this.org).in('id', part)
+      fail(error)
+      for (const row of (data ?? []) as Row[]) result.set(String(row.id), versionMs(row.updated_at))
+    }
+    return result
+  }
+
+  private async apply<T extends { id: string; updatedAt?: string }>(kind: TrashKind, changes: Changes<T>, toRow: (item: T, org: string) => Row, prev: readonly T[] = []) {
     const sb = getClient()
     const table = TABLES[kind]
+    let conflicts: string[] = []
     if (changes.upserts.length) {
+      const before = new Map(prev.map((item) => [item.id, item]))
+      const updated = changes.upserts.filter((item) => before.has(item.id)).map((item) => item.id)
+      if (updated.length) {
+        const server = await this.serverVersions(table, updated)
+        conflicts = updated.filter((id) => {
+          if (!server.has(id)) return false
+          // Ma'lum versiya: oxirgi o'z yozuvimizdan keyingi server qiymati yoki serverdan olingan holat (refresh)
+          const current = server.get(id) ?? null
+          return current !== null && current !== this.versions.get(`${kind}:${id}`) && current !== versionMs(before.get(id)?.updatedAt)
+        })
+      }
+      const upserts = changes.upserts.filter((item) => !conflicts.includes(item.id))
       // Katta import (5000 qatorgacha) bitta so'rovga sig'masin: 500 tadan
-      for (let i = 0; i < changes.upserts.length; i += UPSERT_CHUNK) {
-        const { error } = await sb.from(table).upsert(changes.upserts.slice(i, i + UPSERT_CHUNK).map((item) => toRow(item, this.org)), { onConflict: 'organization_id,id' })
+      for (let i = 0; i < upserts.length; i += UPSERT_CHUNK) {
+        const { error } = await sb.from(table).upsert(upserts.slice(i, i + UPSERT_CHUNK).map((item) => toRow(item, this.org)), { onConflict: 'organization_id,id' })
         fail(error)
       }
+      // Yozilgandan keyingi server versiyasi (trigger updated_at ni o'zgartirgan bo'lishi mumkin)
+      const written = upserts.filter((item) => before.has(item.id)).map((item) => item.id)
+      if (written.length) for (const [id, version] of await this.serverVersions(table, written)) this.versions.set(`${kind}:${id}`, version)
       const restored = changes.upserts.filter((item) => this.trashed.has(`${kind}:${item.id}`)).map((item) => item.id)
       if (restored.length) {
         const { error: restoreError } = await sb.rpc('trash_restore', { p_table: table, p_ids: restored })
@@ -389,18 +423,19 @@ export class CloudSync {
       fail(error)
       for (const id of changes.removedIds) this.trashed.add(`${kind}:${id}`)
     }
+    if (conflicts.length) throw new SyncConflictError(conflicts)
   }
 
   customers(prev: StoredData['customers'], next: StoredData['customers']) {
-    return this.apply('customer', diffById(prev, next), customerToRow)
+    return this.apply('customer', diffById(prev, next), customerToRow, prev)
   }
 
   transactions(prev: StoredData['transactions'], next: StoredData['transactions']) {
-    return this.apply('transaction', diffById(prev, next), transactionToRow)
+    return this.apply('transaction', diffById(prev, next), transactionToRow, prev)
   }
 
   courses(prev: StoredData['courses'], next: StoredData['courses']) {
-    return this.apply('course', diffById(prev, next), courseToRow)
+    return this.apply('course', diffById(prev, next), courseToRow, prev)
   }
 
   // Savatchasiz jadvallar (davomat, bekor qilingan darslar): o'zgargani — upsert (noyob kalit bo'yicha), olib tashlangani — o'chiriladi
@@ -440,11 +475,11 @@ export class CloudSync {
       case 'courses':
         return this.courses(prev as StoredData['courses'], next as StoredData['courses'])
       case 'teachers':
-        return this.apply('teacher', diffById(prev as StoredData['teachers'], next as StoredData['teachers']), teacherToRow)
+        return this.apply('teacher', diffById(prev as StoredData['teachers'], next as StoredData['teachers']), teacherToRow, prev as StoredData['teachers'])
       case 'groups':
-        return this.apply('group', diffById(prev as StoredData['groups'], next as StoredData['groups']), groupToRow)
+        return this.apply('group', diffById(prev as StoredData['groups'], next as StoredData['groups']), groupToRow, prev as StoredData['groups'])
       case 'enrollments':
-        return this.apply('enrollment', diffById(prev as StoredData['enrollments'], next as StoredData['enrollments']), enrollmentToRow)
+        return this.apply('enrollment', diffById(prev as StoredData['enrollments'], next as StoredData['enrollments']), enrollmentToRow, prev as StoredData['enrollments'])
       case 'attendance':
         return this.plain('attendance', diffById(prev as StoredData['attendance'], next as StoredData['attendance']), attendanceToRow, 'organization_id,group_id,customer_id,date')
       // Filial savatchaga tushmaydi: arxivlanadi yoki (ishlatilmagan bo'lsa) o'chiriladi

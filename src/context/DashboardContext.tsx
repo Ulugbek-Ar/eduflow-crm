@@ -34,6 +34,7 @@ import {
 } from '../services/storage.service'
 import type { ListKey, SaveResult, StoredData } from '../services/storage.service'
 import type { CloudSnapshot, CloudSync } from '../data/supabase'
+import { SyncConflictError } from '../data/syncConflict'
 import type { Settings } from '../types/dashboard.types'
 import type { Customer, CustomerFilters, CustomerInput, CustomerSortKey } from '../types/customer.types'
 import type { DateRange, ModalState, ModalType, Section, SortState } from '../types/dashboard.types'
@@ -221,10 +222,23 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
         else await cloud.sync.list(key as ListKey, prev as never, next as never)
         synced.current = { ...synced.current, [key]: next }
         onSaved(key, { ok: true })
-      } catch {
+      } catch (error) {
+        // B-04: boshqa xodim shu yozuvni o'zgartirgan — ustidan yozilmaydi, serverdagi holat olib kelinadi
+        if (error instanceof SyncConflictError) {
+          synced.current = { ...synced.current, [key]: next }
+          latest.current = { ...latest.current, [key]: next }
+          onSaved(key, { ok: true })
+          onConflict(error.ids.length)
+          return
+        }
         onSaved(key, { ok: false, reason: 'network' })
       }
     })
+  })
+
+  const onConflict = useEffectEvent((count: number) => {
+    toast.error(tr('Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi', { 0: count }))
+    refreshCloud()
   })
 
   useEffect(() => (cloud ? pushCloud('branches', branches) : onSaved(STORAGE_KEYS.branches, setItem(STORAGE_KEYS.branches, branches))), [branches, cloud])

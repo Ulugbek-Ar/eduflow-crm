@@ -1690,4 +1690,5 @@ export const RU: Readonly<Record<string, string>> = {
   'Bog\'lanmagan onlayn to\'lov: {0} ta': 'Непривязанный онлайн-платёж: {0}',
   'O\'quvchi aniqlanmadi (bitta telefonda bir nechta o\'quvchi). Moliyada to\'lovni tahrirlab o\'quvchini tanlang: {0}': 'Ученик не определён (несколько учеников на одном телефоне). Отредактируйте платёж в «Финансах» и выберите ученика: {0}',
   'Test kaliti faol: u bilan kelgan to\'lovlar kassaga, qarzga va hisobotlarga kirmaydi. Sandbox sinovidan keyin test kalitini o\'chiring.': 'Тестовый ключ активен: платежи с ним не попадают в кассу, долги и отчёты. После проверки в песочнице удалите тестовый ключ.',
+  'Boshqa xodim {0} ta yozuvni siz bilan bir vaqtda o\'zgartirgan — sizning o\'zgarishingiz saqlanmadi, yangi holat yuklandi': 'Другой сотрудник одновременно изменил записи ({0}) — ваши изменения не сохранены, загружено актуальное состояние',
 }
