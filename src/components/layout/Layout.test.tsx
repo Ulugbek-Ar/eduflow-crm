@@ -97,3 +97,12 @@ describe('Layout: sidebar, profil menyusi, mavzu', () => {
     expect(localStorage.getItem('apex:theme')).toBe('"system"')
   })
 })
+
+describe('QA-09: o\'qituvchi "Bugun" sahifasi', () => {
+  it('ta\'sirsiz "Davr" tanlovi ko\'rinmaydi', async () => {
+    await renderSignedIn(undefined, { role: 'teacher' })
+    expect(await screen.findByRole('heading', { level: 1 })).toBeTruthy()
+    expect(screen.queryByRole('group', { name: 'Davr' })).toBeNull()
+  })
+})
+
