@@ -631,4 +631,27 @@ begin
   end if;
   if exists (select 1 from public.transactions where organization_id = v_org and provider_ref like 'bad%' and is_test) then raise exception 'FAIL: oddiy to''lov is_test'; end if;
 end $$;
+-- B-02: Payme/Click kirimi — summa, sana, tur, provayder API orqali o'zgarmaydi; bog'lanmagan to'lovga o'quvchi biriktiriladi
+update public.organizations set status = 'active', plan = 'trial', trial_ends_at = now() + interval '1 day'
+where id = (select organization_id from public.profiles where id = '00000000-0000-0000-0000-00000000000a');
+insert into public.transactions (organization_id, id, type, amount, method, category, date, status, provider, provider_ref)
+select organization_id, 'tprov', 'income', 650000, 'card', 'other_income', now(), 'paid', 'payme', 'prov-1' from public.profiles where id = '00000000-0000-0000-0000-00000000000a';
+select pg_temp.as_user('00000000-0000-0000-0000-00000000000a');
+do $$ begin
+  begin
+    update public.transactions set amount = 1 where id = 'tprov';
+    raise exception 'FAIL: provayder to''lovi summasi o''zgardi';
+  exception when insufficient_privilege then null; end;
+  begin
+    update public.transactions set provider = null where id = 'tprov';
+    raise exception 'FAIL: provayder belgisi o''chirildi';
+  exception when insufficient_privilege then null; end;
+  update public.transactions set customer_id = 'c1', category = 'course_fee', note = 'qo''lda bog''landi' where id = 'tprov';
+  if (select customer_id from public.transactions where id = 'tprov') is distinct from 'c1' then raise exception 'FAIL: bog''lanmagan to''lovga o''quvchi biriktirilmadi'; end if;
+  begin
+    update public.transactions set customer_id = 'c2' where id = 'tprov';
+    raise exception 'FAIL: bog''langan provayder to''lovining o''quvchisi o''zgardi';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
 select 'RLS_OK' as result, :'imported' as imported;
