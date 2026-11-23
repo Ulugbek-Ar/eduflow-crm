@@ -106,3 +106,14 @@ describe('QA-09: o\'qituvchi "Bugun" sahifasi', () => {
   })
 })
 
+
+describe('A-09: bo\'lim manzilda', () => {
+  it('bo\'lim tanlansa #hash yoziladi; sahifa shu hash bilan ochilsa — o\'sha bo\'lim (ruxsat bo\'lsa)', async () => {
+    window.history.replaceState(null, '', '/app#finance')
+    const { user } = await renderSignedIn()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Moliya va kassa' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Kurslar va xizmatlar' }))
+    expect(window.location.hash).toBe('#courses')
+    window.history.replaceState(null, '', '/')
+  })
+})

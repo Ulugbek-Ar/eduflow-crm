@@ -13,6 +13,8 @@ import type { Transaction } from '../types/finance.types'
 import type { Role, StaffUser } from '../types/user.types'
 
 afterEach(() => {
+  // A-09: bo'lim #hash'da — keyingi test bosh sahifadan boshlansin
+  if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
   cleanup()
   localStorage.clear()
   sessionStorage.clear()

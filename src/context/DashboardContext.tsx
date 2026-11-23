@@ -1,7 +1,7 @@
 import { tr } from '../i18n'
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { sectionAllowed, sectionPermissions } from '../auth/permissions'
+import { canOpenSection, SECTION_PERMISSION, sectionAllowed, sectionPermissions } from '../auth/permissions'
 import type { Permission } from '../auth/permissions'
 import { CATEGORY_LABELS, STATUS_LABELS, TX_STATUS_LABELS, TYPE_LABELS } from '../constants/navigation'
 import { AuthContext, useAuditActor, useCan } from '../hooks/useAuth'
@@ -164,7 +164,11 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
   const [isDemo, setIsDemo] = useState(() => !cloud && isDemoMode())
   const [search, setSearch] = useState('')
   const [dateRange, setDateRange] = useState<DateRange>('month')
-  const [activeSection, setSection] = useState<Section>('overview')
+  // A-09: bo'lim manzilda (#finance) — sahifa yangilansa ham shu bo'lim ochiladi (ruxsat bo'lsa)
+  const [activeSection, setSection] = useState<Section>(() => {
+    const fromHash = window.location.hash.slice(1) as Section
+    return fromHash && fromHash in SECTION_PERMISSION && canOpenSection(role, fromHash) ? fromHash : 'overview'
+  })
   const [modal, setModal] = useState<ModalState>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistentState(SIDEBAR_COLLAPSED_KEY, false, isBoolean)
@@ -722,6 +726,7 @@ export function DashboardProvider({ children, cloud }: { children: ReactNode; cl
         unsavedRef.current = false
       }
       setSection(section)
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${section}`)
       setSidebarOpen(false)
     },
     setUnsavedChanges: (dirty) => {
