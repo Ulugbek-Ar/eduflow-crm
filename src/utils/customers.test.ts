@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Customer } from '../types/customer.types'
 import type { Transaction } from '../types/finance.types'
-import { customerPayments, groupByStage, neighbourStage, deleteCustomerMessage, deletedCustomerName, filterCustomers, resolveCustomerName, sortCustomers, validateCustomer } from './customers'
+import { customerPayments, groupByStage, neighbourStage, deleteCustomerMessage, deletedCustomerName, filterCustomers, matchesCustomer, resolveCustomerName, sortCustomers, validateCustomer } from './customers'
 import { paginate } from './list'
 import { formatPhone, isValidPhone } from './phone'
 
@@ -152,3 +152,14 @@ describe('qidiruv: o\'zbekcha apostrof turlari (QA-02)', () => {
     expect(matchesCustomer(customer, '+998931112233')).toBe(true)
   })
 })
+
+describe('A-05: harf va raqam aralash qidiruv', () => {
+  it('"Python 1" telefon raqami bo\'yicha moslanmaydi; raqamli so\'rov — telefon bo\'yicha', () => {
+    const c = { id: 'c1', name: 'Aziza Karimova', phone: '+998 90 123 45 67', course: 'IELTS', status: 'new', source: 'website', createdAt: '' } as Customer
+    expect(matchesCustomer(c, 'Python 1')).toBe(false)
+    expect(matchesCustomer(c, '90 123')).toBe(true)
+    expect(matchesCustomer(c, '+998901234567')).toBe(true)
+    expect(matchesCustomer(c, 'Aziza 9')).toBe(false)
+  })
+})
+

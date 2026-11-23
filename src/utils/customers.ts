@@ -19,7 +19,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export function matchesCustomer(customer: Customer, search: string): boolean {
   const query = normalizeSearch(search)
   if (!query) return true
-  const digits = query.replace(/\D/g, '')
+  // A-05: telefon bo'yicha — faqat so'rovda harf bo'lmasa ("Python 1" har qanday telefonni moslamasin)
+  const digits = /\p{L}/u.test(query) ? '' : query.replace(/\D/g, '')
   return (
     searchIncludes(customer.name, query) ||
     searchIncludes(customer.course, query) ||
