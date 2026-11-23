@@ -127,13 +127,17 @@ describe('Tanishtiruv va boshlash ro\'yxati', () => {
     expect(screen.queryByText('1 / 5')).toBeNull()
   })
 
-  it('boshlash ro\'yxati bajarilganlarni belgilaydi va yashiriladi', async () => {
+  it('QA-08: boshlash ro\'yxati — kurs → o\'qituvchi → guruh → guruhga yozish → to\'lov → xodimlar → zaxira', async () => {
     const { user } = await renderSignedIn({ customers: [makeCustomer()], transactions: [] })
-    const card = screen.getByRole('region', { name: /Boshlash uchun 5 qadam/ })
-    expect(within(card).getByText('2 / 5 bajarildi')).toBeTruthy()
-    expect(within(card).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('2')
+    const card = screen.getByRole('region', { name: /Boshlash uchun 7 qadam/ })
+    expect(within(card).getByText('1 / 7 bajarildi')).toBeTruthy()
+    const labels = within(card).getAllByRole('listitem').map((li) => li.textContent ?? '')
+    expect(labels.findIndex((l) => l.includes('o\'qituvchi'))).toBeLessThan(labels.findIndex((l) => l.includes('guruhga yozing')))
+    // Guruhga yozilish bo'lmaguncha to'lov qadami tavsiya qilinmaydi
+    const pay = labels.findIndex((l) => l.includes('to\'lovni'))
+    expect((within(card).getAllByRole('listitem')[pay].querySelector('button') as HTMLButtonElement).disabled).toBe(true)
     await user.click(within(card).getAllByRole('button', { name: 'Boshlash' })[0])
-    expect(await screen.findByRole('dialog', { name: 'Yangi mijoz' }).catch(() => screen.findByRole('dialog', { name: 'To\'lov qabul qilish' }))).toBeTruthy()
+    expect(await screen.findByRole('dialog', { name: /o'qituvchi/i })).toBeTruthy()
     await user.keyboard('{Escape}')
     await user.click(within(card).getByRole('button', { name: 'Yashirish' }))
     expect(screen.queryByRole('region', { name: /Boshlash uchun/ })).toBeNull()

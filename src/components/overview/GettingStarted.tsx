@@ -13,31 +13,46 @@ export const CHECKLIST_HIDDEN_KEY = 'apex:checklist-hidden'
 
 // Yangi markaz uchun "nimadan boshlash" ro'yxati: bajarilgani belgilanadi, hammasi tayyor bo'lsa yo'qoladi
 export function GettingStarted() {
-  const { courses, customers, transactions, openModal, setActiveSection } = useDashboard()
-  const { users, can, mode } = useAuth()
+  const { courses, teachers, groups, enrollments, transactions, settings, openModal, setActiveSection } = useDashboard()
+  const { users, can, mode, cloud } = useAuth()
   const audit = useSyncExternalStore(subscribeAudit, getAuditSnapshot)
   const [hidden, setHidden] = usePersistentState(CHECKLIST_HIDDEN_KEY, false, isBoolean)
   if (hidden || mode === 'demo' || !can('staff.manage')) return null
 
-  const steps = [
+  // QA-08: qarz guruhga yozilish orqali hisoblanadi — tartib shunga mos; bulutda zaxira o'rniga onlayn to'lov
+  const enrolled = enrollments.length > 0
+  const steps: Array<{ id: string; label: string; done: boolean; action: () => void; blocked?: string }> = [
     { id: 'course', label: tr('Kurs va narxlarni kiriting'), done: courses.length > 0, action: () => openModal({ type: 'course' }) },
-    { id: 'customer', label: tr('Birinchi mijozni qo\'shing'), done: customers.length > 0, action: () => openModal({ type: 'customer' }) },
+    { id: 'teacher', label: tr('O\'qituvchini qo\'shing'), done: teachers.length > 0, action: () => openModal({ type: 'teacher' }) },
+    { id: 'group', label: tr('Guruh oching (kurs, o\'qituvchi, kunlar)'), done: groups.length > 0, action: () => openModal({ type: 'group' }) },
+    { id: 'enroll', label: tr('O\'quvchini guruhga yozing'), done: enrolled, action: () => setActiveSection('groups') },
     {
       id: 'payment',
       label: tr('Birinchi to\'lovni qabul qiling'),
       done: transactions.some((t) => t.type === 'income'),
       action: () => openModal({ type: 'transaction', payload: { kind: 'income' } }),
+      blocked: enrolled ? undefined : tr('Avval o\'quvchini guruhga yozing — qarz guruh bo\'yicha hisoblanadi'),
     },
     { id: 'staff', label: tr('Xodimlarni qo\'shing'), done: users.length > 1, action: () => setActiveSection('admin') },
-    {
-      id: 'backup',
-      label: tr('Birinchi zaxirani oling'),
-      done: audit.some((e) => e.action === 'data.backup'),
-      action: () => {
-        setActiveSection('settings')
-        scrollToId('data')
-      },
-    },
+    cloud
+      ? {
+          id: 'online',
+          label: tr('Onlayn to\'lovni ulang (Payme yoki Click)'),
+          done: Boolean(settings.paymeMerchantId || settings.clickServiceId),
+          action: () => {
+            setActiveSection('settings')
+            scrollToId('integrations')
+          },
+        }
+      : {
+          id: 'backup',
+          label: tr('Birinchi zaxirani oling'),
+          done: audit.some((e) => e.action === 'data.backup'),
+          action: () => {
+            setActiveSection('settings')
+            scrollToId('data')
+          },
+        },
   ]
   const doneCount = steps.filter((s) => s.done).length
   if (doneCount === steps.length) return null
@@ -69,7 +84,7 @@ export function GettingStarted() {
               {step.done && <span className="sr-only"> {tr('(bajarildi)')}</span>}
             </span>
             {!step.done && (
-              <Button size="sm" variant="ghost" onClick={step.action}>
+              <Button size="sm" variant="ghost" onClick={step.action} disabled={Boolean(step.blocked)} title={step.blocked}>
                 {tr('Boshlash')}
               </Button>
             )}

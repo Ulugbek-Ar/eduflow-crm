@@ -1699,4 +1699,9 @@ export const RU: Readonly<Record<string, string>> = {
   "{0} (onlayn)": "{0} (онлайн)",
   "Muddat, oy": "Срок, мес.",
   "0 — muddatsiz": "0 — бессрочно",
+  "O'qituvchini qo'shing": "Добавьте преподавателя",
+  "Guruh oching (kurs, o'qituvchi, kunlar)": "Откройте группу (курс, преподаватель, дни)",
+  "O'quvchini guruhga yozing": "Запишите ученика в группу",
+  "Avval o'quvchini guruhga yozing — qarz guruh bo'yicha hisoblanadi": "Сначала запишите ученика в группу — долг считается по группе",
+  "Onlayn to'lovni ulang (Payme yoki Click)": "Подключите онлайн-оплату (Payme или Click)",
 }
