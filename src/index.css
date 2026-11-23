@@ -4976,3 +4976,12 @@ ol.steps-list {
 .form-more[open] > summary {
   margin-bottom: 8px;
 }
+
+/* QA-12: telefonda Boshqaruv tablari va Sozlamalar menyusi ekrandan chiqmaydi — qatorlarga o'raladi */
+@media (max-width: 640px) {
+  .tabs,
+  .settings-nav {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}

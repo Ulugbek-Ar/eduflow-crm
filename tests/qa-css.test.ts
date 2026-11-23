@@ -10,4 +10,10 @@ describe('QA CSS', () => {
     expect(block('.tour-spot {')).toContain('transition: transform')
     expect(block('.tour-spot {')).not.toMatch(/transition: left|transition:[^;]*\btop /)
   })
+
+  it('QA-12: telefonda tablar va sozlamalar menyusi o\'raladi (ekrandan chiqmaydi)', () => {
+    const mobile = css.slice(css.indexOf('/* QA-12:'))
+    expect(mobile).toMatch(/\.tabs,\s*\.settings-nav \{\s*flex-wrap: wrap;/)
+  })
 })
+
