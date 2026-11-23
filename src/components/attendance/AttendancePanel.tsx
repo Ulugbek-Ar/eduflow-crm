@@ -26,6 +26,7 @@ export function AttendancePanel() {
   const options = recent.map((r) => ({ value: `${r.group.id}|${r.date}`, label: `${r.date === today ? tr('Bugun') : `${WEEKDAY_SHORT[weekdayOf(parseDay(r.date))]}, ${r.date.slice(8, 10)}.${r.date.slice(5, 7)}`} · ${r.group.startTime} · ${r.group.name}` }))
   const selected = options.some((o) => o.value === choice) ? choice : fallback ? `${fallback.group.id}|${today}` : (options[0]?.value ?? '')
   const [groupId, date] = selected.split('|')
+  const pastOptions = slots.length > 0 ? options.filter((o) => !o.value.endsWith(`|${today}`)) : options
 
   if (active.length === 0) {
     return <EmptyState title={tr('Guruhlaringiz yo\'q')} description={tr('Administrator guruhga sizni o\'qituvchi qilib biriktirgach, davomatni shu yerda belgilaysiz.')} />
@@ -56,7 +57,16 @@ export function AttendancePanel() {
             <span className="muted">{date === today ? tr('Bugungi dars') : date ? formatDate(`${date}T12:00:00`) : ''}</span>
           </div>
         </div>
-        {options.length > 0 && <Select label={tr('Dars')} value={selected} onChange={(e) => setChoice(e.target.value)} options={options} hint={tr('Bugun va oxirgi {0} kun ichidagi darslar', { 0: settings.attendanceEditDays })} />}
+        {/* QA-19: bugungi darslar tepadagi tablarda — bu yerda faqat oldingi kunlar (dars ikki marta tanlanmaydi) */}
+        {pastOptions.length > 0 && (
+          <Select
+            label={tr('Oldingi dars')}
+            value={selected.endsWith(`|${today}`) ? '' : selected}
+            onChange={(e) => setChoice(e.target.value || (slots[0] ? `${slots[0].group.id}|${today}` : ''))}
+            options={[{ value: '', label: slots.length > 0 ? tr('— bugungi dars —') : tr('Tanlang') }, ...pastOptions]}
+            hint={tr('Oxirgi {0} kun ichidagi darslar', { 0: settings.attendanceEditDays })}
+          />
+        )}
         {groupId && date ? <LessonMarking groupId={groupId} date={date} /> : <p className="muted">{tr('Bugun va oxirgi kunlarda dars yo\'q.')}</p>}
       </section>
     </div>

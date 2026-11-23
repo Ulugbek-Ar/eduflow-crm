@@ -1704,4 +1704,7 @@ export const RU: Readonly<Record<string, string>> = {
   "O'quvchini guruhga yozing": "Запишите ученика в группу",
   "Avval o'quvchini guruhga yozing — qarz guruh bo'yicha hisoblanadi": "Сначала запишите ученика в группу — долг считается по группе",
   "Onlayn to'lovni ulang (Payme yoki Click)": "Подключите онлайн-оплату (Payme или Click)",
+  "Oldingi dars": "Прошлое занятие",
+  "— bugungi dars —": "— сегодняшнее занятие —",
+  "Oxirgi {0} kun ichidagi darslar": "Занятия за последние {0} дн.",
 }

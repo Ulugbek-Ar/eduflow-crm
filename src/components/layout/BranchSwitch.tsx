@@ -1,11 +1,14 @@
 import { Icon } from '../../constants/navigation'
 import { useDashboard } from '../../context/useDashboard'
+import { useAuth } from '../../hooks/useAuth'
 import { tr } from '../../i18n'
 
 // Header: qaysi filial ma'lumoti ko'rinayotgani. Filiallar bo'lmasa — hech narsa; filialga cheklangan xodimda — faqat nomi
 export function BranchSwitch() {
-  const { branches, branchFilter, setBranchFilter, restrictedBranch, getBranch } = useDashboard()
-  if (branches.length === 0) return null
+  const { branches, branchFilter, setBranchFilter, restrictedBranch, getBranch, activeSection } = useDashboard()
+  const { user } = useAuth()
+  // QA-19: o'qituvchiga va Yordam sahifasida tanlov ortiqcha (Sozlamalarda filiallar boshqariladi — qoladi)
+  if (branches.length === 0 || user?.role === 'teacher' || activeSection === 'help') return null
   if (restrictedBranch) {
     return (
       <span className="branch-switch is-fixed" title={tr('Siz shu filialga biriktirilgansiz')}>

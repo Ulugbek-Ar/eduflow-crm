@@ -159,5 +159,12 @@ describe('Filiallar', () => {
     expect(await screen.findByRole('columnheader', { name: 'Filial' })).toBeTruthy()
     expect(screen.getAllByText('Butun markaz').length).toBeGreaterThan(0)
   })
+
+  it('QA-19: Yordam sahifasida Header filial tanlovi yo\'q', async () => {
+    const { user } = await renderSignedIn(twoBranches())
+    expect(screen.getByRole('combobox', { name: 'Filial' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Yordam' }))
+    expect(screen.queryByRole('combobox', { name: 'Filial' })).toBeNull()
+  })
 })
 
